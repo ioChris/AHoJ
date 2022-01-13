@@ -318,7 +318,7 @@ print('Done\n')
 print('Apo candidate chains satisfying user requirements (method/resolution) [', res_threshold, 'Å ]: ', sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)]), '\n')
 
 
-# Open apo winner structures, align to holo, and check if the superimposed ligand sites are ligand-free
+# Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
 if beyond_hetatm == 1:    search_name = 'resn '
 else:    search_name = 'hetatm and resn '
 
