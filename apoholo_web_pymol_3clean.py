@@ -30,12 +30,12 @@ import time
 ## User input
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '3fav all zn'
-single_line_input = '1a2p all zn'
+single_line_input = '5ok3 all tpo'
 
 ## User options
 NMR = 1                 # 0/1: discard/include NMR structures
 res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
-lig_free_sites = 1      # 1: corresponding apo sites are free of any other known ligands in addition to specified ligands
+lig_free_sites = 0      # 1: corresponding apo sites are free of any other known ligands in addition to specified ligands
 water_as_ligand = 0     # 1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 save_session = 1        # 1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 1: save all aligned structures in one .pdb file (unzipped -not recommended)
@@ -46,6 +46,7 @@ overlap_threshold = 100  # % of overlap between apo and holo chain (w UniProt nu
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is '<' than)
+beyond_hetatm = 0        # when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
@@ -170,11 +171,10 @@ except:
 
 ## Find Apo candidates (rSIFTS)
 
-# Discarded chains (format: structchain  discard_msg)
-discarded_chains = list()
-
-# Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we can't process them)
+# Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we cannot process them)
 print('Verifying input holo chains by UniProt ID')
+discarded_chains = list()   # Discarded chains (format: structchain  discard_msg)
+
 if user_chains == 'ALL':
     user_chains = list()
     user_structchains = list()
@@ -183,7 +183,6 @@ if user_chains == 'ALL':
         if key[:4] == struct:
             user_chains.append(key[4:])
             user_structchains.append(key)
-
 else:
     for user_structchain in user_structchains:
         try:
@@ -207,8 +206,8 @@ for user_structchain in user_structchains:
     for key, values in dict_rSIFTS.items(): # iterate over reverse SIFTS chains/uniprot IDs
         for i in values: # iterate over the values in each key, i = struct/chain combo
             if i.split()[0] == user_structchain:
-                #uniprot_id = key #not needed
-                structchain = i.split()[0] #pass structchain to variable
+                #uniprot_id = key # not needed
+                structchain = i.split()[0] # pass structchain to variable
                 x1 = i.split()[1]    # holo SP BEG
                 x2 = i.split()[2]    # holo SP END
                 
@@ -277,7 +276,7 @@ for apo_candidate_struct in apo_candidate_structs:
             try:
                 if line.split()[0] == '_exptl.method':
                     method = line.split("'")[1] # capture experimental method #method = ' '.join(line.split()[1:]) 
-                    if method == 'SOLUTION NMR':# fail fast #if 'NMR' in method.split(): 
+                    if method == 'SOLUTION NMR': # fail fast if 'NMR' in method.split(): 
                         break
                 elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
                     resolution = float(line.split()[1]) # X-ray highest resolution
@@ -285,8 +284,8 @@ for apo_candidate_struct in apo_candidate_structs:
                 elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
                     resolution = float(line.split()[1]) # EM resolution
                     break
-            except:
-                print('Problem parsing structure: ', apo_candidate_struct)
+            except Exception as ex: # getting weird but harmless exceptions
+                print('Problem parsing structure: ', apo_candidate_struct, ex)
         try:
             if NMR == 1 and method == 'SOLUTION NMR' or resolution <= res_threshold:
                 print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS') # Xray/EM
@@ -312,7 +311,7 @@ for key, values in dictApoCandidates.items():
     for i in values[:apo_chain_limit]:            
         if i.split()[0][:4] in discard_structs:
             print('removing apo', i.split()[0], 'from holo', key.split()[0])
-            pass
+            #pass
         else:
             dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
 print('Done\n')
@@ -320,6 +319,9 @@ print('Apo candidate chains satisfying user requirements (method/resolution) [',
 
 
 # Open apo winner structures, align to holo, and check if the superimposed ligand sites are ligand-free
+if beyond_hetatm == 1:    search_name = 'resn '
+else:    search_name = 'hetatm and resn '
+
 holo_lig_positions = dict()
 apo_holo_dict = dict()
 for holo_structchain, apo_structchains in dictApoCandidates_1.items():
@@ -340,16 +342,15 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     cmd.reinitialize('everything')
     cmd.load(holo_struct_path)
     cmd.select(holo_struct + holo_chain, holo_struct + '& chain ' + holo_chain) 
-    #cmd.set('cif_use_auth')
     
-    # Select specified ligands
-    ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
-
+    # Find & name specified ligands
+    #ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
+    ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
     if ligands_selection == 0:
-        print('No ligands found in default chain, trying author chain')
-        ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and segi ' + holo_chain)
+        print('No ligands found in author chain, trying PDB chain')
+        ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and segi ' + holo_chain)
         if ligands_selection == 0:
-            print('No ligands found in author chain, skipping: ', holo_structchain)
+            print('No ligands found in PDB chain, skipping: ', holo_structchain)
             continue
     
     ligands_atoms = cmd.identify('query_ligands', mode=0)
@@ -432,10 +433,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             # Assess apo ligands
             for i in apo_lig_names:
                 if i in holo_lig_names or i in ligand_names:    # check in both lists (detected holo ligs + query ligs)
-                    #print('Holo ligand found in Apo: ', apo_structchain, i)
-                    found_ligands.add(i)
-                    #counter_lig += 1
-                    #break
+                    found_ligands.add(i)    #break #print('Holo ligand found in Apo: ', apo_structchain, i)
                 elif i not in nolig_resn:
                     found_ligands_xtra.add(i)
                     
@@ -487,7 +485,6 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             cmd.multisave(filename_pdb)
         elif save_session == 1 and multisave == 0:            cmd.save(filename_pse)
         elif save_session == 0 and multisave == 1:            cmd.multisave(filename_pdb)
-    #else:        print('Nothing to save')
         
     
 print('')
