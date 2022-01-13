@@ -285,7 +285,7 @@ for apo_candidate_struct in apo_candidate_structs:
                     resolution = float(line.split()[1]) # EM resolution
                     break
             except Exception as ex: # getting weird but harmless exceptions
-                print('Problem parsing structure: ', apo_candidate_struct, ex)
+                print('Problem parsing structure: ', apo_candidate_struct)#, ex)
         try:
             if NMR == 1 and method == 'SOLUTION NMR' or resolution <= res_threshold:
                 print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS') # Xray/EM
