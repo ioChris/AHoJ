@@ -5,8 +5,8 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo finder/ Apofind
-'''Given a list of holo structures, with chains and ligands, find apo structures
-    Test PyMOL parser for apo-holo framework
+'''Given a holo structure, with specified chain(s) and ligand(s), find apo structures
+    Use PyMOL parser
     '''
 
 import __main__
@@ -14,7 +14,6 @@ __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
 import pymol
 import pymol.cmd as cmd
 pymol.finish_launching()
-#from pymol import stored
 import psico.fitting
 
 import ast
@@ -22,9 +21,6 @@ import gzip
 import os
 import wget
 import time
-#from Bio.PDB import *
-#from get_root_path import root_path
-#from download_files import download_mmCIF_gz2
 
 
 ## User input
@@ -89,9 +85,8 @@ print('Done\n')
 
 ## Define functions
 def root_path():
-    npath = os.path.normpath(os.getcwd())   # Normalize the path string into a proper string for the OS
-    if npath.split(os.sep)[1] == 'Users' and 'Chris' in npath.split(os.sep)[2]: # Check "User" and "Chris" are part of the path
-        path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
+    npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
+    path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):        memo = "Root path found >> " + path0
     else:        memo = 'Error finding root path in working dir:' + npath        
     return path0
@@ -172,17 +167,18 @@ except:
 ## Find Apo candidates (rSIFTS)
 
 # Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we cannot process them)
-print('Verifying input holo chains by UniProt ID')
+print('Finding & verifying query chains "', user_chains, '" by UniProt ID')
 discarded_chains = list()   # Discarded chains (format: structchain  discard_msg)
 
 if user_chains == 'ALL':
     user_chains = list()
     user_structchains = list()
-    print('Considering all chains in query structure, finding chains..')
+    #print('Considering all chains in query structure, finding chains..')
     for key in dict_SIFTS:
         if key[:4] == struct:
             user_chains.append(key[4:])
             user_structchains.append(key)
+            print(key, dict_SIFTS[key])
 else:
     for user_structchain in user_structchains:
         try:
@@ -194,10 +190,10 @@ else:
             discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
 user_chains_bundle = '+'.join(user_chains)
 print('Input chains verified:\t', user_structchains, user_chains)
-print('Input chains rejected:\t', discarded_chains, '\n')
+if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_chains)
     
 # Get apo candidates from rSIFTS dict
-print('Looking for Apo candidates')
+print('\nLooking for Apo candidates')
 dictApoCandidates = dict()
 positive_overlap = dict()
 negative_overlap = dict()
@@ -262,7 +258,7 @@ for apo_candidate_structure in apo_candidate_structs:
         add_log(message, log_file_dnld)
         print(f'*apo file {apo_candidate_structure} not found')
         
-'''# Add extra structures for testing [NMR struct: 1hko | cryo-em structure: 6nt5]
+'''# Add extra structures for testing [NMR struct: 1hko | cryo-em struct: 6nt5]
 apo_candidate_structs.add('6nt5') #EM
 apo_candidate_structs.add('1hko') #NMR'''
 
@@ -275,8 +271,8 @@ for apo_candidate_struct in apo_candidate_structs:
         for line in mmCIFin:
             try:
                 if line.split()[0] == '_exptl.method':
-                    method = line.split("'")[1] # capture experimental method #method = ' '.join(line.split()[1:]) 
-                    if method == 'SOLUTION NMR': # fail fast if 'NMR' in method.split(): 
+                    method = line.split("'")[1] # capture experimental method #method = ' '.join(line.split()[1:])
+                    if method == 'SOLUTION NMR': # break fast if method is 'NMR'
                         break
                 elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
                     resolution = float(line.split()[1]) # X-ray highest resolution
@@ -305,7 +301,8 @@ for i in discarded_chains:
         discard_structs.add(i.split()[0])
 
 # Discard apo entries below threshold(s). Put remainder into new dict, discard UniProt numbering
-print('Discarding structures\t', discard_structs)
+print('Structures to discard:\t', len(discard_structs))
+if len(discard_structs) > 0:    print('Discarding structures\t', discard_structs)
 dictApoCandidates_1 = dict()
 for key, values in dictApoCandidates.items():
     for i in values[:apo_chain_limit]:            
@@ -314,7 +311,6 @@ for key, values in dictApoCandidates.items():
             #pass
         else:
             dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
-print('Done\n')
 print('Apo candidate chains satisfying user requirements (method/resolution) [', res_threshold, 'Å ]: ', sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)]), '\n')
 
 
