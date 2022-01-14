@@ -21,12 +21,19 @@ import gzip
 import os
 import wget
 import time
+import argparse
 
 
 ## User input
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '3fav all zn'
 single_line_input = '5ok3 all tpo'
+
+
+# Create the parser
+parser = argparse.ArgumentParser()
+
+
 
 ## User options
 NMR = 1                 # 0/1: discard/include NMR structures
