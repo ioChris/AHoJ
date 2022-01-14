@@ -30,26 +30,40 @@ import argparse
 single_line_input = '5ok3 all tpo'
 
 
-# Create the parser
+# Create the parser, add arguments
 parser = argparse.ArgumentParser()
+# User arguments
+parser.add_argument('--res_threshold', type=float, help='resolution cut-off for apo chains (angstrom), condition is <=')
+parser.add_argument('--NMR', type=int, help='0/1: discard/include NMR structures')
+parser.add_argument('--lig_free_sites', type=int, help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
+parser.add_argument('--water_as_ligand', type=int, help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--save_session', type=int, help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)')
+parser.add_argument('--multisave', type=int, help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
+# Internal/advanced arguments
+parser.add_argument('--overlap_threshold', type=int, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
+parser.add_argument('--ligand_scan_radius', type=str, help='angstrom radius to look around holo ligand(s) superposition')
+parser.add_argument('--apo_chain_limit', type=int, help='limit number of apo chains to consider when aligning (for fast test runs)')
+parser.add_argument('--min_tmscore', type=float, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+parser.add_argument('--beyond_hetatm', type=int, help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
+args = parser.parse_args()
 
 
 
 ## User options
-NMR = 1                 # 0/1: discard/include NMR structures
 res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
-lig_free_sites = 0      # 1: corresponding apo sites are free of any other known ligands in addition to specified ligands
-water_as_ligand = 0     # 1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
-save_session = 1        # 1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
-multisave = 0           # 1: save all aligned structures in one .pdb file (unzipped -not recommended)
+NMR = 1                 # 0/1: discard/include NMR structures
+lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
+water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
+save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
+multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 
 ## Internal variables
 job_id = '0001'
-overlap_threshold = 100  # % of overlap between apo and holo chain (w UniProt numbering), condition is '>='
+overlap_threshold = 100  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
-min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is '<' than)
-beyond_hetatm = 0        # when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
+min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
+beyond_hetatm = 0        # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
