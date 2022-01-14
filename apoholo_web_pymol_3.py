@@ -33,18 +33,18 @@ single_line_input = '5ok3 all tpo'
 # Create the parser, add arguments
 parser = argparse.ArgumentParser()
 # User arguments
-parser.add_argument('--res_threshold', type=float, help='resolution cut-off for apo chains (angstrom), condition is <=')
-parser.add_argument('--NMR', type=int, help='0/1: discard/include NMR structures')
-parser.add_argument('--lig_free_sites', type=int, help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
-parser.add_argument('--water_as_ligand', type=int, help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
-parser.add_argument('--save_session', type=int, help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)')
-parser.add_argument('--multisave', type=int, help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
+parser.add_argument('--res_threshold', type=float, default=3, help='resolution cut-off for apo chains (angstrom), condition is <=')
+parser.add_argument('--NMR', type=int, default=1, help='0/1: discard/include NMR structures')
+parser.add_argument('--lig_free_sites', type=int, default=1, help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
+parser.add_argument('--water_as_ligand', type=int, default=0, help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--save_session', type=int, default=1, help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)')
+parser.add_argument('--multisave', type=int, default=0, help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
 # Internal/advanced arguments
-parser.add_argument('--overlap_threshold', type=int, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
-parser.add_argument('--ligand_scan_radius', type=str, help='angstrom radius to look around holo ligand(s) superposition')
-parser.add_argument('--apo_chain_limit', type=int, help='limit number of apo chains to consider when aligning (for fast test runs)')
-parser.add_argument('--min_tmscore', type=float, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
-parser.add_argument('--beyond_hetatm', type=int, help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
+parser.add_argument('--overlap_threshold', type=int, default=100, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
+parser.add_argument('--ligand_scan_radius', type=str, default='5', help='angstrom radius to look around holo ligand(s) superposition')
+parser.add_argument('--apo_chain_limit', type=int, default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
+parser.add_argument('--min_tmscore', type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+parser.add_argument('--beyond_hetatm', type=int, default=0, help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
 args = parser.parse_args()
 
 
@@ -64,6 +64,7 @@ ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superpo
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
 beyond_hetatm = 0        # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
+
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
@@ -130,40 +131,32 @@ script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rej
 log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
 
 
-# Set output directories
-path0 = root_path()
-path_root = path0 + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
-pathHOLO = path_root + r'\holo'
-pathAPO = path_root + r'\apo'
-pathALN = path_root + r'\aln'
+# Set directories
+#path0 = root_path()
+path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
+pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
+pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
 
 
 # Create directories if they don't exist
 print('Setting up directories')
-if os.path.isdir(pathHOLO):
-    print('Holo directory:\t', pathHOLO)
+if os.path.isdir(pathSTRUCTS):
+    print('Structure directory:\t', pathSTRUCTS)
 else:
-    print('Creating holo directory:\t', pathHOLO)
-    os.makedirs(pathHOLO)
-if os.path.isdir(pathAPO):
-    print('Apo directory:\t', pathAPO)
+    print('Creating structure directory:\t', pathSTRUCTS)
+    os.makedirs(pathSTRUCTS)
+if os.path.isdir(pathRSLTS):
+    print('Results directory:\t', pathRSLTS)
 else:
-    print('Creating apo directory:\t', pathAPO)
-    os.makedirs(pathAPO)
-if os.path.isdir(pathALN):
-    print('Alignments directory:\t', pathALN)
-else:
-    print('Creating alignments directory:\t', pathALN)
-    os.makedirs(pathALN)
+    print('Creating results directory:\t', pathRSLTS)
+    os.makedirs(pathRSLTS)
 print('Done\n')
 
-
 # Declare and load SIFTS input file(s)
-pathSIFTS = path0 + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
-infile_SIFTSdict = "pdb_chain_uniprot_dict.txt" # downloaded SIFTS file unedited
-fileSIFTSdict = pathSIFTS + '\\' + infile_SIFTSdict
-infile_rSIFTS = "pdb_chain_uniprot_REVERSE_SPnum.txt" # pre-compiled rSIFTS file (reverse_SIFTS_SPnum.py)
-fileRSIFTS = pathSIFTS + '\\' + infile_rSIFTS
+#pathSIFTS = path0 + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
+fileSIFTSdict = pathSIFTS + '\\' + "pdb_chain_uniprot_dict.txt" # downloaded SIFTS file unedited
+fileRSIFTS = pathSIFTS + '\\' + "pdb_chain_uniprot_REVERSE_SPnum.txt" # pre-compiled rSIFTS file (reverse_SIFTS_SPnum.py)
 
 print('Loading SIFTS dictionary')   # Load normal SIFTS dictionary as dict_SIFTS
 with open (fileSIFTSdict, 'r') as input1:
@@ -178,7 +171,7 @@ print('Done\n')
 
 # Download or get path to query structure
 try:
-    struct_path = download_mmCIF_gz2(struct, pathHOLO)
+    struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
     print('Loading structure:\t', struct_path, '\n')
 except:
     print('Error downloading structure:\t', struct, '\n')
@@ -272,7 +265,7 @@ print('Total structures to download for parsing: ', len(apo_candidate_structs), 
 # Download/fetch/load the Apo candidate structures to specified directory [this should be replaced by fetch later #TODO]
 for apo_candidate_structure in apo_candidate_structs:
     try:
-        structPath = download_mmCIF_gz2(apo_candidate_structure, pathAPO)
+        structPath = download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
     except Exception as ex1:
         template = "Exception {0} occurred. \n\t\t\t\t\tArguments:{1!r}"
         message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
@@ -286,7 +279,7 @@ apo_candidate_structs.add('1hko') #NMR'''
 # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
 print('Checking resolution and experimental method of Apo candidate structures')
 for apo_candidate_struct in apo_candidate_structs:
-    apo_candidate_structPath = download_mmCIF_gz2(apo_candidate_struct, pathAPO)
+    apo_candidate_structPath = download_mmCIF_gz2(apo_candidate_struct, pathSTRUCTS)
     resolution = '?'
     with gzip.open (apo_candidate_structPath, 'rt') as mmCIFin:
         for line in mmCIFin:
@@ -345,7 +338,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     print('')
     holo_struct = holo_structchain[:4]
     holo_chain = holo_structchain[4:]
-    holo_struct_path = download_mmCIF_gz2(holo_struct, pathHOLO)
+    holo_struct_path = download_mmCIF_gz2(holo_struct, pathSTRUCTS)
     '''# Initialize PyMOL but don't reload Holo if present
     if holo_struct in cmd.get_object_list('all'): # object names
     #if holo_struct in cmd.get_names('all'): # object and selection names
@@ -400,7 +393,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     for apo_structchain in apo_structchains:
         apo_struct = apo_structchain[:4]
         apo_chain = apo_structchain[4:]
-        apo_struct_path = download_mmCIF_gz2(apo_struct, pathAPO)
+        apo_struct_path = download_mmCIF_gz2(apo_struct, pathSTRUCTS)
         
         if apo_struct in cmd.get_object_list('all'):
             pass
@@ -490,8 +483,8 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     cmd.center('query_ligands')
     
     #apo_win_structs_filename = '_'.join(list(apo_win_structs))
-    #filename_pse = pathALN + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
-    filename_body = pathALN + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct)) 
+    #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
+    filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct)) 
     filename_pse = filename_body + '.pse.gz'
     filename_pdb = filename_body + '.pdb'
     
