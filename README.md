@@ -9,7 +9,7 @@ Note: ligands are confined to chemical components that are not part of the prote
 The application is conducting a search within the experimentally determined protein structures in the Protein Data Bank. It retrieves identical proteins with known structures, and then it looks whether the specified ligand(s) is present or absent. Depending on the user’s preferences, the application can look for the specified ligand(s) in a single specified chain, or the whole protein (all chains). It can find apo-proteins that i) simply lack the specified ligand in a given binding site (but may bind a different ligand at the same site), or ii) lack any known ligand in a given binding site and thus constitute universal apo- sites.
 
 ##  Server setup requirements
-The application was built and initially ran in a Windows 7 OS. The python packages were all installed through the Anaconda package manager.
+The application was built and initially ran in a Windows 10 OS. The python packages were all installed through the Anaconda package manager.
 The python version and packages used to run the application appear below:
 
 >Python  3.8.11
