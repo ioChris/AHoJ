@@ -27,7 +27,8 @@ import argparse
 ## User input
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '3fav all zn'
-single_line_input = '5ok3 all tpo'
+#single_line_input = '5ok3 all tpo'
+single_line_input = '3CQV a hem'
 
 
 # Create the parser, add arguments
@@ -52,23 +53,30 @@ args = parser.parse_args()
 ## User options
 res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
 NMR = 1                 # 0/1: discard/include NMR structures
-lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
+lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 
 ## Internal variables
 job_id = '0001'
-overlap_threshold = 100  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
+overlap_threshold = 50  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
 beyond_hetatm = 0        # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
-
+nonstd_rsds_as_lig = 0   # 0/1: ignore/consider non-standard residues as ligands
+d_aa_as_lig = 0          # 0/1: ignore/consider D-amino acids as ligands
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
 if water_as_ligand == 0:    nolig_resn.append('HOH')
+# Non-standard residues [SEP TPO PSU MSE MSO][1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG]
+nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC".split()
+if nonstd_rsds_as_lig == 0:    nolig_resn.extend(nonstd_rsds)
+# D-amino acids
+d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
+if d_aa_as_lig == 0:    nolig_resn.extend(d_aminoacids)
 
 ## Parse single line input (line by line mode, 1 holo structure per line)
 # if no chains specified, consider all chains #TODO
@@ -482,19 +490,17 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     cmd.reset()
     cmd.center('query_ligands')
     
-    #apo_win_structs_filename = '_'.join(list(apo_win_structs))
-    #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
+    # Save results as session (.pse.gz) or multisave (.pdb)
     filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct)) 
     filename_pse = filename_body + '.pse.gz'
-    filename_pdb = filename_body + '.pdb'
+    filename_pdb = filename_body + '.pdb'    
+    #apo_win_structs_filename = '_'.join(list(apo_win_structs))
+    #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
     
-    # Save results as session (.pse.gz) or multisave (.pdb)
     if len(cmd.get_object_list('all')) > 1:
-        if save_session == 1 and multisave == 1:
-            cmd.save(filename_pse)
-            cmd.multisave(filename_pdb)
-        elif save_session == 1 and multisave == 0:            cmd.save(filename_pse)
-        elif save_session == 0 and multisave == 1:            cmd.multisave(filename_pdb)
+        if save_session == 1:            cmd.save(filename_pse)
+        if multisave == 1:            cmd.multisave(filename_pdb)
+
         
     
 print('')
