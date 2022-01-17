@@ -20,6 +20,10 @@ The python version and packages used to run the application appear below:
 
 >wget		  3.2
 
+>tmalign 20170708
+
+>pymol-psico 3.4.19
+
 
 Note: Newer versions of these packages should be functional as long as they are intercompatible, including the open-source version of PyMOL.
 
