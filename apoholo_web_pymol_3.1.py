@@ -26,10 +26,10 @@ import argparse
 
 ## User input
 #single_line_input = '1a73 a zn,MG,HEM'
-#single_line_input = '3fav all zn'
+single_line_input = '3fav all zn'
 #single_line_input = '5ok3 all tpo'
-single_line_input = '3CQV a hem'
-
+#single_line_input = '3CQV a hem' #hem
+#single_line_input = '5gss all gsh' # slow
 
 # Create the parser, add arguments
 parser = argparse.ArgumentParser()
@@ -55,11 +55,12 @@ res_threshold = 3       # resolution cut-off for apo chains (angstrom), conditio
 NMR = 1                 # 0/1: discard/include NMR structures
 lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
-save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
+save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
+save_separate = 1       # 0/1: save each chain object in a separate file
 
 ## Internal variables
-job_id = '0001'
+job_id = '0005'
 overlap_threshold = 50  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
@@ -425,7 +426,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             discarded_chains.append(apo_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
             print('*poor alignment, discarding chain ', apo_structchain)
             continue
-        
+
         found_ligands = set()
         found_ligands_xtra = set()
         
@@ -456,11 +457,12 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                     found_ligands_xtra.add(i)
                     
         
-        # Print verdict for chain 
+        # Print verdict for chain & save it as a separate object/file
         print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
         if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
             apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
             print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
+            if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '.pdb.gz', apo_structchain)
         else:
             print('FAIL')   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
             
@@ -496,15 +498,21 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     filename_pdb = filename_body + '.pdb'    
     #apo_win_structs_filename = '_'.join(list(apo_win_structs))
     #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
-    
+
     if len(cmd.get_object_list('all')) > 1:
+        if save_separate ==1:            cmd.save(pathRSLTS + '\\holo_' + holo_structchain + '.pdb.gz', holo_structchain)
         if save_session == 1:            cmd.save(filename_pse)
         if multisave == 1:            cmd.multisave(filename_pdb)
-
         
     
 print('')
 if len(apo_holo_dict) > 0:
+    
+    # Write dictionary to file
+    with open (filename_body + '.txt', 'wt') as out1:
+        out1.write(str(apo_holo_dict))   
+    
+    # Print dict
     print('Apo holo results: ')
     for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
 else:    print('No apo forms found')
