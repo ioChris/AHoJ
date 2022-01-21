@@ -28,7 +28,9 @@ import argparse
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '3fav all zn'
 #single_line_input = '5ok3 all tpo'
-single_line_input = '3CQV all hem' #hem
+single_line_input = '2ZB1 all gk4'
+#'7l1f all F86'
+#'3CQV all hem,f86,mg,tpo,act' #hem
 #single_line_input = '5gss all gsh' # slow
 
 # Create the parser, add arguments
@@ -60,8 +62,8 @@ multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no ann
 save_separate = 1       # 0/1: save each chain object in a separate file
 
 ## Internal variables
-job_id = '0004'
-overlap_threshold = 50  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
+job_id = '0007'
+overlap_threshold = 95  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
@@ -82,6 +84,8 @@ if d_aa_as_lig == 0:    nolig_resn.extend(d_aminoacids)
 ## Parse single line input (line by line mode, 1 holo structure per line)
 # if no chains specified, consider all chains #TODO
 print('Parsing input')
+
+
 struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
 user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
 ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
@@ -132,6 +136,16 @@ def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCI
         print('Downloading: ', pdb_id + urlB)
         return file_path
     else:        return file_path
+def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands (without exception handling)
+    urlA = 'https://files.rcsb.org/ligands/view/'
+    urlB = '.cif'
+    url = urlA + lig_id.upper() + urlB
+    file_path = destination_path + '\\' + lig_id + urlB
+    if not os.path.isfile(file_path):
+        wget.download(url, destination_path)
+        print('Downloading: ', lig_id + urlB)
+        return file_path
+    else:        return file_path
 def add_log(msg, log_file):     # Create error log
     msg = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + '\t' + msg
     with open(path_root + '\\' + log_file, 'a') as file:
@@ -145,18 +159,21 @@ log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
+pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for fetch/download)
 pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
 
 
 # Create directories if they don't exist
 print('Setting up directories')
-if os.path.isdir(pathSTRUCTS):
-    print('Structure directory:\t', pathSTRUCTS)
+if os.path.isdir(pathSTRUCTS):    print('Structure directory:\t', pathSTRUCTS)
 else:
     print('Creating structure directory:\t', pathSTRUCTS)
     os.makedirs(pathSTRUCTS)
-if os.path.isdir(pathRSLTS):
-    print('Results directory:\t', pathRSLTS)
+if os.path.isdir(pathLIGS):    print('Results directory:\t', pathLIGS)
+else:
+    print('Creating results directory:\t', pathLIGS)
+    os.makedirs(pathLIGS)
+if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
 else:
     print('Creating results directory:\t', pathRSLTS)
     os.makedirs(pathRSLTS)
@@ -178,19 +195,32 @@ with open (fileRSIFTS, 'r') as input2:
 dict_rSIFTS = ast.literal_eval(data)
 print('Done\n')
 
-# Download or get path to query structure
+# Download or get path to query structure & ligand
 try:
     struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
     print('Loading structure:\t', struct_path, '\n')
 except:
     print('Error downloading structure:\t', struct, '\n')
-    
+print('Verifying ligands:\t', ligand_names)
+for lig_id in ligand_names:
+    try:
+        lig_path = download_mmCIF_lig(lig_id, pathLIGS)
+        with open (lig_path, 'r') as in_lig:
+            for line in in_lig:
+                if line.startswith('_chem_comp.name'):
+                    lig_name = line.split()[1:]
+                if line.startswith('_chem_comp.pdbx_synonyms'):
+                    lig_syn = line.split()[1:]
+                    print(lig_id, ' '.join(lig_name), ' '.join(lig_syn))
+                    break
+    except:        print('Error verifying ligand:\t', lig_id)
+
 
 
 ## Find Apo candidates (rSIFTS)
 
 # Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we cannot process them)
-print('Finding & verifying query chains "', user_chains, '" by UniProt ID')
+print('\nFinding & verifying query chains "', user_chains, '" by UniProt ID')
 discarded_chains = list()   # Discarded chains (format: structchain  discard_msg)
 
 if user_chains == 'ALL':
@@ -334,7 +364,7 @@ for key, values in dictApoCandidates.items():
             #pass
         else:
             dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
-print('Apo candidate chains satisfying user requirements (method/resolution) [', res_threshold, 'Å ]: ', sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)]), '\n')
+print('\nApo candidate chains satisfying user requirements (method/resolution) [', res_threshold, 'Å ]: ', sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)]))
 
 
 # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
@@ -357,8 +387,9 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         cmd.reinitialize('everything')
         cmd.load(holo_struct_path)
     
-
     cmd.select(holo_struct + holo_chain, holo_struct + '& chain ' + holo_chain) 
+    if len(dictApoCandidates_1) > 0 and save_separate == 1 and not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz'):
+        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz', holo_struct)
     
     # Find & name specified ligands
     #ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
@@ -497,10 +528,11 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     #apo_win_structs_filename = '_'.join(list(apo_win_structs))
     #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
 
-    if len(cmd.get_object_list('all')) > 1:
-        if save_separate ==1:            
-            cmd.save(pathRSLTS + '\\holo_' + holo_structchain + '.pdb.gz', holo_structchain)
-            if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz'):                cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz', holo_struct)
+    #if len(cmd.get_object_list('all')) > 1:
+    if len(dictApoCandidates_1) > 0:
+        #if save_separate ==1:            
+            #cmd.save(pathRSLTS + '\\holo_' + holo_structchain + '.pdb.gz', holo_structchain)
+            #if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz'):                cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz', holo_struct)
         if save_session == 1:            cmd.save(filename_pse)
         if multisave == 1:            cmd.multisave(filename_pdb)
         
