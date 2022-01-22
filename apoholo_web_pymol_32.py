@@ -26,9 +26,10 @@ import argparse
 
 ## User input
 #single_line_input = '1a73 a zn,MG,HEM'
-#single_line_input = '3fav all zn'
+#single_line_input = 
 #single_line_input = '5ok3 all tpo'
-single_line_input = '2ZB1 all gk4'
+single_line_input = '3fav all zn'
+#'2ZB1 all gk4'
 #'7l1f all F86'
 #'3CQV all hem,f86,mg,tpo,act' #hem
 #single_line_input = '5gss all gsh' # slow
@@ -156,11 +157,13 @@ log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
 
 # Set directories
 #path0 = root_path()
-path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+#path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for fetch/download)
 pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
+pathQRS = path_root + r'queries'             # Directory/index with parameters of previsouly run jobs
 
 
 # Create directories if they don't exist
@@ -176,6 +179,10 @@ else:
 if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
 else:
     print('Creating results directory:\t', pathRSLTS)
+    os.makedirs(pathRSLTS)
+if os.path.isdir(pathQRS):    print('Queries directory:\t', pathQRS)
+else:
+    print('Creating queries directory:\t', pathQRS)
     os.makedirs(pathRSLTS)
 print('Done\n')
 
