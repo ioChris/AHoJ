@@ -16,8 +16,8 @@ Creates 2 dictionaries:
 '''
 
 # Saving options
-save_r_spnum = 1    # save dict_R_SPnum dictionary to file (includes readable version w headers)
-save_plaindict = 1  # save dict_SIFTS dictionary to file (includes readable version w headers)
+save_r_spnum = 0    # save dict_R_SPnum dictionary to file (includes readable version w headers)
+save_plaindict = 0  # save dict_SIFTS dictionary to file (includes readable version w headers)
 
 import os
 import gzip

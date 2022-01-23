@@ -25,8 +25,9 @@ import argparse
 
 
 ## User input
+multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+
 #single_line_input = '1a73 a zn,MG,HEM'
-#single_line_input = 
 #single_line_input = '5ok3 all tpo'
 single_line_input = '3fav all zn'
 #'2ZB1 all gk4'
@@ -153,6 +154,18 @@ def add_log(msg, log_file):     # Create error log
         file.write(msg + '\n')
 script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
 log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
+def next_path(path_pattern):    # Create incrementing directory name for each job
+    i = 1
+    # First do an exponential search
+    while os.path.exists(path_pattern % i):
+        i = i * 2
+    # Result lies somewhere in the interval (i/2..i]
+    # We call this interval (a..b] and narrow it down until a + 1 = b
+    a, b = (i // 2, i)
+    while a + 1 < b:
+        c = (a + b) // 2 # interval midpoint
+        a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
+    return path_pattern % b
 
 
 # Set directories
@@ -162,8 +175,9 @@ path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for fetch/download)
-pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
-pathQRS = path_root + r'queries'             # Directory/index with parameters of previsouly run jobs
+#pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
+pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')
+pathQRS = path_root + r'\queries'             # Directory/index with parameters of previsouly run jobs
 
 
 # Create directories if they don't exist
@@ -172,18 +186,18 @@ if os.path.isdir(pathSTRUCTS):    print('Structure directory:\t', pathSTRUCTS)
 else:
     print('Creating structure directory:\t', pathSTRUCTS)
     os.makedirs(pathSTRUCTS)
-if os.path.isdir(pathLIGS):    print('Results directory:\t', pathLIGS)
+if os.path.isdir(pathLIGS):    print('Ligands directory:\t', pathLIGS)
 else:
-    print('Creating results directory:\t', pathLIGS)
+    print('Creating ligands directory:\t', pathLIGS)
     os.makedirs(pathLIGS)
 if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
 else:
-    print('Creating results directory:\t', pathRSLTS)
+    print('Results directory:\t', pathRSLTS)
     os.makedirs(pathRSLTS)
 if os.path.isdir(pathQRS):    print('Queries directory:\t', pathQRS)
 else:
     print('Creating queries directory:\t', pathQRS)
-    os.makedirs(pathRSLTS)
+    os.makedirs(pathQRS)
 print('Done\n')
 
 # Declare and load SIFTS input file(s)
