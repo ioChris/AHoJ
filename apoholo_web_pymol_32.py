@@ -22,6 +22,7 @@ import os
 import wget
 import time
 import argparse
+#import csv
 
 
 ## User input
@@ -91,6 +92,7 @@ print('Parsing input')
 struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
 user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
 ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+#user_position = single_line_input.split()[3] #TODO
 
 # Parse chains
 if not user_chains == 'ALL':
@@ -170,8 +172,8 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
 
 # Set directories
 #path0 = root_path()
-#path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
-path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
+path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+#path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for fetch/download)
@@ -409,8 +411,8 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         cmd.load(holo_struct_path)
     
     cmd.select(holo_struct + holo_chain, holo_struct + '& chain ' + holo_chain) 
-    if len(dictApoCandidates_1) > 0 and save_separate == 1 and not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz'):
-        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz', holo_struct)
+    if len(dictApoCandidates_1) > 0 and save_separate == 1 and not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):
+        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct)
     
     # Find & name specified ligands
     #ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
@@ -512,7 +514,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
             apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
             print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
-            if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.pdb.gz', apo_structchain)
+            if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
         else:
             print('FAIL')   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
             
@@ -543,9 +545,10 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     cmd.center('query_ligands')
     
     # Save results as session (.pse.gz) or multisave (.pdb)
-    filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct)) 
+    #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
+    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct + '_and_' + '_'.join(cmd.get_object_list('not ' + holo_struct))
     filename_pse = filename_body + '.pse.gz'
-    filename_pdb = filename_body + '.pdb'    
+    filename_multi = filename_body + '_multi.cif'    
     #apo_win_structs_filename = '_'.join(list(apo_win_structs))
     #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
 
@@ -555,7 +558,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             #cmd.save(pathRSLTS + '\\holo_' + holo_structchain + '.pdb.gz', holo_structchain)
             #if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz'):                cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz', holo_struct)
         if save_session == 1:            cmd.save(filename_pse)
-        if multisave == 1:            cmd.multisave(filename_pdb)
+        if multisave == 1:            cmd.multisave(filename_multi, append=1)
         
     
 print('')
@@ -566,7 +569,15 @@ if len(apo_holo_dict) > 0:
     filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
     with open (filename_aln + '.txt', 'wt') as out1:
         out1.write(header)
-        out1.write(str(apo_holo_dict))   
+        out1.write(str(apo_holo_dict))
+        
+    # Write CSV file
+    filename_csv = pathRSLTS + '\\results.csv'
+    header = "#holo_chain,apo_chain,RMSD,TM_score\n"
+    with open (filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        for key in apo_holo_dict.keys():
+            csv_out.write("%s,%s,%s,%s\n"%(key,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2]))
     
     # Print dict
     print('Apo holo results: ')
