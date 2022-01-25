@@ -22,6 +22,8 @@ import os
 import wget
 import time
 import argparse
+from os import walk
+#import sys
 #import csv
 
 
@@ -63,7 +65,7 @@ lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other kno
 water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_separate = 1       # 0/1: save each chain object in a separate file
+save_separate = 0       # 0/1: save each chain object in a separate file
 
 ## Internal variables
 job_id = '0007'
@@ -74,6 +76,9 @@ min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (
 beyond_hetatm = 0        # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
 nonstd_rsds_as_lig = 0   # 0/1: ignore/consider non-standard residues as ligands
 d_aa_as_lig = 0          # 0/1: ignore/consider D-amino acids as ligands
+
+# Pass settings to a string
+settings_param = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(ligand_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
@@ -133,7 +138,9 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
         c = (a + b) // 2 # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
-
+#def save_query(name, path):
+    
+    
 
 # Set directories
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
@@ -145,6 +152,7 @@ pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for
 pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')
 pathQRS = path_root + r'\queries'             # Directory/index with parameters of previsouly run jobs
 
+job_id = os.path.basename(os.path.normpath(pathRSLTS))
 
 # Create directories if they don't exist
 print('Setting up directories')
@@ -156,9 +164,10 @@ if os.path.isdir(pathLIGS):    print('Ligands directory:\t', pathLIGS)
 else:
     print('Creating ligands directory:\t', pathLIGS)
     os.makedirs(pathLIGS)
-if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
-else:
-    print('Results directory:\t', pathRSLTS)
+if save_separate == 1 or multisave == 1 or save_session == 1:
+    if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
+    else:
+        print('Results directory:\t', pathRSLTS)
     os.makedirs(pathRSLTS)
 if os.path.isdir(pathQRS):    print('Queries directory:\t', pathQRS)
 else:
@@ -268,7 +277,17 @@ else:
 user_chains_bundle = '+'.join(user_chains)
 print('Input chains verified:\t', user_structchains, user_chains)
 if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_chains)
-    
+
+## Look up query in history #TODO
+user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+query_full = user_input_parameters + '_' + settings_param + '-' + job_id
+past_queries = dict()
+with open (pathQRS + '\\' + 'queries.txt', 'r') as in_q:
+    for line in in_q:
+        past_queries.setdefault(line.split('-')[0])
+if query_full in past_queries:
+    query
+
 # Get apo candidates from rSIFTS dict
 print('\nLooking for Apo candidates')
 dictApoCandidates = dict()
@@ -564,28 +583,39 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
 print('')
 if len(apo_holo_dict) > 0:
-    
-    # Write dictionary to file
-    header = "#HEADER: {holo_chain: [apo_chain RMSD TM_score]\n"
-    filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
-    with open (filename_aln + '.txt', 'wt') as out1:
-        out1.write(header)
-        out1.write(str(apo_holo_dict))
+    if save_separate == 1 or multisave == 1 or save_session == 1:
         
-    # Write CSV file
-    filename_csv = pathRSLTS + '\\results.csv'
-    header = "#holo_chain,apo_chain,RMSD,TM_score\n"
-    with open (filename_csv, 'w') as csv_out:
-        csv_out.write(header)
-        for key in apo_holo_dict.keys():
-            csv_out.write("%s,%s,%s,%s\n"%(key,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2]))
-    
+        # Write dictionary to file
+        header = "#HEADER: {holo_chain: [apo_chain RMSD TM_score]\n"
+        filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
+        with open (filename_aln + '.txt', 'wt') as out1:
+            out1.write(header)
+            out1.write(str(apo_holo_dict))
+            
+        # Write CSV file
+        filename_csv = pathRSLTS + '\\results.csv'
+        header = "#holo_chain,apo_chain,RMSD,TM_score\n"
+        with open (filename_csv, 'w') as csv_out:
+            csv_out.write(header)
+            for key in apo_holo_dict.keys():
+                csv_out.write("%s,%s,%s,%s\n"%(key,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2]))
+        
     # Print dict
     print('Apo holo results: ')
     for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
 else:    print('No apo forms found')
 print('\nDone')
 
+
+print(query_full)
+# Save the name of the query, job_id as file content
+if job_id:
+    with open (pathQRS + '\\' + 'queries.txt', 'a') as out_q:
+        out_q.write(query_full + '\n')
+    
+
+
+    
 
 
 
