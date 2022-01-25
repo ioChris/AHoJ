@@ -28,9 +28,10 @@ import argparse
 ## User input
 multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
+single_line_input = '3fav all zn'
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
-single_line_input = '3fav all zn'
+
 #'2ZB1 all gk4'
 #'7l1f all F86'
 #'3CQV all hem,f86,mg,tpo,act' #hem
@@ -84,42 +85,6 @@ if nonstd_rsds_as_lig == 0:    nolig_resn.extend(nonstd_rsds)
 d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
 if d_aa_as_lig == 0:    nolig_resn.extend(d_aminoacids)
 
-## Parse single line input (line by line mode, 1 holo structure per line)
-# if no chains specified, consider all chains #TODO
-print('Parsing input')
-
-
-struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
-user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
-ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
-#user_position = single_line_input.split()[3] #TODO
-
-# Parse chains
-if not user_chains == 'ALL':
-    user_chains = ''.join(user_chains)
-    user_chains = user_chains.split(',')
-    user_chains_bundle = '+'.join(user_chains)
-    # Convert chains to structchain combos
-    user_structchains = list()
-    for user_chain in user_chains:
-        user_structchain = struct.lower() + user_chain.upper()
-        user_structchains.append(user_structchain)
-
-# Parse ligands
-ligand_names = ''.join(ligand_names)
-ligand_names = ligand_names.split(',')
-ligand_names_bundle = '+'.join(ligand_names)
-
-# Print input info
-print('Input structure:\t', struct)
-if user_chains == 'ALL':
-    print('Input chains:\t\t', user_chains)
-else:
-    print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
-    print('Input structchains:\t', user_structchains)
-print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
-#print('PyMOL version: ', cmd.get_version())
-print('Done\n')
 
 
 ## Define functions
@@ -171,7 +136,6 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
 
 
 # Set directories
-#path0 = root_path()
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
@@ -218,7 +182,44 @@ with open (fileRSIFTS, 'r') as input2:
 dict_rSIFTS = ast.literal_eval(data)
 print('Done\n')
 
-# Download or get path to query structure & ligand
+
+## Parse single line input (line by line mode, 1 holo structure per line)
+# if no chains specified, consider all chains #TODO
+print('Parsing input')
+struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
+user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
+ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+#user_position = single_line_input.split()[3] #TODO
+
+# Parse chains
+if not user_chains == 'ALL':
+    user_chains = ''.join(user_chains)
+    user_chains = user_chains.split(',')
+    user_chains_bundle = '+'.join(user_chains)
+    # Convert chains to structchain combos
+    user_structchains = list()
+    for user_chain in user_chains:
+        user_structchain = struct.lower() + user_chain.upper()
+        user_structchains.append(user_structchain)
+
+# Parse ligands
+ligand_names = ''.join(ligand_names)
+ligand_names = ligand_names.split(',')
+ligand_names_bundle = '+'.join(ligand_names)
+
+# Print input info
+print('Input structure:\t', struct)
+if user_chains == 'ALL':
+    print('Input chains:\t\t', user_chains)
+else:
+    print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
+    print('Input structchains:\t', user_structchains)
+print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
+#print('PyMOL version: ', cmd.get_version())
+print('Done\n')
+
+
+## Download or get path to query structure & ligand
 try:
     struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
     print('Loading structure:\t', struct_path, '\n')
@@ -546,7 +547,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
     # Save results as session (.pse.gz) or multisave (.pdb)
     #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
-    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct + '_and_' + '_'.join(cmd.get_object_list('not ' + holo_struct))
+    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct
     filename_pse = filename_body + '.pse.gz'
     filename_multi = filename_body + '_multi.cif'    
     #apo_win_structs_filename = '_'.join(list(apo_win_structs))
