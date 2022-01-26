@@ -16,18 +16,28 @@ Creates 2 dictionaries:
 '''
 
 # Saving options
-save_r_spnum = 0    # save dict_R_SPnum dictionary to file (includes readable version w headers)
-save_plaindict = 0  # save dict_SIFTS dictionary to file (includes readable version w headers)
+save_r_spnum = 1    # save dict_R_SPnum dictionary to file (includes readable version w headers)
+save_plaindict = 1  # save dict_SIFTS dictionary to file (includes readable version w headers)
 
 import os
 import gzip
 import wget
 #from get_root_path import root_path
 
+def root_path():
+    npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
+    path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
+    if os.path.exists(path0):        memo = "Root path found >> " + path0
+    else:        memo = 'Error finding root path in working dir:' + npath        
+    return path0
+    print(memo)
+
 url1 = "http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz"
-   
+
+path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+path1 = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping   
 #path1 = root_path()  + '\\' + r'ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
-path1 = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
+#path1 = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
 filename = url1.split('/')[-1]
 
 print('Downloading SIFTS files from EBI ftp to local folder') # Print the description of the script as a message

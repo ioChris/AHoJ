@@ -22,15 +22,18 @@ import os
 import wget
 import time
 import argparse
+from os import walk
+#import sys
 #import csv
 
 
 ## User input
 multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
+single_line_input = '3fav all zn'
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
-single_line_input = '3fav all zn'
+
 #'2ZB1 all gk4'
 #'7l1f all F86'
 #'3CQV all hem,f86,mg,tpo,act' #hem
@@ -62,7 +65,7 @@ lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other kno
 water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_separate = 1       # 0/1: save each chain object in a separate file
+save_separate = 0       # 0/1: save each chain object in a separate file
 
 ## Internal variables
 job_id = '0007'
@@ -74,6 +77,9 @@ beyond_hetatm = 0        # 0/1: when enabled, does not limit holo ligand detecti
 nonstd_rsds_as_lig = 0   # 0/1: ignore/consider non-standard residues as ligands
 d_aa_as_lig = 0          # 0/1: ignore/consider D-amino acids as ligands
 
+# Pass settings to a string
+settings_param = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(ligand_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
+
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
 if water_as_ligand == 0:    nolig_resn.append('HOH')
@@ -84,42 +90,6 @@ if nonstd_rsds_as_lig == 0:    nolig_resn.extend(nonstd_rsds)
 d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
 if d_aa_as_lig == 0:    nolig_resn.extend(d_aminoacids)
 
-## Parse single line input (line by line mode, 1 holo structure per line)
-# if no chains specified, consider all chains #TODO
-print('Parsing input')
-
-
-struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
-user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
-ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
-#user_position = single_line_input.split()[3] #TODO
-
-# Parse chains
-if not user_chains == 'ALL':
-    user_chains = ''.join(user_chains)
-    user_chains = user_chains.split(',')
-    user_chains_bundle = '+'.join(user_chains)
-    # Convert chains to structchain combos
-    user_structchains = list()
-    for user_chain in user_chains:
-        user_structchain = struct.lower() + user_chain.upper()
-        user_structchains.append(user_structchain)
-
-# Parse ligands
-ligand_names = ''.join(ligand_names)
-ligand_names = ligand_names.split(',')
-ligand_names_bundle = '+'.join(ligand_names)
-
-# Print input info
-print('Input structure:\t', struct)
-if user_chains == 'ALL':
-    print('Input chains:\t\t', user_chains)
-else:
-    print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
-    print('Input structchains:\t', user_structchains)
-print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
-#print('PyMOL version: ', cmd.get_version())
-print('Done\n')
 
 
 ## Define functions
@@ -168,10 +138,11 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
         c = (a + b) // 2 # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
-
+#def save_query(name, path):
+    
+    
 
 # Set directories
-#path0 = root_path()
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
@@ -181,6 +152,7 @@ pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for
 pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')
 pathQRS = path_root + r'\queries'             # Directory/index with parameters of previsouly run jobs
 
+job_id = os.path.basename(os.path.normpath(pathRSLTS))
 
 # Create directories if they don't exist
 print('Setting up directories')
@@ -192,9 +164,10 @@ if os.path.isdir(pathLIGS):    print('Ligands directory:\t', pathLIGS)
 else:
     print('Creating ligands directory:\t', pathLIGS)
     os.makedirs(pathLIGS)
-if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
-else:
-    print('Results directory:\t', pathRSLTS)
+if save_separate == 1 or multisave == 1 or save_session == 1:
+    if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
+    else:
+        print('Results directory:\t', pathRSLTS)
     os.makedirs(pathRSLTS)
 if os.path.isdir(pathQRS):    print('Queries directory:\t', pathQRS)
 else:
@@ -218,7 +191,44 @@ with open (fileRSIFTS, 'r') as input2:
 dict_rSIFTS = ast.literal_eval(data)
 print('Done\n')
 
-# Download or get path to query structure & ligand
+
+## Parse single line input (line by line mode, 1 holo structure per line)
+# if no chains specified, consider all chains #TODO
+print('Parsing input')
+struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
+user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
+ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+#user_position = single_line_input.split()[3] #TODO
+
+# Parse chains
+if not user_chains == 'ALL':
+    user_chains = ''.join(user_chains)
+    user_chains = user_chains.split(',')
+    user_chains_bundle = '+'.join(user_chains)
+    # Convert chains to structchain combos
+    user_structchains = list()
+    for user_chain in user_chains:
+        user_structchain = struct.lower() + user_chain.upper()
+        user_structchains.append(user_structchain)
+
+# Parse ligands
+ligand_names = ''.join(ligand_names)
+ligand_names = ligand_names.split(',')
+ligand_names_bundle = '+'.join(ligand_names)
+
+# Print input info
+print('Input structure:\t', struct)
+if user_chains == 'ALL':
+    print('Input chains:\t\t', user_chains)
+else:
+    print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
+    print('Input structchains:\t', user_structchains)
+print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
+#print('PyMOL version: ', cmd.get_version())
+print('Done\n')
+
+
+## Download or get path to query structure & ligand
 try:
     struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
     print('Loading structure:\t', struct_path, '\n')
@@ -267,7 +277,17 @@ else:
 user_chains_bundle = '+'.join(user_chains)
 print('Input chains verified:\t', user_structchains, user_chains)
 if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_chains)
-    
+
+## Look up query in history #TODO
+user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+query_full = user_input_parameters + '_' + settings_param + '-' + job_id
+past_queries = dict()
+with open (pathQRS + '\\' + 'queries.txt', 'r') as in_q:
+    for line in in_q:
+        past_queries.setdefault(line.split('-')[0])
+if query_full in past_queries:
+    query
+
 # Get apo candidates from rSIFTS dict
 print('\nLooking for Apo candidates')
 dictApoCandidates = dict()
@@ -546,7 +566,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
     # Save results as session (.pse.gz) or multisave (.pdb)
     #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
-    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct + '_and_' + '_'.join(cmd.get_object_list('not ' + holo_struct))
+    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct
     filename_pse = filename_body + '.pse.gz'
     filename_multi = filename_body + '_multi.cif'    
     #apo_win_structs_filename = '_'.join(list(apo_win_structs))
@@ -563,28 +583,39 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
 print('')
 if len(apo_holo_dict) > 0:
-    
-    # Write dictionary to file
-    header = "#HEADER: {holo_chain: [apo_chain RMSD TM_score]\n"
-    filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
-    with open (filename_aln + '.txt', 'wt') as out1:
-        out1.write(header)
-        out1.write(str(apo_holo_dict))
+    if save_separate == 1 or multisave == 1 or save_session == 1:
         
-    # Write CSV file
-    filename_csv = pathRSLTS + '\\results.csv'
-    header = "#holo_chain,apo_chain,RMSD,TM_score\n"
-    with open (filename_csv, 'w') as csv_out:
-        csv_out.write(header)
-        for key in apo_holo_dict.keys():
-            csv_out.write("%s,%s,%s,%s\n"%(key,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2]))
-    
+        # Write dictionary to file
+        header = "#HEADER: {holo_chain: [apo_chain RMSD TM_score]\n"
+        filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
+        with open (filename_aln + '.txt', 'wt') as out1:
+            out1.write(header)
+            out1.write(str(apo_holo_dict))
+            
+        # Write CSV file
+        filename_csv = pathRSLTS + '\\results.csv'
+        header = "#holo_chain,apo_chain,RMSD,TM_score\n"
+        with open (filename_csv, 'w') as csv_out:
+            csv_out.write(header)
+            for key in apo_holo_dict.keys():
+                csv_out.write("%s,%s,%s,%s\n"%(key,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2]))
+        
     # Print dict
     print('Apo holo results: ')
     for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
 else:    print('No apo forms found')
 print('\nDone')
 
+
+print(query_full)
+# Save the name of the query, job_id as file content
+if job_id:
+    with open (pathQRS + '\\' + 'queries.txt', 'a') as out_q:
+        out_q.write(query_full + '\n')
+    
+
+
+    
 
 
 
