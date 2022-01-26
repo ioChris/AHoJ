@@ -22,13 +22,13 @@ import os
 import wget
 import time
 import argparse
-from os import walk
-#import sys
+#from os import walk
+import sys
 #import csv
 
 
 ## User input
-multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
 single_line_input = '3fav all zn'
 #single_line_input = '1a73 a zn,MG,HEM'
@@ -65,7 +65,7 @@ lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other kno
 water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_separate = 0       # 0/1: save each chain object in a separate file
+save_separate = 1       # 0/1: save each chain object in a separate file
 
 ## Internal variables
 job_id = '0007'
@@ -138,7 +138,18 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
         c = (a + b) // 2 # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
-#def save_query(name, path):
+# Find if there is a past job under the same query name, if yes, return the id of the job
+def search_query_history(new_query_name, past_queries_filename):
+    dict_q = dict()
+    try:
+        with open (pathQRS + '\\' + past_queries_filename, 'r') as in_q:
+            for line in in_q:
+                dict_q[line.split('-')[0]] = line.split('-')[1][:-1]
+        if new_query_name in dict_q.keys():            return dict_q[new_query_name]
+        else:            return 0
+    except:        return 0
+
+    
     
     
 
@@ -278,15 +289,38 @@ user_chains_bundle = '+'.join(user_chains)
 print('Input chains verified:\t', user_structchains, user_chains)
 if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_chains)
 
-## Look up query in history #TODO
+
+
+
+
+
+## Look up query in history, if found, return job path and end script
 user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
 query_full = user_input_parameters + '_' + settings_param + '-' + job_id
-past_queries = dict()
-with open (pathQRS + '\\' + 'queries.txt', 'r') as in_q:
-    for line in in_q:
-        past_queries.setdefault(line.split('-')[0])
-if query_full in past_queries:
-    query
+#print(query_full)
+print('\nLooking for the same job in history')
+old_same_job = search_query_history(query_full.split('-')[0], 'queries.txt')
+# print('Result of lookup:', old_same_job)
+if old_same_job == 0:
+    print('Same job not found, continuing process\n')
+else:
+    if os.path.isdir(os.path.dirname(pathRSLTS) + '\\' + old_same_job):
+        print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '\\' + old_same_job, '\n')
+        print('Printing alignments of old job')
+        with open (os.path.dirname(pathRSLTS) + '\\' + old_same_job + '\\' + 'results.csv', 'r') as old_in:
+            for line in old_in:
+                print(line[:-1])
+        print('\nDeleting new job folder', job_id)
+        if os.path.isdir(pathRSLTS):
+            os.rmdir(pathRSLTS)
+        print('Done\nExiting')
+        sys.exit(0)
+    print('Old job directory not found, continuing process\n')
+    
+    
+    
+
+
 
 # Get apo candidates from rSIFTS dict
 print('\nLooking for Apo candidates')
@@ -376,7 +410,7 @@ for apo_candidate_struct in apo_candidate_structs:
                 elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
                     resolution = float(line.split()[1]) # EM resolution
                     break
-            except Exception as ex: # getting weird but harmless exceptions
+            except:# Exception as ex: # getting weird but harmless exceptions
                 print('Problem parsing structure: ', apo_candidate_struct)#, ex)
         try:
             if NMR == 1 and method == 'SOLUTION NMR' or resolution <= res_threshold:
@@ -607,8 +641,7 @@ else:    print('No apo forms found')
 print('\nDone')
 
 
-print(query_full)
-# Save the name of the query, job_id as file content
+# Append the name of the query and the job_id in the queries.txt
 if job_id:
     with open (pathQRS + '\\' + 'queries.txt', 'a') as out_q:
         out_q.write(query_full + '\n')
