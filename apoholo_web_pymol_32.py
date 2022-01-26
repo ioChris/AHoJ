@@ -66,6 +66,7 @@ water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in com
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 save_separate = 1       # 0/1: save each chain object in a separate file
+look_in_archive = 1     # 0/1: search if the same query has been processed in the past (can give very fast results)
 
 ## Internal variables
 job_id = '0007'
@@ -298,24 +299,25 @@ if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_cha
 user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
 query_full = user_input_parameters + '_' + settings_param + '-' + job_id
 #print(query_full)
-print('\nLooking for the same job in history')
-old_same_job = search_query_history(query_full.split('-')[0], 'queries.txt')
-# print('Result of lookup:', old_same_job)
-if old_same_job == 0:
-    print('Same job not found, continuing process\n')
-else:
-    if os.path.isdir(os.path.dirname(pathRSLTS) + '\\' + old_same_job):
-        print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '\\' + old_same_job, '\n')
-        print('Printing alignments of old job')
-        with open (os.path.dirname(pathRSLTS) + '\\' + old_same_job + '\\' + 'results.csv', 'r') as old_in:
-            for line in old_in:
-                print(line[:-1])
-        print('\nDeleting new job folder', job_id)
-        if os.path.isdir(pathRSLTS):
-            os.rmdir(pathRSLTS)
-        print('Done\nExiting')
-        sys.exit(0)
-    print('Old job directory not found, continuing process\n')
+if look_in_archive == 1:
+    print('\nLooking for the same job in history')
+    old_same_job = search_query_history(query_full.split('-')[0], 'queries.txt')
+    # print('Result of lookup:', old_same_job)
+    if old_same_job == 0:
+        print('Same job not found, continuing process\n')
+    else:
+        if os.path.isdir(os.path.dirname(pathRSLTS) + '\\' + old_same_job):
+            print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '\\' + old_same_job, '\n')
+            print('Printing alignments of old job')
+            with open (os.path.dirname(pathRSLTS) + '\\' + old_same_job + '\\' + 'results.csv', 'r') as old_in:
+                for line in old_in:
+                    print(line[:-1])
+            print('\nDeleting new job folder', job_id)
+            if os.path.isdir(pathRSLTS):
+                os.rmdir(pathRSLTS)
+            print('Done\nExiting')
+            sys.exit(0)
+        print('Old job directory not found, continuing process\n')
     
     
     
