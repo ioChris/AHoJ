@@ -462,7 +462,7 @@ print('\nApo candidate chains satisfying user requirements (method/resolution) [
 if autodetect_lig == 1:    
     print('\n======No ligands specified: looking for all HETATMS=====\n')
     search_name = 'hetatm'
-    ligand_names_bundle = ' and not solvent'
+    ligand_names_bundle = ' and not solvent and not polymer'
 elif beyond_hetatm == 1:    search_name = 'resn '
 else:    search_name = 'hetatm and resn '
 
