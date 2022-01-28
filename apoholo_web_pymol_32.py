@@ -8,7 +8,8 @@ Created on Mon Dec 20 16:24:57 2021
 '''Given a holo structure, with specified chain(s) and ligand(s), find apo structures
     Use PyMOL parser
     '''
-#TODO add force-download mode in mmCIF download function
+#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
+#TODO adjust radius according to mol. weight of ligand
 
 import __main__
 __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
@@ -29,7 +30,8 @@ import sys
 ## User input
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
-single_line_input = '3fav zn'#' zn'
+single_line_input = '1a0u'
+#single_line_input = '3fav zn'#' zn'
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
 #'2ZB1 all gk4'
@@ -70,7 +72,7 @@ autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detect
 
 ## Internal variables
 #job_id = '0007'
-overlap_threshold = 0    # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
+overlap_threshold = 95    # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
@@ -145,8 +147,8 @@ def search_query_history(new_query_name, past_queries_filename):    # Find past 
         if new_query_name in dict_q.keys():            return dict_q[new_query_name]
         else:            return 0
     except:        return 0
-    
-    
+
+
 ## Set directories, get job_id
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
@@ -251,7 +253,7 @@ if user_chains == 'ALL':
 else:
     print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
     print('Input structchains:\t', user_structchains)
-if autodetect_lig == 1:     print('Input ligands:\t\tauto detect')
+if autodetect_lig == 1:     print('Input ligands:\t\tauto-detect')
 else:    print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
 #print('PyMOL version: ', cmd.get_version())
 print('Done\n')
