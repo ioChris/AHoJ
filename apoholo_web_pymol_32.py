@@ -8,6 +8,7 @@ Created on Mon Dec 20 16:24:57 2021
 '''Given a holo structure, with specified chain(s) and ligand(s), find apo structures
     Use PyMOL parser
     '''
+#TODO add force-download mode in mmCIF download function
 
 import __main__
 __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
@@ -28,12 +29,13 @@ import sys
 ## User input
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
-#single_line_input = '3fav all zn'
+single_line_input = '3fav zn'#' zn'
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
 #'2ZB1 all gk4'
 #'7l1f all F86'
-single_line_input ='3CQV'#' hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input ='3CQV'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+
 #single_line_input = '5gss all gsh' # slow
 
 # Create the parser, add arguments
@@ -64,7 +66,7 @@ save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zippe
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 save_separate = 1       # 0/1: save each chain object in a separate file
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
-autodetect_lig = 1      # experimental 0/1: if the user does not know the ligand, auto detection will consider all non-residue atoms as ligands
+autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 
 ## Internal variables
 #job_id = '0007'
@@ -202,7 +204,11 @@ if len(input_arguments) == 1 and autodetect_lig == 1:
     struct = single_line_input.split()[0].lower()
     user_chains = 'ALL'
     #ligand_names = 'autodetect'
-elif len(input_arguments) == 2 and autodetect_lig == 0: # this should trigger auto-detect as well
+elif len(input_arguments) == 1 and len(single_line_input) == 4:
+    autodetect_lig = 1 # automatically activate ligand auto-detection mode
+    struct = single_line_input.split()[0].lower()
+    user_chains = 'ALL'
+elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
     struct = single_line_input.split()[0].lower()
     user_chains = 'ALL'
     ligand_names = single_line_input.split()[1].upper()
@@ -215,7 +221,7 @@ elif len(input_arguments) == 3:
     user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
     ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
 else:
-    print('Wrong input format\nPlease use white space to separate input arguments\nInput examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN"')
+    print('Wrong input format\nPlease use a whitespace character to separate input arguments\nInput examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
     print('Exiting & deleting new results folder', job_id)
     if os.path.isdir(pathRSLTS):        os.rmdir(pathRSLTS)
     sys.exit(0)
@@ -460,7 +466,7 @@ print('\nApo candidate chains satisfying user requirements (method/resolution) [
 
 # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
 if autodetect_lig == 1:    
-    print('\n======No ligands specified: looking for all HETATMS=====\n')
+    print('\n======No ligands specified: auto-detecting ligands======\n')
     search_name = 'hetatm'
     ligand_names_bundle = ' and not solvent and not polymer'
 elif beyond_hetatm == 1:    search_name = 'resn '
