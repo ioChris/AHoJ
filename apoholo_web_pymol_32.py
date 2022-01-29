@@ -30,9 +30,9 @@ import sys
 ## User input
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
-single_line_input = '1a0u'
+#single_line_input = '1a0u'
 #single_line_input = '3fav zn'#' zn'
-#single_line_input = '1a73 a zn,MG,HEM'
+single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
 #'2ZB1 all gk4'
 #'7l1f all F86'
@@ -478,6 +478,7 @@ else:    search_name = 'hetatm and resn '
 
 holo_lig_positions = dict()
 apo_holo_dict = dict()
+apo_holo_dict_H = dict()
 for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     print('')
     holo_struct = holo_structchain[:4]
@@ -599,6 +600,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
             if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
         else:
+            apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(apo_lig_names))
             print('FAIL')   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
             
     
@@ -664,6 +666,18 @@ if len(apo_holo_dict) > 0:
                 for value in values:
                     #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
                     csv_out.write("%s,%s\n"%(key,','.join(value.split())))
+                    
+if len(apo_holo_dict_H) > 0:
+    # Write CSV holo file
+    filename_csv = pathRSLTS + '\\results_holo.csv'
+    header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
+    with open (filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        for key, values in apo_holo_dict_H.items():
+            for value in values:
+                #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
+                csv_out.write("%s,%s\n"%(key,','.join(value.split())))
+        
     # Print dict
     print('Apo holo results: ')
     for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
