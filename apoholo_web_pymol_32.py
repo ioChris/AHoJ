@@ -8,6 +8,8 @@ Created on Mon Dec 20 16:24:57 2021
 '''Given a holo structure, with specified chain(s) and ligand(s), find apo structures
     Use PyMOL parser
     '''
+#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
+#TODO adjust radius according to mol. weight of ligand
 
 import __main__
 __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
@@ -22,21 +24,20 @@ import os
 import wget
 import time
 import argparse
-from os import walk
-#import sys
-#import csv
+import sys
 
 
 ## User input
-multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
-single_line_input = '3fav all zn'
+single_line_input = '1a0u'
+#single_line_input = '3fav zn'#' zn'
 #single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
-
 #'2ZB1 all gk4'
 #'7l1f all F86'
-#'3CQV all hem,f86,mg,tpo,act' #hem
+#single_line_input ='3CQV'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+
 #single_line_input = '5gss all gsh' # slow
 
 # Create the parser, add arguments
@@ -63,13 +64,15 @@ res_threshold = 3       # resolution cut-off for apo chains (angstrom), conditio
 NMR = 1                 # 0/1: discard/include NMR structures
 lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
-save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
+save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_separate = 0       # 0/1: save each chain object in a separate file
+save_separate = 1       # 0/1: save each chain object in a separate file
+look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
+autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 
 ## Internal variables
-job_id = '0007'
-overlap_threshold = 95  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">="
+#job_id = '0007'
+overlap_threshold = 95    # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
 ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
 apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
@@ -125,32 +128,35 @@ def add_log(msg, log_file):     # Create error log
     with open(path_root + '\\' + log_file, 'a') as file:
         file.write(msg + '\n')
 script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
-log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
+log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
 def next_path(path_pattern):    # Create incrementing directory name for each job
     i = 1
-    # First do an exponential search
-    while os.path.exists(path_pattern % i):
+    while os.path.exists(path_pattern % i):     # First do an exponential search
         i = i * 2
-    # Result lies somewhere in the interval (i/2..i]
-    # We call this interval (a..b] and narrow it down until a + 1 = b
-    a, b = (i // 2, i)
+    a, b = (i // 2, i)  # Result lies somewhere in the interval (i/2..i]    # We call this interval (a..b] and narrow it down until a + 1 = b
     while a + 1 < b:
         c = (a + b) // 2 # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
-#def save_query(name, path):
-    
-    
+def search_query_history(new_query_name, past_queries_filename):    # Find past job under the same query name, if found, return that job id
+    dict_q = dict()
+    try:
+        with open (pathQRS + '\\' + past_queries_filename, 'r') as in_q:
+            for line in in_q:
+                dict_q[line.split('-')[0]] = line.split('-')[1][:-1]
+        if new_query_name in dict_q.keys():            return dict_q[new_query_name]
+        else:            return 0
+    except:        return 0
 
-# Set directories
+
+## Set directories, get job_id
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for fetch/download)
-#pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
-pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')
-pathQRS = path_root + r'\queries'             # Directory/index with parameters of previsouly run jobs
+pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
+pathQRS = path_root + r'\queries'             # Directory/index with parameters of previously run jobs
 
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
 
@@ -176,8 +182,7 @@ else:
 print('Done\n')
 
 # Declare and load SIFTS input file(s)
-#pathSIFTS = path0 + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
-fileSIFTSdict = pathSIFTS + '\\' + "pdb_chain_uniprot_dict.txt" # downloaded SIFTS file unedited
+fileSIFTSdict = pathSIFTS + '\\' + "pdb_chain_uniprot_dict.txt" # regular SIFTS file stripped
 fileRSIFTS = pathSIFTS + '\\' + "pdb_chain_uniprot_REVERSE_SPnum.txt" # pre-compiled rSIFTS file (reverse_SIFTS_SPnum.py)
 
 print('Loading SIFTS dictionary')   # Load normal SIFTS dictionary as dict_SIFTS
@@ -193,11 +198,35 @@ print('Done\n')
 
 
 ## Parse single line input (line by line mode, 1 holo structure per line)
-# if no chains specified, consider all chains #TODO
+# if no chains specified, consider all chains
 print('Parsing input')
-struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
-user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
-ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+input_arguments = single_line_input.split()
+
+if len(input_arguments) == 1 and autodetect_lig == 1:
+    struct = single_line_input.split()[0].lower()
+    user_chains = 'ALL'
+    #ligand_names = 'autodetect'
+elif len(input_arguments) == 1 and len(single_line_input) == 4:
+    autodetect_lig = 1 # automatically activate ligand auto-detection mode
+    struct = single_line_input.split()[0].lower()
+    user_chains = 'ALL'
+elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
+    struct = single_line_input.split()[0].lower()
+    user_chains = 'ALL'
+    ligand_names = single_line_input.split()[1].upper()
+elif len(input_arguments) == 2 and autodetect_lig == 1:
+    struct = single_line_input.split()[0].lower()
+    user_chains = single_line_input.split()[1].upper()
+    #ligand_names = single_line_input.split()[1].upper() # adjust case, ligands = upper
+elif len(input_arguments) == 3:
+    struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
+    user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
+    ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+else:
+    print('Wrong input format\nPlease use a whitespace character to separate input arguments\nInput examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
+    print('Exiting & deleting new results folder', job_id)
+    if os.path.isdir(pathRSLTS):        os.rmdir(pathRSLTS)
+    sys.exit(0)
 #user_position = single_line_input.split()[3] #TODO
 
 # Parse chains
@@ -212,9 +241,10 @@ if not user_chains == 'ALL':
         user_structchains.append(user_structchain)
 
 # Parse ligands
-ligand_names = ''.join(ligand_names)
-ligand_names = ligand_names.split(',')
-ligand_names_bundle = '+'.join(ligand_names)
+if autodetect_lig == 0:
+    ligand_names = ''.join(ligand_names)
+    ligand_names = ligand_names.split(',')
+    ligand_names_bundle = '+'.join(ligand_names)
 
 # Print input info
 print('Input structure:\t', struct)
@@ -223,7 +253,8 @@ if user_chains == 'ALL':
 else:
     print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
     print('Input structchains:\t', user_structchains)
-print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
+if autodetect_lig == 1:     print('Input ligands:\t\tauto-detect')
+else:    print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
 #print('PyMOL version: ', cmd.get_version())
 print('Done\n')
 
@@ -234,19 +265,20 @@ try:
     print('Loading structure:\t', struct_path, '\n')
 except:
     print('Error downloading structure:\t', struct, '\n')
-print('Verifying ligands:\t', ligand_names)
-for lig_id in ligand_names:
-    try:
-        lig_path = download_mmCIF_lig(lig_id, pathLIGS)
-        with open (lig_path, 'r') as in_lig:
-            for line in in_lig:
-                if line.startswith('_chem_comp.name'):
-                    lig_name = line.split()[1:]
-                if line.startswith('_chem_comp.pdbx_synonyms'):
-                    lig_syn = line.split()[1:]
-                    print(lig_id, ' '.join(lig_name), ' '.join(lig_syn))
-                    break
-    except:        print('Error verifying ligand:\t', lig_id)
+if autodetect_lig == 0:
+    print('Verifying ligands:\t', ligand_names)
+    for lig_id in ligand_names:
+        try:
+            lig_path = download_mmCIF_lig(lig_id, pathLIGS)
+            with open (lig_path, 'r') as in_lig:
+                for line in in_lig:
+                    if line.startswith('_chem_comp.name'):
+                        lig_name = line.split()[1:]
+                    if line.startswith('_chem_comp.pdbx_synonyms'):
+                        lig_syn = line.split()[1:]
+                        print(lig_id, ' '.join(lig_name), ' '.join(lig_syn))
+                        break
+        except:        print('Error verifying ligand:\t', lig_id)
 
 
 
@@ -278,21 +310,47 @@ user_chains_bundle = '+'.join(user_chains)
 print('Input chains verified:\t', user_structchains, user_chains)
 if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_chains)
 
-## Look up query in history #TODO
-user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+
+
+
+
+
+## Look up query in history, if found, return job path and end script
+if autodetect_lig == 0:    user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+else:    user_input_parameters = struct + '_' + ','.join(user_chains) + '_autodetect_lig'
 query_full = user_input_parameters + '_' + settings_param + '-' + job_id
-past_queries = dict()
-with open (pathQRS + '\\' + 'queries.txt', 'r') as in_q:
-    for line in in_q:
-        past_queries.setdefault(line.split('-')[0])
-if query_full in past_queries:
-    query
+#print(query_full)
+if look_in_archive == 1:
+    print('\nLooking for the same job in history')
+    old_same_job = search_query_history(query_full.split('-')[0], 'queries.txt')
+    # print('Result of lookup:', old_same_job)
+    if old_same_job == 0:
+        print('Same job not found, continuing process\n')
+    else:
+        if os.path.isdir(os.path.dirname(pathRSLTS) + '\\' + old_same_job):
+            print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '\\' + old_same_job, '\n')
+            print('Printing alignments of old job')
+            with open (os.path.dirname(pathRSLTS) + '\\' + old_same_job + '\\' + 'results.csv', 'r') as old_in:
+                for line in old_in:
+                    print(line[:-1])
+            print('\nDeleting new job folder', job_id)
+            if os.path.isdir(pathRSLTS):
+                os.rmdir(pathRSLTS)
+            print('Done\nExiting')
+            sys.exit(0)
+        print('Old job directory not found, continuing process\n')
+    
+    
+    
+
+
 
 # Get apo candidates from rSIFTS dict
 print('\nLooking for Apo candidates')
 dictApoCandidates = dict()
-positive_overlap = dict()
-negative_overlap = dict()
+#positive_overlap = dict()
+#negative_overlap = dict()
+uniprot_overlap = dict()
 
 for user_structchain in user_structchains:
     for key, values in dict_rSIFTS.items(): # iterate over reverse SIFTS chains/uniprot IDs
@@ -319,14 +377,12 @@ for user_structchain in user_structchains:
                         percent = round(percent, 1)     # round the float
                                                 
                         # Only consider positive overlap (negative overlap may occur cause of numbering)
-                        if percent > 0:
-                            if percent >= overlap_threshold:
-                                dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
-                                positive_overlap.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
-                            else:
-                                positive_overlap.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
-                        else:
-                            negative_overlap.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
+                        #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
+                        uniprot_overlap.setdefault(candidate.split()[0], []).append(i.split()[0] + ' ' + str(percent))
+                        if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0:
+                            dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
+                        
+
 #print('Candidates with positive overlap: ', positive_overlap)
 #print('Candidates with negative overlap: ', negative_overlap)
 print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ', sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
@@ -376,7 +432,7 @@ for apo_candidate_struct in apo_candidate_structs:
                 elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
                     resolution = float(line.split()[1]) # EM resolution
                     break
-            except Exception as ex: # getting weird but harmless exceptions
+            except:# Exception as ex: # getting weird but harmless exceptions
                 print('Problem parsing structure: ', apo_candidate_struct)#, ex)
         try:
             if NMR == 1 and method == 'SOLUTION NMR' or resolution <= res_threshold:
@@ -411,8 +467,14 @@ print('\nApo candidate chains satisfying user requirements (method/resolution) [
 
 
 # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
-if beyond_hetatm == 1:    search_name = 'resn '
+if autodetect_lig == 1:    
+    print('\n======No ligands specified: auto-detecting ligands======\n')
+    search_name = 'hetatm'
+    ligand_names_bundle = ' and not solvent and not polymer'
+elif beyond_hetatm == 1:    search_name = 'resn '
 else:    search_name = 'hetatm and resn '
+
+    
 
 holo_lig_positions = dict()
 apo_holo_dict = dict()
@@ -436,6 +498,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
     # Find & name specified ligands
     #ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
+    
     ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
     if ligands_selection == 0:
         print('No ligands found in author chain, trying PDB chain')
@@ -468,7 +531,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         ligand_ = ligand.replace(' ', '_')
         holo_lig_names.add(resn)
         s1 = cmd.select('holo_' + ligand_, 'model ' + holo_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn)
-
+    if autodetect_lig == 1:        ligand_names = holo_lig_names.copy()
     
     # Start Apo chain loop. Align and mark atom selections around holo ligand
     for apo_structchain in apo_structchains:
@@ -532,7 +595,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         # Print verdict for chain & save it as a separate object/file
         print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
         if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
-            apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
+            apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
             print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
             if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
         else:
@@ -586,7 +649,7 @@ if len(apo_holo_dict) > 0:
     if save_separate == 1 or multisave == 1 or save_session == 1:
         
         # Write dictionary to file
-        header = "#HEADER: {holo_chain: [apo_chain RMSD TM_score]\n"
+        header = "#HEADER: {holo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
         filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
         with open (filename_aln + '.txt', 'wt') as out1:
             out1.write(header)
@@ -594,12 +657,13 @@ if len(apo_holo_dict) > 0:
             
         # Write CSV file
         filename_csv = pathRSLTS + '\\results.csv'
-        header = "#holo_chain,apo_chain,RMSD,TM_score\n"
+        header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
         with open (filename_csv, 'w') as csv_out:
             csv_out.write(header)
-            for key in apo_holo_dict.keys():
-                csv_out.write("%s,%s,%s,%s\n"%(key,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2]))
-        
+            for key, values in apo_holo_dict.items():
+                for value in values:
+                    #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
+                    csv_out.write("%s,%s\n"%(key,','.join(value.split())))
     # Print dict
     print('Apo holo results: ')
     for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
@@ -607,8 +671,7 @@ else:    print('No apo forms found')
 print('\nDone')
 
 
-print(query_full)
-# Save the name of the query, job_id as file content
+# Append the name of the query and the job_id in the queries.txt
 if job_id:
     with open (pathQRS + '\\' + 'queries.txt', 'a') as out_q:
         out_q.write(query_full + '\n')
