@@ -32,11 +32,12 @@ import sys
 
 #single_line_input = '1a0u'
 #single_line_input = '3fav zn'#' zn'
-single_line_input = '1a73 a zn,MG,HEM'
+#single_line_input = '1a73 a zn,MG,HEM'
 #single_line_input = '5ok3 all tpo'
 #'2ZB1 all gk4'
 #'7l1f all F86'
-#single_line_input ='3CQV'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+single_line_input ='3CQV hem,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input = '2v0v a' # this is a fully apo structure
 
 #single_line_input = '5gss all gsh' # slow
 
@@ -51,7 +52,7 @@ parser.add_argument('--save_session', type=int, default=1, help='0/1: save each 
 parser.add_argument('--multisave', type=int, default=0, help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
 # Internal/advanced arguments
 parser.add_argument('--overlap_threshold', type=int, default=100, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
-parser.add_argument('--ligand_scan_radius', type=str, default='5', help='angstrom radius to look around holo ligand(s) superposition')
+parser.add_argument('--lig_scan_radius', type=str, default='5', help='angstrom radius to look around holo ligand(s) superposition')
 parser.add_argument('--apo_chain_limit', type=int, default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
 parser.add_argument('--min_tmscore', type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 parser.add_argument('--beyond_hetatm', type=int, default=0, help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
@@ -60,28 +61,31 @@ args = parser.parse_args()
 
 
 ## User options
-res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
+res_threshold = 2.45       # resolution cut-off for apo chains (angstrom), condition is '<='
 NMR = 1                 # 0/1: discard/include NMR structures
-lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
-water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
+xray_only = 0           # 0/1: only consider X-ray structures
+lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
+autodetect_lig = 1      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
+
 save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 save_separate = 1       # 0/1: save each chain object in a separate file
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
-autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 
-## Internal variables
+## Internal/advanced variables
 #job_id = '0007'
-overlap_threshold = 95    # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
-ligand_scan_radius = '5' # angstrom radius to look around holo ligand(s) superposition
-apo_chain_limit = 999    # limit number of apo chains to consider when aligning (for fast test runs)
-min_tmscore = 0.5        # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
-beyond_hetatm = 0        # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
-nonstd_rsds_as_lig = 0   # 0/1: ignore/consider non-standard residues as ligands
-d_aa_as_lig = 0          # 0/1: ignore/consider D-amino acids as ligands
+overlap_threshold = 95  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
+lig_scan_radius = '5'   # angstrom radius to look around holo ligand(s)' superposition
+apo_chain_limit = 999   # limit number of apo chains to consider when aligning (for fast test runs)
+min_tmscore = 0.5       # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
+
+water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
+beyond_hetatm = 0       # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
+nonstd_rsds_as_lig = 0  # 0/1: ignore/consider non-standard residues as ligands
+d_aa_as_lig = 0         # 0/1: ignore/consider D-amino acids as ligands
 
 # Pass settings to a string
-settings_param = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(ligand_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
+settings_param = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
@@ -127,8 +131,6 @@ def add_log(msg, log_file):     # Create error log
     msg = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + '\t' + msg
     with open(path_root + '\\' + log_file, 'a') as file:
         file.write(msg + '\n')
-script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
-log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
 def next_path(path_pattern):    # Create incrementing directory name for each job
     i = 1
     while os.path.exists(path_pattern % i):     # First do an exponential search
@@ -138,7 +140,7 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
         c = (a + b) // 2 # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
-def search_query_history(new_query_name, past_queries_filename):    # Find past job under the same query name, if found, return that job id
+def search_query_history(new_query_name, past_queries_filename):    # Find past job under the same query name, if found, return the job id
     dict_q = dict()
     try:
         with open (pathQRS + '\\' + past_queries_filename, 'r') as in_q:
@@ -158,7 +160,11 @@ pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for
 pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
 pathQRS = path_root + r'\queries'             # Directory/index with parameters of previously run jobs
 
+# Additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
+script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
+log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
+#print('PyMOL version: ', cmd.get_version())
 
 # Create directories if they don't exist
 print('Setting up directories')
@@ -255,7 +261,6 @@ else:
     print('Input structchains:\t', user_structchains)
 if autodetect_lig == 1:     print('Input ligands:\t\tauto-detect')
 else:    print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
-#print('PyMOL version: ', cmd.get_version())
 print('Done\n')
 
 
@@ -435,14 +440,14 @@ for apo_candidate_struct in apo_candidate_structs:
             except:# Exception as ex: # getting weird but harmless exceptions
                 print('Problem parsing structure: ', apo_candidate_struct)#, ex)
         try:
-            if NMR == 1 and method == 'SOLUTION NMR' or resolution <= res_threshold:
-                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS') # Xray/EM
+            if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
+                print(apo_candidate_struct, ' resolution:\t', round(resolution, 3), '\t', method, '\tPASS') # Xray/EM
             else:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL') # Xray/EM
+                print(apo_candidate_struct, ' resolution:\t', round(resolution, 3), '\t', method, '\tFAIL') # Xray/EM
         except:
             discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-            print(apo_candidate_struct, ' resolution:\t', resolution, '\t\t', method, '\t\tFAIL') # NMR
+            print(apo_candidate_struct, ' resolution:\t', round(resolution, 3), '\t\t', method, '\t\tFAIL') # NMR
 print('Done\n')
 
 
@@ -571,8 +576,8 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
 
             # Around selection [this is looking for ligands in every (valid) chain alignment, not just the standard locus of holo ligand(s)]
             ligand_ = ligand.replace(' ', '_') #remove spaces for selection name
-            #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + ligand_scan_radius + ' of holo_' + ligand_)
-            s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + ligand_scan_radius + ' of holo_' + ligand_)
+            #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
+            s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
         
             # Put selected atoms in a list, check their name identifiers to see if holo ligand name is present
             myspace_a = {'a_positions': []}
@@ -600,7 +605,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
             if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
         else:
-            apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(apo_lig_names))
+            apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
             print('FAIL')   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
             
     
@@ -667,6 +672,13 @@ if len(apo_holo_dict) > 0:
                     #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
                     csv_out.write("%s,%s\n"%(key,','.join(value.split())))
                     
+    # Print apo dict
+    print('Apo results: ')
+    for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
+else:    print('No apo forms found')
+#print('\nDone')
+
+# Print holo results
 if len(apo_holo_dict_H) > 0:
     # Write CSV holo file
     filename_csv = pathRSLTS + '\\results_holo.csv'
@@ -678,19 +690,19 @@ if len(apo_holo_dict_H) > 0:
                 #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
                 csv_out.write("%s,%s\n"%(key,','.join(value.split())))
         
-    # Print dict
-    print('Apo holo results: ')
-    for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
-else:    print('No apo forms found')
-print('\nDone')
+    # Print holo dict
+    print('\nHolo results: ')
+    for key in apo_holo_dict_H: print(key, apo_holo_dict_H.get(key))
+else:    print('No holo forms found')
 
 
 # Append the name of the query and the job_id in the queries.txt
 if job_id:
+    print('\nSaving query:', query_full)
     with open (pathQRS + '\\' + 'queries.txt', 'a') as out_q:
         out_q.write(query_full + '\n')
     
-
+print('\nDone')
 
     
 
