@@ -36,7 +36,7 @@ import sys
 #single_line_input = '5ok3 all tpo'
 #'2ZB1 all gk4'
 #'7l1f all F86'
-#single_line_input ='3CQV hem,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
 single_line_input = '2v0v a' # this is a fully apo structure
 
 #single_line_input = '5gss all gsh' # slow
@@ -64,13 +64,13 @@ args = parser.parse_args()
 res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
 NMR = 1                 # 0/1: discard/include NMR structures
 xray_only = 0           # 0/1: only consider X-ray structures
-lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
-autodetect_lig = 1      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
-reverse_mode = 1        # 0/1: look for holo structures from apo
+lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
+autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
+reverse_search = 1      # 0/1: look for holo structures from apo
 
+save_separate = 1       # 0/1: save each chain object in a separate file
 save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_separate = 1       # 0/1: save each chain object in a separate file
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
 
 ## Internal/advanced/experimental variables
@@ -260,7 +260,7 @@ if user_chains == 'ALL':
 else:
     print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
     print('Input structchains:\t', user_structchains)
-if autodetect_lig == 1:     print('Input ligands:\t\tauto-detect')
+if autodetect_lig == 1:     print('Input ligands:\t\t\tauto-detect')
 else:    print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
 print('Done\n')
 
@@ -352,10 +352,8 @@ if look_in_archive == 1:
 
 
 # Get apo candidates from rSIFTS dict
-print('\nLooking for Apo candidates')
+print('\nLooking for apo/holo candidates')
 dictApoCandidates = dict()
-#positive_overlap = dict()
-#negative_overlap = dict()
 uniprot_overlap = dict()
 
 for user_structchain in user_structchains:
@@ -387,16 +385,13 @@ for user_structchain in user_structchains:
                         uniprot_overlap.setdefault(candidate.split()[0], []).append(i.split()[0] + ' ' + str(percent))
                         if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0:
                             dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
-                        
-
-#print('Candidates with positive overlap: ', positive_overlap)
-#print('Candidates with negative overlap: ', negative_overlap)
+                            
 print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ', sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
 print('')
 
 
 
-## Apo candidates evaluation
+## Apo/holo candidate evaluation
 
 # Put all structures for downloading into set
 apo_candidate_structs = set()
@@ -473,6 +468,8 @@ print('\nApo candidate chains satisfying user requirements (method/resolution) [
 
 
 # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
+
+# apply user parameters
 if autodetect_lig == 1:    
     print('\n======No ligands specified: auto-detecting ligands======\n')
     search_name = 'hetatm'
@@ -500,21 +497,23 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         cmd.load(holo_struct_path)
     
     cmd.select(holo_struct + holo_chain, holo_struct + '& chain ' + holo_chain) 
-    if len(dictApoCandidates_1) > 0 and save_separate == 1 and not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):
-        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct)
     
     # Find & name specified ligands
-    #ligands_selection = cmd.select('query_ligands', 'hetatm and resn ' + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
-    
     ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
     if ligands_selection == 0:
         print('No ligands found in author chain, trying PDB chain')
         ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and segi ' + holo_chain)
-        if ligands_selection == 0 and reverse_mode == 0:
+        if ligands_selection == 0 and reverse_search == 0:
             print('No ligands found in PDB chain, skipping: ', holo_structchain)
             continue
-        elif ligands_selection == 0 and reverse_mode == 1:
-            print('Initiating reverse mode, look for holo from apo')
+        elif ligands_selection == 0 and reverse_search == 1:
+            print('No ligands found in PDB chain\nActivating reverse mode, considering input as apo, looking for holo')
+            reverse_mode = True
+    
+    # start reverse mode, where query (holo) is apo and there is no ligand. Find identical structures with/wo ligands
+    #if reverse_mode:
+        
+    
     
     ligands_atoms = cmd.identify('query_ligands', mode=0)
     print('Query ligand selection atoms:\t', ligands_atoms, holo_chain)    
@@ -532,7 +531,6 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
     # Name holo ligands as PyMOL selections. Put real (detected) ligand names into set
     holo_lig_names = set()
-    #holo_lig_names.update(ligand_names)
     for ligand in holo_lig_positions[holo_structchain]:
         resi = ligand.split()[0]
         chain = ligand.split()[1]
@@ -541,6 +539,8 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         holo_lig_names.add(resn)
         s1 = cmd.select('holo_' + ligand_, 'model ' + holo_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn)
     if autodetect_lig == 1:        ligand_names = holo_lig_names.copy()
+        
+    
     
     # Start Apo chain loop. Align and mark atom selections around holo ligand
     for apo_structchain in apo_structchains:
@@ -596,17 +596,20 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             # Assess apo ligands
             for i in apo_lig_names:
                 if i in holo_lig_names or i in ligand_names:    # check in both lists (detected holo ligs + query ligs)
-                    found_ligands.add(i)    #break #print('Holo ligand found in Apo: ', apo_structchain, i)
+                    found_ligands.add(i)    #print('Holo ligand found in Apo: ', apo_structchain, i)
                 elif i not in nolig_resn:
                     found_ligands_xtra.add(i)
                     
         
-        # Print verdict for chain & save it as a separate object/file
+        # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
         print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
         if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
             apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
             print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
-            if save_separate ==1:                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
+            if save_separate ==1:                
+                cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
+                if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):
+                    cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct)
         else:
             apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
             print('FAIL')   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
@@ -631,30 +634,23 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         if cmd.count_atoms(i) == 0:
             cmd.delete(i)
     
-    cmd.disable('all') # toggles off the display of all objects
+    cmd.disable('all') # toggle off the display of all objects
     cmd.enable(holo_struct)
     cmd.deselect()
     cmd.reset()
     cmd.center('query_ligands')
     
-    # Save results as session (.pse.gz) or multisave (.pdb)
-    #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
-    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct
+    # Save results as session (.pse.gz) or multisave (.cif)
+    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
     filename_pse = filename_body + '.pse.gz'
-    filename_multi = filename_body + '_multi.cif'    
-    #apo_win_structs_filename = '_'.join(list(apo_win_structs))
-    #filename_pse = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + apo_win_structs_filename + '.pse.gz'
+    filename_multi = filename_body + '_multi.cif'
 
-    #if len(cmd.get_object_list('all')) > 1:
-    if len(dictApoCandidates_1) > 0:
-        #if save_separate ==1:            
-            #cmd.save(pathRSLTS + '\\holo_' + holo_structchain + '.pdb.gz', holo_structchain)
-            #if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz'):                cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.pdb.gz', holo_struct)
+    if len(apo_holo_dict) > 0:    #len(dictApoCandidates_1) > 0:    #if len(cmd.get_object_list('all')) > 1:
         if save_session == 1:            cmd.save(filename_pse)
         if multisave == 1:            cmd.multisave(filename_multi, append=1)
-        
-    
 print('')
+
+# Save output
 if len(apo_holo_dict) > 0:
     if save_separate == 1 or multisave == 1 or save_session == 1:
         
