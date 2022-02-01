@@ -36,9 +36,9 @@ import sys
 #single_line_input = '5ok3 all tpo'
 #'2ZB1 all gk4'
 #'7l1f all F86'
-#single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
 #single_line_input = '2v0v a' # this is a fully apo structure
-single_line_input = '2v7c a'
+#single_line_input = '2v7c a'
 #single_line_input = '5gss all gsh' # slow
 
 # Create the parser, add arguments
@@ -66,7 +66,7 @@ NMR = 1                 # 0/1: discard/include NMR structures
 xray_only = 1           # 0/1: only consider X-ray structures
 lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
-reverse_search = 1      # 0/1: look for holo structures from apo
+reverse_search = 0      # 0/1: look for holo structures from apo
 
 save_separate = 1       # 0/1: save each chain object in a separate file
 save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
@@ -475,7 +475,7 @@ print('\nApo candidate chains satisfying user requirements (method/resolution) [
 
 # query ligand detection parameters
 if autodetect_lig == 1:    
-    print('\n======No ligands specified: auto-detecting ligands======\n')
+    print('\n====== No ligands specified: auto-detecting ligands ======\n')
     search_name = 'hetatm'
     ligand_names_bundle = ' and not solvent and not polymer'
 elif beyond_hetatm == 1:    search_name = 'resn '
@@ -511,7 +511,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             print('No ligands found in PDB chain, skipping: ', holo_structchain)
             continue
         elif ligands_selection == 0 and reverse_search == 1:
-            print('No ligands found in PDB chain\n======Reverse mode active, considering input as apo, looking for holo======\n')
+            print('No ligands found in PDB chain\n====== Reverse mode active, considering input as apo, looking for holo ======\n')
             reverse_mode = True
             cmd.delete('query_ligands')
     
@@ -734,6 +734,7 @@ if len(apo_holo_dict_H) > 0:
     for key in apo_holo_dict_H: print(key, apo_holo_dict_H.get(key))
 else:    print('No holo forms found')
 
+if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:    print('\nConsider reversing the search')
 
 # Append the name of the query and the job_id in the queries.txt
 if job_id:
