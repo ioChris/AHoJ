@@ -38,7 +38,7 @@ import sys
 #'7l1f all F86'
 #single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
 #single_line_input = '2v0v a' # this is a fully apo structure
-single_line_input = '2v7c all'
+single_line_input = '2v7c a'
 #single_line_input = '5gss all gsh' # slow
 
 # Create the parser, add arguments
@@ -63,7 +63,7 @@ args = parser.parse_args()
 ## User options
 res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
 NMR = 1                 # 0/1: discard/include NMR structures
-xray_only = 0           # 0/1: only consider X-ray structures
+xray_only = 1           # 0/1: only consider X-ray structures
 lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 reverse_search = 1      # 0/1: look for holo structures from apo
@@ -74,7 +74,7 @@ multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no ann
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
 
 ## Internal/advanced/experimental variables
-overlap_threshold = 95  # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
+overlap_threshold = 0   # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
 lig_scan_radius = '5'   # angstrom radius to look around holo ligand(s)' superposition
 apo_chain_limit = 999   # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5       # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
@@ -84,12 +84,13 @@ beyond_hetatm = 0       # 0/1: when enabled, does not limit holo ligand detectio
 nonstd_rsds_as_lig = 0  # 0/1: ignore/consider non-standard residues as ligands
 d_aa_as_lig = 0         # 0/1: ignore/consider D-amino acids as ligands
 
-# Adjust input
+# Adjust input, resolve conflicts
 if reverse_search == 1:    autodetect_lig = 1
 reverse_mode = False
 
 # Pass settings to a string
 settings_param = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
+
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
@@ -580,7 +581,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             for ligand in holo_lig_positions[holo_structchain]:
     
                 # Around selection [looks for ligands in every (valid) chain alignment, not just the standard locus of holo ligand(s)]
-                ligand_ = ligand.replace(' ', '_') #remove spaces for selection name
+                ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
                 #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
                 s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
             
@@ -589,7 +590,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 for a_atom in cmd.identify(apo_structchain + '_arnd_' + ligand_):
                     cmd.iterate('id ' + str(a_atom), 'a_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_a)
                 
-                # Transfer previous dict[key] values (just resn) into set (for easier handling)
+                # Transfer dict[key] values (just resn) into set (for easier handling)
                 apo_lig_names = set()
                 for a_position in myspace_a['a_positions']:
                     a_atom_lig_name = a_position.split()[2]
@@ -601,6 +602,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                         found_ligands.add(i)    #print('Holo ligand found in Apo: ', apo_structchain, i)
                     elif i not in nolig_resn:
                         found_ligands_xtra.add(i)
+        
         else:  # reverse mode
             found_ligands_r = set()
             # Find ligands in holo candidate
@@ -608,23 +610,26 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             myspace_r = {'r_positions': []}
             for r_atom in cmd.identify('holo_ligands_' + apo_structchain, mode=0):
                 cmd.iterate('id ' + str(r_atom), 'r_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_r)
-            # Transfer previous dict[key] values (just resn) into set (for easier handling)
+            # Transfer dict[key] values (just resn) into set (for easier handling)
             for r_position in myspace_r['r_positions']:
-                found_ligands_r.add(r_position.split()[2])
-        
+                r_atom_lig_name = r_position.split()[2]
+                if r_atom_lig_name not in nolig_resn: # exclude non ligands
+                    found_ligands_r.add(r_atom_lig_name)
+
+
+        # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
         if not reverse_mode:
-            # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
             print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
             if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                 apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
-                print('PASS')   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
-                if save_separate ==1:                
+                print('APO') #PASS   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
+                if save_separate ==1:
                     cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
                     if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):
                         cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct)
             else:
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
-                print('FAIL')   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
+                print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
         
         else: # reverse mode
             # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
@@ -637,7 +642,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 print('APO')
             
     
-    # Clean objects/selections
+    # Clean objects/selections in session & save
     apo_win_structs = set()
     for key, values in apo_holo_dict.items():
         for value in values:
@@ -653,65 +658,75 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             cmd.delete(i)
     all_selections = cmd.get_names('all')
     for i in all_selections:    # Delete 0 atom selections
-        if cmd.count_atoms(i) == 0:
-            cmd.delete(i)
-    
+        if cmd.count_atoms(i) == 0:            cmd.delete(i)
     cmd.disable('all') # toggle off the display of all objects
     cmd.enable(holo_struct)
     cmd.deselect()
     cmd.reset()
-    try:
-        cmd.center('query_ligands')
-    except:
-        cmd.center(holo_structchain)
-    
+    try:        cmd.center('query_ligands')
+    except:        cmd.center(holo_structchain)
+
     # Save results as session (.pse.gz) or multisave (.cif)
     filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
     filename_pse = filename_body + '.pse.gz'
     filename_multi = filename_body + '_multi.cif'
-
     if len(apo_holo_dict) > 0:    #len(dictApoCandidates_1) > 0:    #if len(cmd.get_object_list('all')) > 1:
         if save_session == 1:            cmd.save(filename_pse)
         if multisave == 1:            cmd.multisave(filename_multi, append=1)
 print('')
 
-# Save output
-if len(apo_holo_dict) > 0:
-    if save_separate == 1 or multisave == 1 or save_session == 1:
+
+## Save results output
+#if reverse_mode:    query_chain = 'apo_chain'
+#else:   query_chain = holo_chain
+
+# apo results
+if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         
-        # Write dictionary to file
-        header = "#HEADER: {holo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
-        filename_aln = pathRSLTS + '\\aln_' + '_'.join(list(apo_holo_dict.keys()))
-        with open (filename_aln + '.txt', 'wt') as out1:
-            out1.write(header)
-            out1.write(str(apo_holo_dict))
-            
-        # Write CSV file
-        filename_csv = pathRSLTS + '\\results.csv'
-        header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
-        with open (filename_csv, 'w') as csv_out:
-            csv_out.write(header)
-            for key, values in apo_holo_dict.items():
-                for value in values:
-                    #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
-                    csv_out.write("%s,%s\n"%(key,','.join(value.split())))
+    # Write dictionary to file
+    filename_aln = pathRSLTS + '\\apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
+    if reverse_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
+    else:        header = "#HEADER: {holo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
+    with open (filename_aln + '.txt', 'wt') as out1:
+        out1.write(header)
+        out1.write(str(apo_holo_dict))
+        
+    # Write CSV file
+    filename_csv = pathRSLTS + '\\results.csv'
+    if reverse_mode:    header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
+    else:        header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
+    #header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
+    with open (filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        for key, values in apo_holo_dict.items():
+            for value in values:
+                csv_out.write("%s,%s\n"%(key,','.join(value.split())))
                     
     # Print apo dict
     print('Apo results: ')
     for key in apo_holo_dict: print(key, apo_holo_dict.get(key))
 else:    print('No apo forms found')
-#print('\nDone')
 
-# Print holo results
+
+# holo results
 if len(apo_holo_dict_H) > 0:
+    
+    # Write dictionary to file
+    filename_aln = pathRSLTS + '\\holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
+    if reverse_mode:    header = "#HEADER: {apo_chain: [holo_chain %UniProt_overlap RMSD TM_score]\n"
+    else:   header = "#HEADER: {holo_chain: [holo_chain %UniProt_overlap RMSD TM_score]\n"
+    with open (filename_aln + '.txt', 'wt') as out1:
+        out1.write(header)
+        out1.write(str(apo_holo_dict_H))
+    
     # Write CSV holo file
     filename_csv = pathRSLTS + '\\results_holo.csv'
-    header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
+    if reverse_mode:    header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
+    else:   header = "#holo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     with open (filename_csv, 'w') as csv_out:
         csv_out.write(header)
         for key, values in apo_holo_dict_H.items():
             for value in values:
-                #csv_out.write("%s,%s,%s,%s,%s,%s\n"%(key,value,apo_holo_dict[key][0].split()[0],apo_holo_dict[key][0].split()[1],apo_holo_dict[key][0].split()[2],apo_holo_dict[key][0].split()[3]))
                 csv_out.write("%s,%s\n"%(key,','.join(value.split())))
         
     # Print holo dict
