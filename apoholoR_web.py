@@ -38,16 +38,17 @@ import sys
 ## User input
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
-#single_line_input = '1a0u'
+#single_line_input = '1a0u' #hem, big search
 #single_line_input = '3fav zn'#' zn'
-#single_line_input = '1a73 a zn,MG,HEM'
-#single_line_input = '5ok3 all tpo'
+#single_line_input = '1a73 a zn'#',MG,HEM'
+#single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
 #'2ZB1 all gk4'
 #'7l1f all F86'
-single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
 #single_line_input = '2v0v a' # this is a fully apo structure
 #single_line_input = '2v7c a'
 #single_line_input = '5gss all gsh' # slow
+single_line_input ='1jq8 so4'
 
 # Create the parser, add arguments
 parser = argparse.ArgumentParser()
@@ -69,16 +70,17 @@ args = parser.parse_args()
 
 
 ## User options
-res_threshold = 3       # resolution cut-off for apo chains (angstrom), condition is '<='
+res_threshold = 3.5     # resolution cut-off for apo chains (angstrom), condition is '<='
 NMR = 1                 # 0/1: discard/include NMR structures
-xray_only = 1           # 0/1: only consider X-ray structures
+xray_only = 0           # 0/1: only consider X-ray structures
 lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 reverse_search = 0      # 0/1: look for holo structures from apo
 
-save_separate = 1       # 0/1: save each chain object in a separate file
-save_session = 1        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
+save_separate = 1       # 0/1: save each chain object in a separate file (default ON)
+save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
+save_oppst = 1          # 0/1: also save chains same with query (that is holo chains when looking for apo, and apo chains when looking for holo) (default OFF)
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
 
 ## Internal/advanced/experimental variables
@@ -87,7 +89,7 @@ lig_scan_radius = '5'   # angstrom radius to look around holo ligand(s)' superpo
 apo_chain_limit = 999   # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5       # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
 
-water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
+water_as_ligand = 1     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 beyond_hetatm = 0       # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
 nonstd_rsds_as_lig = 0  # 0/1: ignore/consider non-standard residues as ligands
 d_aa_as_lig = 0         # 0/1: ignore/consider D-amino acids as ligands
@@ -169,9 +171,9 @@ path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_can
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
-pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for fetch/download)
+pathLIGS = path_root + r'\ligands'          # Directory with ALL pdb ligands (used for fetch/download)
+pathQRS = path_root + r'\queries'           # Directory/index with parameters of previously run jobs
 pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
-pathQRS = path_root + r'\queries'             # Directory/index with parameters of previously run jobs
 
 # Get additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
@@ -440,22 +442,22 @@ for apo_candidate_struct in apo_candidate_structs:
                     if method == 'SOLUTION NMR': # break fast if method is 'NMR'
                         break
                 elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
-                    resolution = float(line.split()[1]) # X-ray highest resolution
+                    resolution = round(float(line.split()[1]), 3) # X-ray highest resolution
                     break
                 elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
-                    resolution = float(line.split()[1]) # EM resolution
+                    resolution = round(float(line.split()[1]), 3) # EM resolution
                     break
             except:# Exception as ex: # getting weird but harmless exceptions
                 print('Problem parsing structure: ', apo_candidate_struct)#, ex)
         try:
             if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
-                print(apo_candidate_struct, ' resolution:\t', round(resolution, 3), '\t', method, '\tPASS') # Xray/EM
+                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS') # Xray/EM
             else:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print(apo_candidate_struct, ' resolution:\t', round(resolution, 3), '\t', method, '\tFAIL') # Xray/EM
+                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL') # Xray/EM
         except:
             discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-            print(apo_candidate_struct, ' resolution:\t', round(resolution, 3), '\t\t', method, '\t\tFAIL') # NMR
+            print(apo_candidate_struct, ' resolution:\t', resolution, '\t\t', method, '\t\tFAIL') # NMR
 print('Done\n')
 
 
@@ -633,14 +635,14 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 print('APO') #PASS   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
                 if save_separate == 1:
                     if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                    cmd.save(pathRSLTS + '\\a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
 
             else:
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
                 print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
-                if save_separate == 1:
+                if save_separate == 1 and save_oppst == 1:
                     if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '\\' + holo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', holo_structchain) # save holo chain
+                    cmd.save(pathRSLTS + '\\h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
         
         else: # reverse mode
             # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
@@ -648,9 +650,15 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             if len(found_ligands_r) > 0:
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r))
                 print('HOLO')
+                if save_separate == 1:
+                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '\\h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
             else:
                 apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
                 print('APO')
+                if save_separate == 1 and save_oppst == 1:
+                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '\\a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
             
     
     # Clean objects/selections in session & save
@@ -724,8 +732,8 @@ if len(apo_holo_dict_H) > 0:
     
     # Write dictionary to file
     filename_aln = pathRSLTS + '\\holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
-    if reverse_mode:    header = "#HEADER: {apo_chain: [holo_chain %UniProt_overlap RMSD TM_score]\n"
-    else:   header = "#HEADER: {holo_chain: [holo_chain %UniProt_overlap RMSD TM_score]\n"
+    if reverse_mode:    header = "#HEADER: {apo_chain: [holo_chain %UniProt_overlap RMSD TM_score ligands]\n"
+    else:   header = "#HEADER: {holo_chain: [holo_chain %UniProt_overlap RMSD TM_score ligands]\n"
     with open (filename_aln + '.txt', 'wt') as out1:
         out1.write(header)
         out1.write(str(apo_holo_dict_H))
