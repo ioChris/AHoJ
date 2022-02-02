@@ -2,27 +2,38 @@
 """
 Created on Sat Jan 22 18:27:43 2022
 
-@author: TopOffice
+@author: ChrisX
 """
 '''
 Download new SIFTS file with PDB chain mapping and unzip it in specified folder
-Creates 2 dictionaries: 
-    i) one short version of the SIFTS file with joint structure and chain
-    ii) one reverse version with structchains as values of UniProt ID(s)
+Create 2 dictionaries: 
+    i) a shorter version of the SIFTS file with joined structure and chain
+    ii) a reverse version with structchains as values of UniProt ID(s)
     
     -deletes old SIFTS file
     -deletes old dict files
     
 '''
-
-# Saving options
-save_r_spnum = 1    # save dict_R_SPnum dictionary to file (includes readable version w headers)
-save_plaindict = 1  # save dict_SIFTS dictionary to file (includes readable version w headers)
-
 import os
 import gzip
 import wget
-#from get_root_path import root_path
+
+
+# Saving options
+del_old_sifts = 1 # it means processing existing SIFTS file and not downloading the new one
+save_dicts = 1 # if 0, overrides following settings
+
+save_r_spnum = 1    # save dict_R_SPnum dictionary to file (includes readable version w headers)
+save_plaindict = 1  # save dict_SIFTS dictionary to file (includes readable version w headers)
+
+if save_dicts == 0:
+    save_r_spnum = 0
+    save_plaindict = 0
+
+use_old_sifts = False
+
+
+
 
 def root_path():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
@@ -40,32 +51,48 @@ path1 = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB ma
 #path1 = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
 filename = url1.split('/')[-1]
 
-print('Downloading SIFTS files from EBI ftp to local folder') # Print the description of the script as a message
-print("Download URL:", url1, '\n') # Print the URL that is being checked/downloaded
-print('Checking file: "%s"' % filename) # Print name of file to download
+print('Downloading SIFTS files from EBI ftp to local folder')
+print('Download URL:', url1, '\n') # Print the URL that is being checked/downloaded
+print('Target filename: "%s"' % filename) # Print name of file to download
 print('Saving directory:', path1)
 
-# Clean old .gz file
-if os.path.exists(path1 + "\\" + filename):
-    print('Deleting existing file')
-    os.remove(path1 + "\\" + filename)
+# Check if (old) SIFTS file exists and/or download new file
+if os.path.exists(path1):
+    if os.path.exists(path1 + "\\" + filename):
         
-# Download new file
-print('Downloading SIFTS file into ', path1)
-wget.download(url1, path1)
+        if del_old_sifts == 1:
+            print('Deleting existing file')
+            os.remove(path1 + "\\" + filename)
+            
+            # Download new file
+            print('Downloading SIFTS file into ', path1)
+            wget.download(url1, path1)
+        else:
+            print('Using existing SIFTS file')
+            use_old_sifts = True
+    else:
+        # Download new file
+        print('Downloading SIFTS file into ', path1)
+        wget.download(url1, path1)
+else:
+    print('Working directory does not exist\n')
+        
+
 
 # Unzip new .gz file (and overwrite old)
-with gzip.open(path1 + "\\" + filename ,"rb") as infile, open(path1 + "\\" + filename[:-3] ,"wb") as outfile:
-    print('Unzipping new file')
-    for line in infile:
-        outfile.write(line)
-print('Done\n')
+if not use_old_sifts:
+    with gzip.open(path1 + "\\" + filename ,"rb") as infile, open(path1 + "\\" + filename[:-3] ,"wb") as outfile:
+        print('Unzipping new file')
+        for line in infile:
+            outfile.write(line)
+    print('Done\n')
 
 
 ## Create reverse version with SPnum and also a simple version of the dict with structchain:uniprot_id
 fileSIFTS = path1 + "\\" + filename[:-3]
 filenameSIFTS = filename[:-3]
-counter_zeroes = 0  #
+counter_zeroes = 0
+counter_neg = 0
 dict_R_SPnum = dict()   # The dictionary with the reversed SIFTS chains/structures and SPnum
 dict_SIFTS = dict()     # Normal forward dict, structure -> structchain:uniprot_id
 
@@ -81,9 +108,8 @@ with open(fileSIFTS, 'r') as infile1:
                 
         structure = line.split("\t")[0]
         chain = line.split("\t")[1]
-        uniprot_id = line.split("\t")[2]
-        #uniprot_id = line.split()[2]
-        SIFTSstructchain = line.split('\t')[0] + line.split('\t')[1]
+        uniprot_id = line.split("\t")[2]    #uniprot_id = line.split()[2]
+        SIFTSstructchain = line.split("\t")[0] + line.split("\t")[1]
         
         SP_BEG = int(line.split("\t")[7])
         SP_END = int(line.split("\t")[8][:-1])    # includes \n cause of EOL     
@@ -101,6 +127,8 @@ with open(fileSIFTS, 'r') as infile1:
         # Count the cases where the length/coverage is zero
         if sp_length == 0:
             counter_zeroes += 1
+        elif sp_length < 0:
+            counter_neg += 1
             #print(uniprot_id, structure+chain+' '+str(SP_BEG)+' '+str(SP_END)+' '+str(sp_length))
     
     print('Done')
@@ -109,6 +137,7 @@ with open(fileSIFTS, 'r') as infile1:
 print('Dict keys, values:')
 print(len(dict_R_SPnum.keys()), sum(len(v) for v in dict_R_SPnum.values()))
 print('Entries with 0 length:\t', counter_zeroes)
+print('Entries with negative length:\t', counter_neg)
 
 ## Save dicts to file (include readable versions)
 

@@ -4,9 +4,17 @@ Created on Mon Dec 20 16:24:57 2021
 
 @author: ChrisX
 """
-# Apo finder/ Apofind
-'''Given a holo structure, with specified chain(s) and ligand(s), find apo structures
-    Use PyMOL parser
+# Apo finder / Apofind / AHoJ
+'''Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
+    The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
+    
+    The user can specify the following input arguments depending on the mode of search
+    i) When looking for apo from holo:
+    -Min arguments: PDB code
+    -Max arguments: PDB code, chain(s), ligand(s)
+    ii) When looking for holo from apo:
+    -Min arguments: PDB code
+    -Max arguments: PDB code, chain(s)
     '''
 #TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
 #TODO adjust radius according to mol. weight of ligand
@@ -156,7 +164,7 @@ def search_query_history(new_query_name, past_queries_filename):    # Find past 
     except:        return 0
 
 
-## Set directories, get job_id
+## Set directories, create job_id
 path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
@@ -165,7 +173,7 @@ pathLIGS = path_root + r'\ligands'    # Directory with ALL pdb ligands (used for
 pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
 pathQRS = path_root + r'\queries'             # Directory/index with parameters of previously run jobs
 
-# Additional info
+# Get additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
 script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
 log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
@@ -623,13 +631,16 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                 apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
                 print('APO') #PASS   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
-                if save_separate ==1:
-                    cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)
-                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):
-                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct)
+                if save_separate == 1:
+                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '\\' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+
             else:
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
                 print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
+                if save_separate == 1:
+                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '\\' + holo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', holo_structchain) # save holo chain
         
         else: # reverse mode
             # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
