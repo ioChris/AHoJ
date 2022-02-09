@@ -18,6 +18,7 @@ Created on Mon Dec 20 16:24:57 2021
     '''
 #TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
 #TODO adjust radius according to mol. weight of ligand
+#TODO add star categories in APO and HOLO verdicts and amend results accordingly
 
 import __main__
 __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
@@ -48,7 +49,8 @@ import sys
 #single_line_input = '2v0v a' # this is a fully apo structure
 #single_line_input = '2v7c a'
 #single_line_input = '5gss all gsh' # slow
-single_line_input ='1jq8 so4'
+#single_line_input ='1jq8 so4'
+single_line_input ='1l5h b CLF'
 
 # Create the parser, add arguments
 parser = argparse.ArgumentParser()
@@ -73,14 +75,14 @@ args = parser.parse_args()
 res_threshold = 3.5     # resolution cut-off for apo chains (angstrom), condition is '<='
 NMR = 1                 # 0/1: discard/include NMR structures
 xray_only = 0           # 0/1: only consider X-ray structures
-lig_free_sites = 1      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
+lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
 autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 reverse_search = 0      # 0/1: look for holo structures from apo
 
 save_separate = 1       # 0/1: save each chain object in a separate file (default ON)
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_oppst = 1          # 0/1: also save chains same with query (that is holo chains when looking for apo, and apo chains when looking for holo) (default OFF)
+save_oppst = 0          # 0/1: also save chains same with query (that is holo chains when looking for apo, and apo chains when looking for holo) (default OFF)
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
 
 ## Internal/advanced/experimental variables
@@ -89,7 +91,7 @@ lig_scan_radius = '5'   # angstrom radius to look around holo ligand(s)' superpo
 apo_chain_limit = 999   # limit number of apo chains to consider when aligning (for fast test runs)
 min_tmscore = 0.5       # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
 
-water_as_ligand = 1     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
+water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
 beyond_hetatm = 0       # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
 nonstd_rsds_as_lig = 0  # 0/1: ignore/consider non-standard residues as ligands
 d_aa_as_lig = 0         # 0/1: ignore/consider D-amino acids as ligands
