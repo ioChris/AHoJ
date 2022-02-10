@@ -46,11 +46,14 @@ import sys
 #'2ZB1 all gk4'
 #'7l1f all F86'
 #single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input ='1SI4 cyn'
 #single_line_input = '2v0v a' # this is a fully apo structure
 #single_line_input = '2v7c a'
 #single_line_input = '5gss all gsh' # slow
 #single_line_input ='1jq8 so4'
-single_line_input ='1l5h b CLF'
+#single_line_input ='1l5h b CLF'
+
+single_line_input ='1DB1 vdx' #vitamin D3 study
 
 # Create the parser, add arguments
 parser = argparse.ArgumentParser()
@@ -79,7 +82,7 @@ lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other kno
 autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 reverse_search = 0      # 0/1: look for holo structures from apo
 
-save_separate = 1       # 0/1: save each chain object in a separate file (default ON)
+save_separate = 0       # 0/1: save each chain object in a separate file (default ON)
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 save_oppst = 0          # 0/1: also save chains same with query (that is holo chains when looking for apo, and apo chains when looking for holo) (default OFF)
@@ -175,7 +178,7 @@ pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PD
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + r'\ligands'          # Directory with ALL pdb ligands (used for fetch/download)
 pathQRS = path_root + r'\queries'           # Directory/index with parameters of previously run jobs
-pathRSLTS = next_path(path_root + r'\results' + '\\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
+pathRSLTS = next_path(path_root + r'\results\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
 
 # Get additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
@@ -193,11 +196,11 @@ if os.path.isdir(pathLIGS):    print('Ligands directory:\t', pathLIGS)
 else:
     print('Creating ligands directory:\t', pathLIGS)
     os.makedirs(pathLIGS)
-if save_separate == 1 or multisave == 1 or save_session == 1:
-    if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
-    else:
-        print('Results directory:\t', pathRSLTS)
-    os.makedirs(pathRSLTS)
+#if save_separate == 1 or multisave == 1 or save_session == 1: # bypass
+if os.path.isdir(pathRSLTS):    print('Results directory:\t', pathRSLTS)
+else:
+    print('Results directory:\t', pathRSLTS)
+os.makedirs(pathRSLTS)
 if os.path.isdir(pathQRS):    print('Queries directory:\t', pathQRS)
 else:
     print('Creating queries directory:\t', pathQRS)
@@ -633,8 +636,11 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         if not reverse_mode:
             print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
             if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
-                apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
-                print('APO') #PASS   #print('*===> Apo chain', apo_structchain, ' clean of query ligands ', holo_lig_names)
+                apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
+                
+                if len(found_ligands_xtra) > 0:     print('APO*')
+                else:       print('APO')
+                
                 if save_separate == 1:
                     if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                     cmd.save(pathRSLTS + '\\a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
@@ -656,8 +662,9 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                     if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                     cmd.save(pathRSLTS + '\\h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
             else:
-                apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)))
-                print('APO')
+                apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r.union(found_ligands_xtra)))
+                if len(found_ligands_xtra) > 0:     print('APO*')
+                else:       print('APO')
                 if save_separate == 1 and save_oppst == 1:
                     if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                     cmd.save(pathRSLTS + '\\a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
@@ -703,7 +710,7 @@ print('')
 
 # apo results
 if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
-        
+    '''
     # Write dictionary to file
     filename_aln = pathRSLTS + '\\apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
     if reverse_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
@@ -711,11 +718,11 @@ if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_ses
     with open (filename_aln + '.txt', 'wt') as out1:
         out1.write(header)
         out1.write(str(apo_holo_dict))
-        
+    '''
     # Write CSV file
-    filename_csv = pathRSLTS + '\\results.csv'
-    if reverse_mode:    header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
-    else:        header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
+    filename_csv = pathRSLTS + '\\results_apo.csv'
+    if reverse_mode:    header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
+    else:        header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     #header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
     with open (filename_csv, 'w') as csv_out:
         csv_out.write(header)
@@ -731,7 +738,7 @@ else:    print('No apo forms found')
 
 # holo results
 if len(apo_holo_dict_H) > 0:
-    
+    '''
     # Write dictionary to file
     filename_aln = pathRSLTS + '\\holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
     if reverse_mode:    header = "#HEADER: {apo_chain: [holo_chain %UniProt_overlap RMSD TM_score ligands]\n"
@@ -739,7 +746,7 @@ if len(apo_holo_dict_H) > 0:
     with open (filename_aln + '.txt', 'wt') as out1:
         out1.write(header)
         out1.write(str(apo_holo_dict_H))
-    
+    '''
     # Write CSV holo file
     filename_csv = pathRSLTS + '\\results_holo.csv'
     if reverse_mode:    header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
@@ -755,7 +762,12 @@ if len(apo_holo_dict_H) > 0:
     for key in apo_holo_dict_H: print(key, apo_holo_dict_H.get(key))
 else:    print('No holo forms found')
 
-if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:    print('\nConsider reversing the search')
+if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:    
+    print('\nConsider reversing the search')
+    print('\nDeleting empty results folder')    # Delete empty results folder
+    try:        os.rmdir(pathRSLTS)
+    except OSError as error:
+        print('Results folder not empty, job ID: ', job_id, error)
 
 # Append the name of the query and the job_id in the queries.txt
 if job_id:
