@@ -57,10 +57,10 @@ Before the main script is run, the helper script must be run so that the UniProt
 The helper script needs no arguments to run, other than setting the root folder for the server, according to which it will create a subdirectory with the helper files (e.g. root/SIFTS).
 As soon as it finishes running, the main script can be run.
 The main script has a number of user parameters that have preset defaults within the script, and currently needs a single line input from the user to run. This single line input can carry anywhere from 1 to 3 arguments (right now), which are separated by whitespace characters. The maximum arguments within the single line input are of this form:
-<pdb_id>  <chains>  <ligands>
+<pdb_id> <chains> <ligands>
   
 pdb_id:
-this is a 4-character code of a PDB protein structure. This argument is obligatory and only 1 can be input per line. (i.e. “1a73” or “3fav” or “3FAV”)
+this is the 4-character code of a PDB protein structure. This argument is obligatory and only 1 PDB ID can be input per line. (i.e. “1a73” or “3fav” or “3FAV”)
 chains:
 A single chain or multiple chains separated by commas or “ALL” in the case of all chains (i.e. “A” or “A,C,D” or “ALL”). This argument is non-obligatory, if omitted, all chains will be considered.
 ligands:
@@ -68,4 +68,4 @@ A single ligand, multiple ligands separated by commas but without whitespace, or
 
 Example of an input argument (query):
 “1a73 A ZN”
-The application will fetch the structure 1a73, get chain A, and look for zinc+2 (ZN) ligands to verify the input argument. If ZN is found in chain A of 1a73, it will retrieve all other known chains that are the same with chain A of 1a73, it will align them with 1a73_A and look for ZN ligands at the superimposed binding site of ZN on 1a73_A. If it finds protein chains with ZN, it will list them as HOLO, if the superimposed site is empty of ligands, the chain will be listed as APO. If another ligand is detected on that site instead of ZN, the chain will be listed as APO or HOLO, depending on the user’s preferences (if the user wants APO with no other ligands there, it will be listed as HOLO, and if the user does not mind other ligands in this binding site, it will be listed as APO).
+The application will fetch the structure 1a73, get chain A, and look for zinc+2 (ZN) ligands to verify the input argument. If ZN is found in chain A of 1a73 (1a73A), it will retrieve all other known chains that belong to the same protein with 1a73A, it will align them with 1a73A and look for ZN ligands at the superimposed binding site of ZN in 1a73A. If it finds protein chains with ZN, it will list them as HOLO, if the superimposed site is empty of ligands, the chain will be listed as APO. If another ligand is detected on that site instead of ZN, the chain will be listed as APO or HOLO, depending on the user’s preferences (if the user wants APO with no other ligands there, it will be listed as HOLO, and if the user does not mind other ligands in this binding site, it will be listed as APO).
