@@ -58,26 +58,31 @@ single_line_input ='1DB1 vdx' #vitamin D3 study
 # Create the parser, add arguments
 parser = argparse.ArgumentParser()
 # User arguments
-parser.add_argument('--res_threshold', type=float, default=3, help='resolution cut-off for apo chains (angstrom), condition is <=')
-parser.add_argument('--NMR', type=int, default=1, help='0/1: discard/include NMR structures')
-parser.add_argument('--lig_free_sites', type=int, default=1, help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
-parser.add_argument('--water_as_ligand', type=int, default=0, help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
-parser.add_argument('--save_session', type=int, default=1, help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)')
-parser.add_argument('--multisave', type=int, default=0, help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
+parser.add_argument('--res_threshold',     type=float, default=3,   help='resolution cut-off for apo chains (angstrom), condition is <=')
+parser.add_argument('--NMR',               type=int,   default=1,   help='0/1: discard/include NMR structures')
+parser.add_argument('--lig_free_sites',    type=int,   default=1,   help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
+parser.add_argument('--water_as_ligand',   type=int,   default=0,   help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--save_session',      type=int,   default=1,   help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)')
+parser.add_argument('--multisave',         type=int,   default=0,   help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
 # Internal/advanced arguments
-parser.add_argument('--overlap_threshold', type=int, default=100, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
-parser.add_argument('--lig_scan_radius', type=str, default='5', help='angstrom radius to look around holo ligand(s) superposition')
-parser.add_argument('--apo_chain_limit', type=int, default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
-parser.add_argument('--min_tmscore', type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
-parser.add_argument('--beyond_hetatm', type=int, default=0, help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
+parser.add_argument('--overlap_threshold', type=int,   default=100, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
+parser.add_argument('--lig_scan_radius',   type=str,   default='5', help='angstrom radius to look around holo ligand(s) superposition')
+parser.add_argument('--apo_chain_limit',   type=int,   default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
+parser.add_argument('--min_tmscore',       type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+parser.add_argument('--beyond_hetatm',     type=int,   default=0,   help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
 args = parser.parse_args()
 
+
+# print help if there are no arguments
+if len(sys.argv)==1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
 
 
 ## User options
 
 # Simple
-res_threshold = 3.5     # resolution cut-off for apo chains (angstrom), condition is '<='
+res_threshold = args.res_threshold
 NMR = 1                 # 0/1: discard/include NMR structures
 xray_only = 0           # 0/1: only consider X-ray structures
 lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
@@ -175,7 +180,7 @@ def search_query_history(new_query_name, past_queries_filename):    # Find past 
 
 
 ## Set directories, create job_id
-path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # TODO: this path needs to be a parameter
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
