@@ -80,6 +80,8 @@ if len(sys.argv)==1:
 
 
 ## User options
+
+# Simple
 res_threshold = args.res_threshold
 NMR = 1                 # 0/1: discard/include NMR structures
 xray_only = 0           # 0/1: only consider X-ray structures
@@ -87,13 +89,14 @@ lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other kno
 autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
 reverse_search = 0      # 0/1: look for holo structures from apo
 
+# Advanced
 save_separate = 0       # 0/1: save each chain object in a separate file (default ON)
 save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
 multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
 save_oppst = 0          # 0/1: also save chains same with query (that is holo chains when looking for apo, and apo chains when looking for holo) (default OFF)
 look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
 
-## Internal/advanced/experimental variables
+## Internal/experimental
 overlap_threshold = 0   # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
 lig_scan_radius = '5'   # angstrom radius to look around holo ligand(s)' superposition
 apo_chain_limit = 999   # limit number of apo chains to consider when aligning (for fast test runs)
@@ -109,7 +112,7 @@ if reverse_search == 1:    autodetect_lig = 1
 reverse_mode = False
 
 # Pass settings to a string
-settings_param = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
+settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
 
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
@@ -348,7 +351,7 @@ if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_cha
 ## Look up query in history, if found, return job path and end script
 if autodetect_lig == 0:    user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
 else:    user_input_parameters = struct + '_' + ','.join(user_chains) + '_autodetect_lig'
-query_full = user_input_parameters + '_' + settings_param + '-' + job_id
+query_full = user_input_parameters + '_' + settings_str + '-' + job_id
 #print(query_full)
 if look_in_archive == 1:
     print('\nLooking for the same job in history')
