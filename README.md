@@ -1,5 +1,5 @@
-# apo_holo_webserver
- Webserver for the detection of apo structures from holo
+# Apo-Holo Juxtaposition
+ Python application for the detection of apo structures from holo
 
 ##  Objective
 Given the holo form of a protein (the complex of a protein structure and its specified ligand(s)), find any unbound form of that protein (apo-protein) that is lacking the specified ligand(s).
