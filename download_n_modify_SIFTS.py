@@ -23,7 +23,7 @@ import time
 # Input arguments
 path_root = '' # (str) define the root directory of the server, inside which the working subdirectories will be created (e.g. r'\apo_holo_pc\webserver')
 
-# Saving options
+# Saving options (default = 1)
 del_old_sifts = 1 # 0 means processing existing SIFTS file and not downloading the new one
 save_dicts = 1 # if 0, overrides following settings
 
