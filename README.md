@@ -6,9 +6,15 @@ Tool for creating apo-holo datasets.
 
 
 ##  Objective
-**Given the holo form of a protein** (the complex of a protein structure **and its user specified ligand(s)**): 
-1. **find** all unbound forms of that protein (**apo-proteins**) that are lacking the specified ligand(s).
-2. **align apo-proteins** to the query holo protein   
+**Given the holo form of a protein** (the complex of a protein structure **and its user specified ligand(s)**):
+1. **find** all unbound forms of that protein (**apo-proteins**) that lack the specified ligand(s) in the same superimposed binding site(s).
+2. **find** all other bound forms of that protein (**holo-proteins**) that include the specified ligand(s) or other ligands in the same superimposed binding site(s).
+3. **align both apo- and holo-proteins** to the query holo protein
+
+**Given the apo form of a protein** (a protein structure **without any ligands**): 
+1. **find** all other forms of that protein that bind at least one ligand (**holo-proteins**).
+2. **find** all other unbound forms of that protein (**apo-proteins**) that lack any ligands.
+3. **align both apo- and holo-proteins** to the query apo protein
 
 Note: ligands are confined to chemical components that are not part of the protein according to the PDB 
 (phosphorylated amino acids can also be considered and specified as ligands). 
@@ -70,35 +76,28 @@ conda install -c speleo3 tmalign
 conda install -c speleo3 pymol-psico
 ~~~     
 
-##### 4.  Download PyMOL whl files
-There are several pre-compiled Open-Source PyMOL distributions from "Christoph Gohlke of the Laboratory for Fluorescence Dynamics, University of California, Irvine":
+##### 4.  Install Open-source PyMOL
+There are several pre-compiled Open-source PyMOL distributions from "Christoph Gohlke of the Laboratory for Fluorescence Dynamics, University of California, Irvine":
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#pymol-open-source
-Here, we download the following files (both “pymol.whl” and “pymol_launcher.whl”):
+Here, we download the following files:
 ~~~
 pymol-2.6.0a0-cp39-cp39-win_amd64.whl
 pymol_launcher-2.1-cp39-cp39-win_amd64.whl
 ~~~
 
-##### 5.  Install whl files
 In the conda pymol environment, switch to download directory (e.g., D:\Downloads)
 * Switch to Drive D:
 * Enter the downloads directory (`cd Downloads`)
-* Install pymol_launcher first
+* Install pymol_launcher (PyMOL will be installed automatically)
 ~~~sh
 pip install --no-index --find-links="%CD%" pymol_launcher-2.1-cp39-cp39-win_amd64.whl
 ~~~
 
-PyMOL is installed automatically.
 To update PyMOL later, run
 ~~~sh
 pip install --upgrade --no-deps pymol-2.6.0a0-cp39-cp39-win_amd64.whl
 ~~~
 
-##### 6.  Launch PyMOL
-In an activated pymol environment, run 
-~~~sh
-pymol
-~~~
 
 ### Linux
    
@@ -140,9 +139,9 @@ The maximum arguments within the single line input are of this form:
 <pdb_id> <chains> <ligands>
 ~~~  
 
-* `pdb_id`: this is the 4-character code of a PDB protein structure. This argument is obligatory and only 1 PDB ID can be input per line. (i.e. “1a73” or “3fav” or “3FAV”)
-* `chains`: A single chain or multiple chains separated by commas or “ALL” in the case of all chains (i.e. “A” or “A,C,D” or “ALL”). This argument is non-obligatory, if omitted, all chains will be considered.
-* `ligands`: A single ligand, multiple ligands separated by commas but without whitespace, or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”). This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo).
+* `pdb_id`: This is the 4-character code of a PDB protein structure. This argument is obligatory and only 1 PDB ID can be input per line. (i.e. “1a73” or “3fav” or “3FAV”)
+* `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” in the case of all chains (i.e. “A” or “A,C,D” or “ALL”). This argument is non-obligatory, if omitted, all chains will be considered.
+* `ligands`: A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”). This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo).
 
 Example of an input argument (query):
 ~~~
