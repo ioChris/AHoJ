@@ -1,8 +1,8 @@
 # Apo-Holo Juxtaposition
 
-Python tool for search and alignment of apo structures for given holo structure.
+Python tool for search and alignment of apo structures for a given holo structure (and vice versa).
 
-Tool for creating apo-holo datasets.
+Tool for creating customized apo-holo datasets.
 
 
 ##  Objective
@@ -157,7 +157,7 @@ it will list them as HOLO, if the superimposed site is empty of ligands, the cha
 the chain will be listed as APO or HOLO, depending on the user’s preferences (if the user wants APO with no other ligands there, 
 it will be listed as HOLO, and if the user does not mind other ligands in this binding site, it will be listed as APO).
 
-More examples of input arguments.
+More examples of user queries.
 ~~~
 python apoholo_J.py --single_line_input '1a73 A,B ZN'
 ~~~
@@ -173,7 +173,7 @@ python apoholo_J.py --single_line_input '1a73 ZN'
 ~~~
 python apoholo_J.py --single_line_input '1a73' (with ligand auto-detection ON)
 ~~~
--finds and considers all bound ligands in all chains of 1a73
+-finds and considers all ligands in all chains of 1a73
 ~~~
 python apoholo_J.py --single_line_input '1a73 A' (with ligand auto-detection ON)
 ~~~
@@ -182,3 +182,27 @@ python apoholo_J.py --single_line_input '1a73 A' (with ligand auto-detection ON)
 python apoholo_J.py --single_line_input '1a73 A ZN,MG'
 ~~~
 -considers ZN and MG ligands in chain A of 1a73
+
+
+##  Parameters
+
+### Basic
+**res_threshold** : resolution threshold
+Floating point number that is applied as a cutoff point when assessing the apo-holo candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. Condition is <=
+**NMR**
+0 or 1. When set to 1 (ON), NMR structures are considered, in the case of multiple available structures, the first one is considered.
+**x-ray only**
+0 or 1. When set to 1 (ON), only X-ray structures are considered. It overrides the NMR setting.
+**lig_free_sites** : ligand-free sites
+0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s).
+**autodetect_lig** : auto-detect ligands
+0 or 1. When set to 1 (ON), the algorithm will auto-detect any possible ligands (and their respective binding sites) in the query protein. It will then conduct the apo-protein search according to these ligands and binding sites.
+**reverse_search**
+0 or 1. When set to 1 (ON), the algorithm will consider that the input is an apo structure without any ligands, essentially reversing the search. It will try to find structures (chains) of the same protein with and without ligands. It will list those as holo and apo respectively. This reverse search is broader in scope because there is no starting ligand (and thus binding site) as a reference point. Any structures that belong to the same protein and bind at least one ligand, will be characterised as holo.
+
+### Advanced
+**save_separate**
+0 or 1. When set to 1 (ON), the server will save all aligned chains that are in the opposite category from the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will save any apo chains that it will find. In a reverse search, it would save all holo chains. If the user wishes to save both apo and holo chains, they can turn on the next parameter, "save_oppst".
+**save_oppst** : save opposite
+0 or 1. When set to 1 (ON), the server will not only find, but also save chains that are in the same category with the starting query (apo or holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will also save any holo chains that it will find. In a reverse search (starting with an apo-protein and looking for holo), it will also save the apo chains that it will find. This setting is dependant on the previous parameter "save_separate" which has to be ON for this parameter to work. This setting does not affect the text output of the server which always includes both apo and holo chains.
+
