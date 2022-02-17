@@ -37,27 +37,11 @@ import sys
 
 
 
-## User main input
-
-#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
-#single_line_input = '1a0u' #hem, big search
-#single_line_input = '3fav zn'#' zn'
-#single_line_input = '1a73 a zn'#',MG,HEM'
-#single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
-#single_line_input = '2ZB1 all gk4'
-#single_line_input = '7l1f all F86'
-#single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
-#single_line_input ='1SI4 cyn'
-#single_line_input = '2v0v a' # this is a fully apo structure
-#single_line_input = '2v7c a'
-#single_line_input = '5gss all gsh' # slow
-#single_line_input = '1jq8 so4'
-#single_line_input = '1l5h b CLF'
-single_line_input = '1DB1 vdx' #vitamin D3 study
-
-
-## User arguments (as website options)
+## User arguments
 parser = argparse.ArgumentParser()  # Create the parser, add arguments
+
+# Main user query
+parser.add_argument('--single_line_input', type=str,   default='1a73 a zn', help='user main input query')
 
 # Basic
 parser.add_argument('--res_threshold',     type=float, default=3.5, help='resolution cut-off for apo chains (angstrom), condition is <=')
@@ -73,7 +57,7 @@ parser.add_argument('--save_session',      type=int,   default=0,   help='0/1: s
 parser.add_argument('--multisave',         type=int,   default=0,   help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 parser.add_argument('--save_oppst',        type=int,   default=0,   help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
 
-parser.add_argument('--overlap_threshold', type=float, default=0,   help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
+parser.add_argument('--overlap_threshold', type=float, default=0,   help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
 parser.add_argument('--lig_scan_radius',   type=float, default=5,   help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
 parser.add_argument('--min_tmscore',       type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
@@ -90,14 +74,35 @@ parser.add_argument('--path_root',         type=str,   default='',  help='define
 
 args = parser.parse_args()  # Parse arguments
 
-
+'''
 # print help if there are no arguments
 if len(sys.argv)==1:
     parser.print_help(sys.stderr)
     sys.exit(1)
+'''
 
+## Map old parameters to argparse arguments
 
-## User options
+# Main user query
+#single_line_input = args.single_line_input
+
+''' Test input (overrides argparse) '''
+#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+#single_line_input = '1a0u' #hem, big search
+#single_line_input = '3fav zn'#' zn'
+#single_line_input = '1a73 a zn'#',MG,HEM'
+#single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
+#single_line_input = '2ZB1 all gk4'
+#single_line_input = '7l1f all F86'
+#single_line_input = '3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input = '1SI4 cyn'
+#single_line_input = '2v0v a' # this is a fully apo structure
+#single_line_input = '2v7c a'
+#single_line_input = '5gss all gsh' # slow
+#single_line_input = '1jq8 so4'
+#single_line_input = '1l5h b CLF'
+single_line_input = '1DB1 vdx' #vitamin D3 study
+
 
 # Basic
 res_threshold = args.res_threshold          # 3.5   # resolution cut-off for apo chains (angstrom), condition is <='
