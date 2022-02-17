@@ -10,8 +10,8 @@ Create 2 dictionaries:
     i) a shorter version of the SIFTS file with joined structure and chain
     ii) a reverse version with structchains as values of UniProt ID(s)
     
-    -deletes old SIFTS file
-    -deletes old dict files
+    -backups and deletes old SIFTS and dict files
+
     
 '''
 import os
@@ -20,6 +20,8 @@ import wget
 import shutil
 import time
 
+# Input arguments
+path_root = '' # (str) define the root directory of the server, inside which the working subdirectories will be created (e.g. r'\apo_holo_pc\webserver')
 
 # Saving options
 del_old_sifts = 1 # 0 means processing existing SIFTS file and not downloading the new one
@@ -45,9 +47,9 @@ def root_path():
 
 url1 = "http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz"
 
-path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'
+path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver' # overrides initial argument
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
-pathOLD = path_root + r'\oldSIFTS'           # old SIFT files, keep as backup
+pathOLD = path_root + r'\oldSIFTS'          # old SIFTS files, keep as backup
 #pathSIFTS = root_path() + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
 #pathSIFTS = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
 filename = url1.split('/')[-1]
@@ -70,24 +72,23 @@ if os.path.exists(pathSIFTS + "\\" + filename):
     if del_old_sifts == 1:
         
         # Archive old SIFTS files before deleting/replacing
-        print('Backing up current SIFTS files')
+        print('Backing up current SIFTS and dict files')
         if not os.path.exists(pathOLD):            os.makedirs(pathOLD)
         time_str = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
         output_archive_pathname = pathOLD + '\\oldSIFTS_' + time_str
         shutil.make_archive(output_archive_pathname, 'zip', pathSIFTS)
         
-        print('Deleting existing file')
+        print('Deleting existing SIFTS file')
         os.remove(pathSIFTS + "\\" + filename)
         
-        print('Downloading SIFTS file into ', pathSIFTS)
+        print('Downloading new SIFTS file into ', pathSIFTS)
         wget.download(url1, pathSIFTS)  # Download new file
     else:
         print('Using existing SIFTS file')
         use_old_sifts = True
 else:
-    # Download new file
-    print('Downloading SIFTS file into ', pathSIFTS)
-    wget.download(url1, pathSIFTS)
+    print('Downloading new SIFTS file into ', pathSIFTS)
+    wget.download(url1, pathSIFTS)  # Download new file
 
         
 
@@ -127,7 +128,6 @@ with open(fileSIFTS, 'r') as infile1:
         SP_END = int(line.split("\t")[8][:-1])    # includes \n cause of EOL     
         sp_length = SP_END - SP_BEG     # Calculate length of chain
         
-
         # Build basic dict with structchain as keys, uniprot IDs as values
         dict_SIFTS[SIFTSstructchain] = uniprot_id
         
