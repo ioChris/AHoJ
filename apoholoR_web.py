@@ -4,7 +4,7 @@ Created on Mon Dec 20 16:24:57 2021
 
 @author: ChrisX
 """
-# Apo finder / Apofind / AHoJ
+# Apo-Holo Juxtaposition - AHoJ
 '''Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
     The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
     
@@ -36,79 +36,108 @@ import argparse
 import sys
 
 
-## User input
-#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 
-#single_line_input = '1a0u' #hem, big search
-#single_line_input = '3fav zn'#' zn'
-#single_line_input = '1a73 a zn'#',MG,HEM'
-#single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
-#'2ZB1 all gk4'
-#'7l1f all F86'
-#single_line_input ='3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
-#single_line_input ='1SI4 cyn'
-#single_line_input = '2v0v a' # this is a fully apo structure
-#single_line_input = '2v7c a'
-#single_line_input = '5gss all gsh' # slow
-#single_line_input ='1jq8 so4'
-#single_line_input ='1l5h b CLF'
+## User arguments
+parser = argparse.ArgumentParser()  # Create the parser, add arguments
 
-single_line_input ='1DB1 vdx' #vitamin D3 study
+# Main user query
+parser.add_argument('--single_line_input', type=str,   default='1a73 a zn', help='user main input query')
 
-# Create the parser, add arguments
-parser = argparse.ArgumentParser()
-# User arguments
-parser.add_argument('--res_threshold',     type=float, default=3,   help='resolution cut-off for apo chains (angstrom), condition is <=')
+# Basic
+parser.add_argument('--res_threshold',     type=float, default=3.5, help='resolution cut-off for apo chains (angstrom), condition is <=')
 parser.add_argument('--NMR',               type=int,   default=1,   help='0/1: discard/include NMR structures')
-parser.add_argument('--lig_free_sites',    type=int,   default=1,   help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
-parser.add_argument('--water_as_ligand',   type=int,   default=0,   help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
-parser.add_argument('--save_session',      type=int,   default=1,   help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)')
-parser.add_argument('--multisave',         type=int,   default=0,   help='0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)')
-# Internal/advanced arguments
-parser.add_argument('--overlap_threshold', type=int,   default=100, help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">="')
-parser.add_argument('--lig_scan_radius',   type=str,   default='5', help='angstrom radius to look around holo ligand(s) superposition')
-parser.add_argument('--apo_chain_limit',   type=int,   default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
+parser.add_argument('--xray_only',         type=int,   default=0,   help='0/1: only consider X-ray structures')
+parser.add_argument('--lig_free_sites',    type=int,   default=0,   help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
+parser.add_argument('--autodetect_lig',    type=int,   default=0,   help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
+parser.add_argument('--reverse_search',    type=int,   default=0,   help='0/1: look for holo structures from apo')
+
+# Advanced
+parser.add_argument('--save_separate',     type=int,   default=0,   help='0/1: save each chain object in a separate file (default save)')
+parser.add_argument('--save_session',      type=int,   default=0,   help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
+parser.add_argument('--multisave',         type=int,   default=0,   help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
+parser.add_argument('--save_oppst',        type=int,   default=0,   help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+
+parser.add_argument('--overlap_threshold', type=float, default=0,   help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
+parser.add_argument('--lig_scan_radius',   type=float, default=5,   help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
 parser.add_argument('--min_tmscore',       type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+
+# Experimental
+parser.add_argument('--water_as_ligand',   type=int,   default=0,   help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,   help='0/1: ignore/consider non-standard residues as ligands')
+parser.add_argument('--d_aa_as_lig',       type=int,   default=0,   help='0/1: ignore/consider D-amino acids as ligands')
 parser.add_argument('--beyond_hetatm',     type=int,   default=0,   help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
-args = parser.parse_args()
+parser.add_argument('--look_in_archive',   type=int,   default=0,   help='0/1: search if the same query has been processed in the past (can give very fast results)')
 
+# Internal
+parser.add_argument('--apo_chain_limit',   type=int,   default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
+parser.add_argument('--path_root',         type=str,   default='',  help='define the root path of the server, inside which the working subdirectories will be created (e.g. r"\apo_holo_pc\webserver")')
 
+args = parser.parse_args()  # Parse arguments
+
+'''
 # print help if there are no arguments
 if len(sys.argv)==1:
     parser.print_help(sys.stderr)
     sys.exit(1)
+'''
+
+## Map old parameters to argparse arguments
+
+# Main user query
+#single_line_input = args.single_line_input
+
+''' Test input (overrides argparse) '''
+#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+#single_line_input = '1a0u' #hem, big search
+#single_line_input = '3fav zn'#' zn'
+#single_line_input = '1a73 a zn'#',MG,HEM'
+#single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
+#single_line_input = '2ZB1 all gk4'
+#single_line_input = '7l1f all F86'
+#single_line_input = '3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#single_line_input = '1SI4 cyn'
+#single_line_input = '2v0v a' # this is a fully apo structure
+#single_line_input = '2v7c a'
+#single_line_input = '5gss all gsh' # slow
+#single_line_input = '1jq8 so4'
+#single_line_input = '1l5h b CLF'
+single_line_input = '1DB1 vdx' #vitamin D3 study
 
 
-## User options
-
-# Simple
-res_threshold = args.res_threshold
-NMR = 1                 # 0/1: discard/include NMR structures
-xray_only = 0           # 0/1: only consider X-ray structures
-lig_free_sites = 0      # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
-autodetect_lig = 0      # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
-reverse_search = 0      # 0/1: look for holo structures from apo
+# Basic
+res_threshold = args.res_threshold          # 3.5   # resolution cut-off for apo chains (angstrom), condition is <='
+NMR = args.NMR                              # 1     # 0/1: discard/include NMR structures
+xray_only = args.xray_only                  # 0     # 0/1: only consider X-ray structures
+lig_free_sites = args.lig_free_sites        # 0     # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
+autodetect_lig = args.autodetect_lig        # 0     # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
+reverse_search = args.reverse_search        # 0     # 0/1: look for holo structures from apo
 
 # Advanced
-save_separate = 0       # 0/1: save each chain object in a separate file (default ON)
-save_session = 0        # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
-multisave = 0           # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_oppst = 0          # 0/1: also save chains same with query (that is holo chains when looking for apo, and apo chains when looking for holo) (default OFF)
-look_in_archive = 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
+save_separate = args.save_separate          # 0     # 0/1: save each chain object in a separate file (default ON)
+save_session = args.save_session            # 0     # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
+multisave = args.multisave                  # 0     # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
+save_oppst = args.save_oppst                # 0     # 0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)
 
-## Internal/experimental
-overlap_threshold = 0   # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
-lig_scan_radius = '5'   # angstrom radius to look around holo ligand(s)' superposition
-apo_chain_limit = 999   # limit number of apo chains to consider when aligning (for fast test runs)
-min_tmscore = 0.5       # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
+overlap_threshold = args.overlap_threshold  # 0     # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
+lig_scan_radius = args.lig_scan_radius      # 5     # angstrom radius to look around holo ligand(s)' superposition
+min_tmscore = args.min_tmscore              # 0.5   # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
 
-water_as_ligand = 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
-beyond_hetatm = 0       # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
-nonstd_rsds_as_lig = 0  # 0/1: ignore/consider non-standard residues as ligands
-d_aa_as_lig = 0         # 0/1: ignore/consider D-amino acids as ligands
+# Experimental
+water_as_ligand = args.water_as_ligand      # 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
+nonstd_rsds_as_lig = args.nonstd_rsds_as_lig# 0     # 0/1: ignore/consider non-standard residues as ligands
+d_aa_as_lig = args.d_aa_as_lig              # 0     # 0/1: ignore/consider D-amino acids as ligands
+beyond_hetatm = args.beyond_hetatm          # 0     # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
+look_in_archive = args.look_in_archive      # 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
+
+# Internal
+apo_chain_limit = args.apo_chain_limit      # 999   # limit number of apo chains to consider when aligning (for fast test runs)
+path_root = args.path_root                  # ''    # define the root path of the server, inside which the working subdirectories will be created (e.g. r'\apo_holo_pc\webserver')
+
+
 
 # Adjust input, resolve conflicts
 if reverse_search == 1:    autodetect_lig = 1
+lig_scan_radius = str(lig_scan_radius)  # needs to be str
 reverse_mode = False
 
 # Pass settings to a string
@@ -180,7 +209,7 @@ def search_query_history(new_query_name, past_queries_filename):    # Find past 
 
 
 ## Set directories, create job_id
-path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # TODO: this path needs to be a parameter
+path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # TODO: this path needs to be an argument
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
