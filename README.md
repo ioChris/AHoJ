@@ -97,7 +97,7 @@ pymol
 ## Setup and usage instructions
 
 The application consists of the main script
-•   apoholoR_web.py
+•   apoholo_J.py
 and a helper script that downloads a UniProt-PDB chain mapping file and compiles 2 helper files
 •   download_n_modify_SIFTS.py
 Before the main script is run, the helper script must be run so that the UniProt file is downloaded, and the helper files are compiled and saved to the designated folder of the server. After the first run, the helper script should be run once a week to update the existing UniProt files. The script replaces the old files automatically.
