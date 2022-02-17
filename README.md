@@ -225,11 +225,11 @@ Floating point number that is applied as a cutoff point when assessing the apo-h
 **overlap_threshold**
 
 Floating point number that is applied as a quality cutoff point when comparing the sequence overlap of the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it would mean that the candidate chain has to completely overlap with the query chain. It can be longer than the query, but not shorter.
-*Note: "100" guarantees a complete overlap, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or set it to 0 and rely on the template-modeling alignment score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff.
+*Note: "100" guarantees a complete overlap, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff.
 
 **lig_scan_radius** : ligand scanning radius
 
 Floating point number that is applied as a scanning radius for ligands, from the point of the superimposition of the query ligand(s) in the respective superimposed binding sites on the candidate chains. If the candidate has ligands bound outside of this sphere, they will be tolerated, and the candidate will be characterised as an apo-protein.
 
 **min_tmscore** : minimum TM-score
-Floating point number that is applied as a minimum cutoff point for template modeling alignment score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.  default = 0.5
+*Floating point number that is applied as a minimum cutoff point for template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.  default = 0.5
