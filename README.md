@@ -6,7 +6,7 @@ Tool for creating customized apo-holo datasets.
 
 
 ##  Objective
-**Given the holo form of a protein** (the complex of a protein structure **and its user specified ligand(s)**):
+**Given the holo form of a protein** (the complex of a protein structure **and its user-specified ligand(s)**):
 1. **find** all unbound forms of that protein (**apo-proteins**) that lack the specified ligand(s) in the superimposed binding site(s) of the specified ligand(s).
 2. **find** all other bound forms of that protein (**holo-proteins**) that include the specified ligand(s) or other ligands in the superimposed binding site(s) of the specified ligand(s).
 3. **align both apo- and holo-proteins** to the query holo protein
