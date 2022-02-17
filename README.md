@@ -114,7 +114,7 @@ pymol
 
 The application consists of the main script
 ~~~
-apoholoR_web.py
+apoholo_J.py
 ~~~
 
 and a helper script that downloads a UniProt-PDB chain mapping file and compiles 2 helper files
@@ -146,7 +146,7 @@ The maximum arguments within the single line input are of this form:
 
 Example of an input argument (query):
 ~~~
-python apoholoR_web.py --single_line_input '1a73 A ZN'
+python apoholo_J.py --single_line_input '1a73 A ZN'
 ~~~
 
 The application will fetch the structure 1a73, get chain A, and look for zinc+2 (ZN) ligands to verify the input argument. 
