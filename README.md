@@ -147,6 +147,8 @@ Example of an input argument (query):
 ~~~
 python apoholo_J.py --single_line_input '1a73 A ZN'
 ~~~
+-considers ZN ligands in chain A of 1a73
+
 
 The application will fetch the structure 1a73, get chain A, and look for zinc+2 (ZN) ligands to verify the input argument. 
 If ZN is found in chain A of 1a73 (1a73A), it will retrieve all other known chains that belong to the same protein with 1a73A, 
@@ -155,3 +157,28 @@ it will list them as HOLO, if the superimposed site is empty of ligands, the cha
 the chain will be listed as APO or HOLO, depending on the user’s preferences (if the user wants APO with no other ligands there, 
 it will be listed as HOLO, and if the user does not mind other ligands in this binding site, it will be listed as APO).
 
+More examples of input arguments.
+~~~
+python apoholo_J.py --single_line_input '1a73 A,B ZN'
+~~~
+-considers ZN ligands in chains A and B of 1a73
+~~~
+python apoholo_J.py --single_line_input '1a73 ALL ZN'
+~~~
+-considers ZN ligands in all chains of 1a73
+~~~
+python apoholo_J.py --single_line_input '1a73 ZN'
+~~~
+-the same with the previous case
+~~~
+python apoholo_J.py --single_line_input '1a73' (with ligand auto-detection ON)
+~~~
+-finds and considers all bound ligands in all chains of 1a73
+~~~
+python apoholo_J.py --single_line_input '1a73 A' (with ligand auto-detection ON)
+~~~
+-finds and considers all bound ligands in chain A of 1a73
+~~~
+python apoholo_J.py --single_line_input '1a73 A ZN,MG'
+~~~
+-considers ZN and MG ligands in chain A of 1a73
