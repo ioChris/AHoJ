@@ -232,4 +232,5 @@ Floating point number that is applied as a quality cutoff point when comparing t
 Floating point number that is applied as a scanning radius for ligands, from the point of the superimposition of the query ligand(s) in the respective superimposed binding sites on the candidate chains. If the candidate has ligands bound outside of this sphere, they will be tolerated, and the candidate will be characterised as an apo-protein.
 
 **min_tmscore** : minimum TM-score
-*Floating point number that is applied as a minimum cutoff point for template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.  default = 0.5
+
+Floating point number that is applied as a minimum cutoff point for template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.  default = 0.5
