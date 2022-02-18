@@ -103,11 +103,18 @@ pip install --upgrade --no-deps pymol-2.6.0a0-cp39-cp39-win_amd64.whl
    
 #### Using conda
 
+Clean installation on Linux using *conda* package manager. Tested on Ubuntu 21.10 and Debian 9.
+
 ~~~sh
+# clone repo
+git clone git@github.com:ioChris/AHoJ.git && cd AHoJ
+
+# install conda
 wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
-source Miniconda3-py39_4.11.0-Linux-x86_64.sh
+bash Miniconda3-py39_4.11.0-Linux-x86_64.sh && bash
 conda update conda
 
+# init conda env
 conda env create -f conda-env.yml
 conda activate ahoj
 
