@@ -61,11 +61,11 @@ For Windows 10 64-bit version, miniconda3-py3.9.7 (here, Conda 4.11.0 Python 3.9
 https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
 
 
-##### 2.  Create PyMOL environment
+##### 2.  Create a new environment
 Click the Start menu and run “Anaconda Prompt (miniconda3)” “as administrator”.
 ~~~sh
-conda create -n pymol      # Create a virtual environment named pymol
-conda activate pymol       # Activate the new environment
+conda create -n ahoj      # Create a virtual environment named ahoj
+conda activate ahoj       # Activate the new environment
 ~~~
 
 ##### 3.  Install supporting packages
@@ -85,7 +85,7 @@ pymol-2.6.0a0-cp39-cp39-win_amd64.whl
 pymol_launcher-2.1-cp39-cp39-win_amd64.whl
 ~~~
 
-In the conda pymol environment, switch to download directory (e.g., D:\Downloads)
+In the conda ahoj environment, switch to download directory (e.g., D:\Downloads)
 * Switch to Drive D:
 * Enter the downloads directory (`cd Downloads`)
 * Install pymol_launcher (PyMOL will be installed automatically)
