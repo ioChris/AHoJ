@@ -165,11 +165,11 @@ python apoholo_J.py --single_line_input '1a73 A,B ZN'
 ~~~
 python apoholo_J.py --single_line_input '1a73 ALL ZN'
 ~~~
+or
+~~~
+python apoholo_J.py --single_line_input '1a73 ZN' (with ligand auto-detection OFF)
+~~~
 -considers ZN ligands in all chains of 1a73
-~~~
-python apoholo_J.py --single_line_input '1a73 ZN'
-~~~
--the same with the previous case
 ~~~
 python apoholo_J.py --single_line_input '1a73' (with ligand auto-detection ON)
 ~~~
@@ -188,49 +188,50 @@ python apoholo_J.py --single_line_input '1a73 A ZN,MG'
 
 ### Basic
 
-**res_threshold** : resolution threshold
+**res_threshold** : resolution threshold [default = 3.5]
 
-Floating point number that is applied as a cutoff point when assessing the apo-holo candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. Condition is <=
+Floating point number that represents angstroms and is applied as a cutoff point when assessing the apo-holo candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. Condition is <=
 
-**NMR**
+**NMR** [default = 1]
 
-0 or 1. When set to 1 (ON), NMR structures are considered, in the case of multiple available structures, the first one is considered.
+0 or 1. When set to 1 (ON), NMR structures are considered as candidates. In the case of multiple states for a certain structure, the first one is considered.
 
-**x-ray only**
+**x-ray only** [default = 0]
 
 0 or 1. When set to 1 (ON), only X-ray structures are considered. It overrides the NMR setting.
 
-**lig_free_sites** : ligand-free sites
+**lig_free_sites** : ligand-free sites [default = 0]
 
 0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s).
 
-**autodetect_lig** : auto-detect ligands
+**autodetect_lig** : auto-detect ligands [default = 0]
 
 0 or 1. When set to 1 (ON), the algorithm will auto-detect any possible ligands (and their respective binding sites) in the query protein. It will then conduct the apo-protein search according to these ligands and binding sites.
 
-**reverse_search**
+**reverse_search** [default = 0]
 
 0 or 1. When set to 1 (ON), the algorithm will consider that the input is an apo structure without any ligands, essentially reversing the search. It will try to find structures (chains) of the same protein with and without ligands. It will list those as holo and apo respectively. This reverse search is broader in scope because there is no starting ligand (and thus binding site) as a reference point. Any structures that belong to the same protein and bind at least one ligand, will be characterised as holo.
 
 ### Advanced
 
-**save_separate**
+**save_separate** [default = 1]
 
 0 or 1. When set to 1 (ON), the server will save all aligned chains that are in the opposite category from the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will save any apo chains that it will find. In a reverse search, it would save all holo chains. If the user wishes to save both apo and holo chains, they can turn on the next parameter, "save_oppst".
 
-**save_oppst** : save opposite
+**save_oppst** : save opposite [default = 1]
 
 0 or 1. When set to 1 (ON), the server will not only find, but also save chains that are in the same category with the starting query (apo or holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will also save any holo chains that it will find. In a reverse search (starting with an apo-protein and looking for holo), it will also save the apo chains that it will find. This setting is dependant on the previous parameter "save_separate" which has to be ON for this parameter to work. This setting does not affect the text output of the server which always includes both apo and holo chains.
 
-**overlap_threshold**
+**overlap_threshold** [default = 0, min/max = 0/100]
 
-Floating point number that is applied as a quality cutoff point when comparing the sequence overlap of the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it would mean that the candidate chain has to completely overlap with the query chain. It can be longer than the query, but not shorter.
-*Note: "100" guarantees a complete overlap, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff.
+Floating point number that represents a percentage (%) and is applied as a cutoff point when comparing the sequence overlap between the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate chains, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it would mean that the candidate chain has to completely overlap with the query chain. It can be longer than the query, but not shorter.
 
-**lig_scan_radius** : ligand scanning radius
+Note: "100" guarantees a complete overlap, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff with the "min_tmscore" parameter.
 
-Floating point number that is applied as a scanning radius for ligands, from the point of the superimposition of the query ligand(s) in the respective superimposed binding sites on the candidate chains. If the candidate has ligands bound outside of this sphere, they will be tolerated, and the candidate will be characterised as an apo-protein.
+**lig_scan_radius** : ligand scanning radius [default = 5]
 
-**min_tmscore** : minimum TM-score
+Floating point number that represents angstroms and is applied as a scanning radius for ligands, from the point of the superimposition of the query ligand(s) in the respective superimposed binding sites on the candidate chains. If the candidate has ligands bound outside of this sphere, they will be tolerated, and the candidate will be characterised as apo-protein.
+
+**min_tmscore** : minimum TM-score [default = 0.5, min/max = 0/1]
 
 Floating point number that is applied as a minimum cutoff point for template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.  default = 0.5
