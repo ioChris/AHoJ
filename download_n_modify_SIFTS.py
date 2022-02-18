@@ -32,8 +32,8 @@ args = parser.parse_args()
 
 
 # Saving options (default = 1)
-del_old_sifts = 1 # 0 means processing existing SIFTS file and not downloading the new one
-save_dicts = 1 # if 0, overrides following settings
+del_old_sifts = 0 # 0 means processing existing SIFTS file and not downloading the new one
+save_dicts = 0 # if 0, overrides following settings
 
 save_r_spnum = 1    # save dict_R_SPnum dictionary to file (includes readable version w headers)
 save_plaindict = 1  # save dict_SIFTS dictionary to file (includes readable version w headers)
@@ -49,14 +49,14 @@ use_old_sifts = False
 # Define functions
 ##########################################################################################################
 
-def root_path():
+def get_2level_cwd():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
     path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):
-        memo = "Root path found >> " + path0
+        memo = "Detected current working >> " + path0
     else:
-        memo = 'Error finding root path in working dir:' + npath
-    # print(memo)
+        memo = 'Error detecting current working dir:' + npath
+    print(memo)
     return path0
 
 
@@ -64,7 +64,7 @@ def work_directory(args):
     if (args.work_directory):
         return args.work_directory
     else:
-        return root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
+        return get_2level_cwd() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
 
 ##########################################################################################################
 
@@ -72,7 +72,7 @@ def work_directory(args):
 path_root = work_directory(args)
 pathSIFTS = path_root + r'/SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathOLD = path_root + r'/oldSIFTS'          # old SIFTS files, keep as backup
-# pathSIFTS = root_path() + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
+# pathSIFTS = get_2level_cwd() + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
 # pathSIFTS = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
 pdb_uniprot_url = args.pdb_uniprot_url
 filename = pdb_uniprot_url.split('/')[-1]
