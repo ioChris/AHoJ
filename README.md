@@ -35,7 +35,7 @@ The python version and packages used to run the application appear below:
 * PyMOL		 2.4.1
 * pywget		0.31
 * wget		  3.2
-* tmalign 20170708   (? TODO: check if it is part of psico)   
+* tmalign 20170708 
 * pymol-psico 3.4.19
 
 
@@ -103,7 +103,26 @@ pip install --upgrade --no-deps pymol-2.6.0a0-cp39-cp39-win_amd64.whl
    
 #### Using conda
 
-*TODO*
+Clean installation on Linux using *conda* package manager. Tested on Ubuntu 21.10 and Debian 9.
+
+~~~sh
+# clone repo
+git clone git@github.com:ioChris/AHoJ.git && cd AHoJ
+
+# install conda
+wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
+bash Miniconda3-py39_4.11.0-Linux-x86_64.sh && bash
+conda update conda
+
+# init conda env
+conda env create -f conda-env.yml
+conda activate ahoj
+
+# prepare
+python download_n_modify_SIFTS.py --work_dir '../ahoj_workdir'  
+# test
+python apoholo_J.py --work_dir '../ahoj_workdir' --single_line_input '1a73 A,B ZN'
+~~~
 
 #### Without conda
 

@@ -51,7 +51,7 @@ use_old_sifts = False
 
 def root_path():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
+    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):
         memo = "Root path found >> " + path0
     else:
@@ -70,8 +70,8 @@ def work_directory(args):
 
 
 path_root = work_directory(args)
-pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
-pathOLD = path_root + r'\oldSIFTS'          # old SIFTS files, keep as backup
+pathSIFTS = path_root + r'/SIFTS'           # Pre compiled files with UniProt PDB mapping
+pathOLD = path_root + r'/oldSIFTS'          # old SIFTS files, keep as backup
 # pathSIFTS = root_path() + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
 # pathSIFTS = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
 pdb_uniprot_url = args.pdb_uniprot_url
@@ -91,18 +91,18 @@ if not os.path.exists(pathSIFTS):
         print('Could not create directory: ', pathSIFTS)
 
 # Check if (old) SIFTS file exists and/or download new file    
-if os.path.exists(pathSIFTS + "\\" + filename):
+if os.path.exists(pathSIFTS + "/" + filename):
     if del_old_sifts == 1:
 
         # Archive old SIFTS files before deleting/replacing
         print('Backing up current SIFTS and dict files')
         if not os.path.exists(pathOLD):            os.makedirs(pathOLD)
         time_str = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
-        output_archive_pathname = pathOLD + '\\oldSIFTS_' + time_str
+        output_archive_pathname = pathOLD + '/oldSIFTS_' + time_str
         shutil.make_archive(output_archive_pathname, 'zip', pathSIFTS)
 
         print('Deleting existing SIFTS file')
-        os.remove(pathSIFTS + "\\" + filename)
+        os.remove(pathSIFTS + "/" + filename)
 
         print('Downloading new SIFTS file into ', pathSIFTS)
         wget.download(pdb_uniprot_url, pathSIFTS)  # Download new file
@@ -117,7 +117,7 @@ else:
 
 # Unzip new .gz file (and overwrite old)
 if not use_old_sifts:
-    with gzip.open(pathSIFTS + "\\" + filename ,"rb") as infile, open(pathSIFTS + "\\" + filename[:-3] ,"wb") as outfile:
+    with gzip.open(pathSIFTS + "/" + filename ,"rb") as infile, open(pathSIFTS + "/" + filename[:-3] ,"wb") as outfile:
         print('Unzipping new file')
         for line in infile:
             outfile.write(line)
@@ -125,7 +125,7 @@ if not use_old_sifts:
 
 
 ## Create reverse version with SPnum and also a simple version of the dict with structchain:uniprot_id
-fileSIFTS = pathSIFTS + "\\" + filename[:-3]
+fileSIFTS = pathSIFTS + "/" + filename[:-3]
 filenameSIFTS = filename[:-3]
 counter_zeroes = 0
 counter_neg = 0
@@ -189,11 +189,11 @@ if save_r_spnum == 1:
     outfile2 = outfile1[:-4] + "_readable.txt"
     print('Saving output of dict_R_SPnum as:\n', outfile1, '\t', outfile2)
 
-    with open (pathSIFTS + '\\' + outfile1, 'wt') as out1:
+    with open (pathSIFTS + '/' + outfile1, 'wt') as out1:
         out1.write(str(dict_R_SPnum))
 
     # Write same dict in a more readable format (new line per key)
-    with open (pathSIFTS + '\\' + outfile2, 'wt') as out2:
+    with open (pathSIFTS + '/' + outfile2, 'wt') as out2:
         for key, value, in dict_R_SPnum.items():
             out2.write('{0}: {1}\n'.format(key, value))
 
@@ -203,11 +203,11 @@ if save_plaindict == 1:
     outfile_SIFTS_readable = outfile_SIFTS[:-4] + "_readable.txt"
     print('Saving output of dict_SIFTS as:\n', outfile_SIFTS, '\t', outfile_SIFTS_readable)
 
-    with open (pathSIFTS + '\\' + outfile_SIFTS, 'wt') as out3:
+    with open (pathSIFTS + '/' + outfile_SIFTS, 'wt') as out3:
         out3.write(str(dict_SIFTS))
 
     # Write  dict2 in a more readable format (new line per key)
-    with open (pathSIFTS + '\\' + outfile_SIFTS_readable, 'wt') as out4:
+    with open (pathSIFTS + '/' + outfile_SIFTS_readable, 'wt') as out4:
         #header = '#HEADER: HOLO_chain SP_BEG SP_END : APO_chain SP_BEG SP_END SP_LEN overlap_len %overlap\n'
         out4.write(header1)
         out4.write(header2)

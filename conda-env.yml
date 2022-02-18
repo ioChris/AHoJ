@@ -1,0 +1,10 @@
+name: ahoj
+channels:
+  - conda-forge
+  - speleo3
+  - defaults
+dependencies:
+  - pymol-open-source=2.5.0
+  - pymol-psico=4.0.2
+  - tmalign=20170708
+  - python-wget
