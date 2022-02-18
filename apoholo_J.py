@@ -41,36 +41,36 @@ import sys
 parser = argparse.ArgumentParser()  # Create the parser, add arguments
 
 # Main user query
-parser.add_argument('--single_line_input', type=str,   default='1a73 a zn', help='user main input query')
+parser.add_argument('--single_line_input', type=str,   default='1a73 a zn', help='main input query')
 
 # Basic
-parser.add_argument('--res_threshold',     type=float, default=3.5, help='resolution cut-off for apo chains (angstrom), condition is <=')
-parser.add_argument('--NMR',               type=int,   default=1,   help='0/1: discard/include NMR structures')
-parser.add_argument('--xray_only',         type=int,   default=0,   help='0/1: only consider X-ray structures')
-parser.add_argument('--lig_free_sites',    type=int,   default=0,   help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
-parser.add_argument('--autodetect_lig',    type=int,   default=0,   help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
-parser.add_argument('--reverse_search',    type=int,   default=0,   help='0/1: look for holo structures from apo')
+parser.add_argument('--res_threshold',     type=float, default=3.5,  help='resolution cut-off for apo chains (angstrom), condition is <=')
+parser.add_argument('--NMR',               type=int,   default=1,    help='0/1: discard/include NMR structures')
+parser.add_argument('--xray_only',         type=int,   default=0,    help='0/1: only consider X-ray structures')
+parser.add_argument('--lig_free_sites',    type=int,   default=0,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
+parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
+parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
 # Advanced
-parser.add_argument('--save_separate',     type=int,   default=0,   help='0/1: save each chain object in a separate file (default save)')
-parser.add_argument('--save_session',      type=int,   default=0,   help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
-parser.add_argument('--multisave',         type=int,   default=0,   help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
-parser.add_argument('--save_oppst',        type=int,   default=0,   help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+parser.add_argument('--save_separate',     type=int,   default=0,    help='0/1: save each chain object in a separate file (default save)')
+parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
+parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
+parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
 
-parser.add_argument('--overlap_threshold', type=float, default=0,   help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
-parser.add_argument('--lig_scan_radius',   type=float, default=5,   help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
-parser.add_argument('--min_tmscore',       type=float, default=0.5, help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
+parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
+parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
 # Experimental
-parser.add_argument('--water_as_ligand',   type=int,   default=0,   help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
-parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,   help='0/1: ignore/consider non-standard residues as ligands')
-parser.add_argument('--d_aa_as_lig',       type=int,   default=0,   help='0/1: ignore/consider D-amino acids as ligands')
-parser.add_argument('--beyond_hetatm',     type=int,   default=0,   help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
-parser.add_argument('--look_in_archive',   type=int,   default=0,   help='0/1: search if the same query has been processed in the past (can give very fast results)')
+parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,    help='0/1: ignore/consider non-standard residues as ligands')
+parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
+parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
+parser.add_argument('--look_in_archive',   type=int,   default=0,    help='0/1: search if the same query has been processed in the past (can give very fast results)')
 
 # Internal
-parser.add_argument('--apo_chain_limit',   type=int,   default=999, help='limit number of apo chains to consider when aligning (for fast test runs)')
-parser.add_argument('--path_root',         type=str,   default='',  help='define the root path of the server, inside which the working subdirectories will be created (e.g. r"\apo_holo_pc\webserver")')
+parser.add_argument('--apo_chain_limit',   type=int,   default=999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
+parser.add_argument('--work_directory',    type=str,   default=None, help='root working directory for pre-computed and intermediary data')
 
 args = parser.parse_args()  # Parse arguments
 
@@ -105,38 +105,38 @@ single_line_input = '1DB1 vdx' #vitamin D3 study
 
 
 # Basic
-res_threshold = args.res_threshold          # 3.5   # resolution cut-off for apo chains (angstrom), condition is <='
-NMR = args.NMR                              # 1     # 0/1: discard/include NMR structures
-xray_only = args.xray_only                  # 0     # 0/1: only consider X-ray structures
-lig_free_sites = args.lig_free_sites        # 0     # 0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands
-autodetect_lig = args.autodetect_lig        # 0     # 0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands
-reverse_search = args.reverse_search        # 0     # 0/1: look for holo structures from apo
+res_threshold = args.res_threshold
+NMR = args.NMR
+xray_only = args.xray_only
+lig_free_sites = args.lig_free_sites
+autodetect_lig = args.autodetect_lig
+reverse_search = args.reverse_search
 
 # Advanced
-save_separate = args.save_separate          # 0     # 0/1: save each chain object in a separate file (default ON)
-save_session = args.save_session            # 0     # 0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -recommended)
-multisave = args.multisave                  # 0     # 0/1: save each result in a .pdb file (unzipped, no annotations -not recommended)
-save_oppst = args.save_oppst                # 0     # 0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)
+save_separate = args.save_separate
+save_session = args.save_session
+multisave = args.multisave
+save_oppst = args.save_oppst
 
-overlap_threshold = args.overlap_threshold  # 0     # % of overlap between apo and holo chain (w UniProt numbering), condition is ">=". "0" allows for negative overlap
-lig_scan_radius = args.lig_scan_radius      # 5     # angstrom radius to look around holo ligand(s)' superposition
-min_tmscore = args.min_tmscore              # 0.5   # minimum acceptable TM score for apo-holo alignments (condition is "<" than)
+overlap_threshold = args.overlap_threshold
+lig_scan_radius = args.lig_scan_radius
+min_tmscore = args.min_tmscore
 
 # Experimental
-water_as_ligand = args.water_as_ligand      # 0     # 0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)
-nonstd_rsds_as_lig = args.nonstd_rsds_as_lig# 0     # 0/1: ignore/consider non-standard residues as ligands
-d_aa_as_lig = args.d_aa_as_lig              # 0     # 0/1: ignore/consider D-amino acids as ligands
-beyond_hetatm = args.beyond_hetatm          # 0     # 0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]
-look_in_archive = args.look_in_archive      # 0     # 0/1: search if the same query has been processed in the past (can give very fast results)
+water_as_ligand = args.water_as_ligand
+nonstd_rsds_as_lig = args.nonstd_rsds_as_lig
+d_aa_as_lig = args.d_aa_as_lig
+beyond_hetatm = args.beyond_hetatm
+look_in_archive = args.look_in_archive
 
 # Internal
-apo_chain_limit = args.apo_chain_limit      # 999   # limit number of apo chains to consider when aligning (for fast test runs)
-path_root = args.path_root                  # ''    # define the root path of the server, inside which the working subdirectories will be created (e.g. r'\apo_holo_pc\webserver')
+apo_chain_limit = args.apo_chain_limit
 
 
 
 # Adjust input, resolve conflicts
-if reverse_search == 1:    autodetect_lig = 1
+if reverse_search == 1:
+    autodetect_lig = 1
 lig_scan_radius = str(lig_scan_radius)  # needs to be str
 reverse_mode = False
 
@@ -146,24 +146,33 @@ settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str
 
 # 3-letter names of amino acids and h2o (inverted selection defines ligands)
 nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
-if water_as_ligand == 0:    nolig_resn.append('HOH')
+if water_as_ligand == 0:
+    nolig_resn.append('HOH')
 # Non-standard residues [SEP TPO PSU MSE MSO][1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG]
 nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA".split()
-if nonstd_rsds_as_lig == 0:    nolig_resn.extend(nonstd_rsds)
+if nonstd_rsds_as_lig == 0:
+    nolig_resn.extend(nonstd_rsds)
 # D-amino acids
 d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
-if d_aa_as_lig == 0:    nolig_resn.extend(d_aminoacids)
+if d_aa_as_lig == 0:
+    nolig_resn.extend(d_aminoacids)
 
 
+##########################################################################################################
+# Define functions
+##########################################################################################################
 
-## Define functions
 def root_path():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
     path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
-    if os.path.exists(path0):        memo = "Root path found >> " + path0
-    else:        memo = 'Error finding root path in working dir:' + npath        
+    if os.path.exists(path0):
+        memo = "Root path found >> " + path0
+    else:
+        memo = 'Error finding root path in working dir:' + npath
+    # print(memo)
     return path0
-    print(memo)
+
+
 def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCIF gz (without exception handling)
     urlA = 'https://files.rcsb.org/download/'
     urlB = '.cif.gz'
@@ -173,7 +182,10 @@ def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCI
         wget.download(url, destination_path)
         print('Downloading: ', pdb_id + urlB)
         return file_path
-    else:        return file_path
+    else:
+        return file_path
+
+
 def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands (without exception handling)
     urlA = 'https://files.rcsb.org/ligands/view/'
     urlB = '.cif'
@@ -183,11 +195,16 @@ def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands
         wget.download(url, destination_path)
         print('Downloading: ', lig_id + urlB)
         return file_path
-    else:        return file_path
+    else:
+        return file_path
+
+
 def add_log(msg, log_file):     # Create error log
     msg = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + '\t' + msg
     with open(path_root + '\\' + log_file, 'a') as file:
         file.write(msg + '\n')
+
+
 def next_path(path_pattern):    # Create incrementing directory name for each job
     i = 1
     while os.path.exists(path_pattern % i):     # First do an exponential search
@@ -197,19 +214,34 @@ def next_path(path_pattern):    # Create incrementing directory name for each jo
         c = (a + b) // 2 # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
+
+
 def search_query_history(new_query_name, past_queries_filename):    # Find past job under the same query name, if found, return the job id
     dict_q = dict()
     try:
         with open (pathQRS + '\\' + past_queries_filename, 'r') as in_q:
             for line in in_q:
                 dict_q[line.split('-')[0]] = line.split('-')[1][:-1]
-        if new_query_name in dict_q.keys():            return dict_q[new_query_name]
-        else:            return 0
-    except:        return 0
+        if new_query_name in dict_q.keys():
+            return dict_q[new_query_name]
+        else:
+            return 0
+    except:
+        return 0
+
+
+def work_directory(args):
+    # TODO add override from local config
+    if (args.work_directory):
+        return args.work_directory
+    else:
+        return root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
+
+##########################################################################################################
 
 
 ## Set directories, create job_id
-path_root = root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # TODO: this path needs to be an argument
+path_root = work_directory(args)
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
@@ -265,10 +297,13 @@ print('Done\n')
 print('Parsing input')
 input_arguments = single_line_input.split()
 
+
+ligand_names = None
+
 if len(input_arguments) == 1 and autodetect_lig == 1:
     struct = single_line_input.split()[0].lower()
     user_chains = 'ALL'
-    #ligand_names = 'autodetect'
+    # ligand_names = 'autodetect'
 elif len(input_arguments) == 1 and len(single_line_input) == 4:
     autodetect_lig = 1 # automatically activate ligand auto-detection mode
     struct = single_line_input.split()[0].lower()
@@ -276,7 +311,7 @@ elif len(input_arguments) == 1 and len(single_line_input) == 4:
 elif len(input_arguments) == 2 and autodetect_lig == 1:
     struct = single_line_input.split()[0].lower()
     user_chains = single_line_input.split()[1].upper()
-    #ligand_names = single_line_input.split()[1].upper() # adjust case, ligands = upper
+    # ligand_names = single_line_input.split()[1].upper() # adjust case, ligands = upper
 elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
     struct = single_line_input.split()[0].lower()
     user_chains = 'ALL'
@@ -288,9 +323,10 @@ elif len(input_arguments) == 3:
 else:
     print('Wrong input format\nPlease use a whitespace character to separate input arguments\nInput examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
     print('Exiting & deleting new results folder', job_id)
-    if os.path.isdir(pathRSLTS):        os.rmdir(pathRSLTS)
-    sys.exit(0)
-#user_position = single_line_input.split()[3] #TODO
+    if os.path.isdir(pathRSLTS):
+        os.rmdir(pathRSLTS)
+    sys.exit(1)  # exit with error
+#user_position = single_line_input.split()[3]  # TODO ?
 
 # Parse chains
 if not user_chains == 'ALL':
@@ -303,6 +339,10 @@ if not user_chains == 'ALL':
         user_structchain = struct.lower() + user_chain.upper()
         user_structchains.append(user_structchain)
 
+if ligand_names is None:
+    print("Input ligands were not defined!")
+    # sys.exit(1) ?
+
 # Parse ligands
 if autodetect_lig == 0:
     ligand_names = ''.join(ligand_names)
@@ -314,10 +354,10 @@ print('Input structure:\t', struct)
 if user_chains == 'ALL':
     print('Input chains:\t\t', user_chains)
 else:
-    print('Input chains:\t\t', user_chains)#, '\t', user_chains_bundle)
-    print('Input structchains:\t', user_structchains)
+    print('Input chains:\t\t', user_chains) #, '\t', user_chains_bundle)
+    print('Input structchains:\t', user_structchains)  # TODO user_structchains may be undefiend here
 if autodetect_lig == 1:     print('Input ligands:\t\tauto-detect')
-else:    print('Input ligands:\t\t', ligand_names)#, '\t', ligand_names_bundle)
+else:    print('Input ligands:\t\t', ligand_names) #, '\t', ligand_names_bundle)
 print('Done\n')
 
 
@@ -340,7 +380,8 @@ if autodetect_lig == 0:
                         lig_syn = line.split()[1:]
                         print(lig_id, ' '.join(lig_name), ' '.join(lig_syn))
                         break
-        except:        print('Error verifying ligand:\t', lig_id)
+        except:
+            print('Error verifying ligand:\t', lig_id)
 
 
 
@@ -370,7 +411,8 @@ else:
             discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
 user_chains_bundle = '+'.join(user_chains)
 print('Input chains verified:\t', user_structchains, user_chains)
-if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_chains)
+if len(discarded_chains) > 0:
+    print('Input chains rejected:\t', discarded_chains)
 
 
 
@@ -378,8 +420,10 @@ if len(discarded_chains) > 0:    print('Input chains rejected:\t', discarded_cha
 
 
 ## Look up query in history, if found, return job path and end script
-if autodetect_lig == 0:    user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
-else:    user_input_parameters = struct + '_' + ','.join(user_chains) + '_autodetect_lig'
+if autodetect_lig == 0:
+    user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+else:
+    user_input_parameters = struct + '_' + ','.join(user_chains) + '_autodetect_lig'
 query_full = user_input_parameters + '_' + settings_str + '-' + job_id
 #print(query_full)
 if look_in_archive == 1:
@@ -489,7 +533,7 @@ for apo_candidate_struct in apo_candidate_structs:
                 elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
                     resolution = round(float(line.split()[1]), 3) # EM resolution
                     break
-            except:# Exception as ex: # getting weird but harmless exceptions
+            except: # Exception as ex: # getting weird but harmless exceptions
                 print('Problem parsing structure: ', apo_candidate_struct)#, ex)
         try:
             if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
@@ -530,8 +574,10 @@ if autodetect_lig == 1:
     print('\n====== No ligands specified: auto-detecting ligands ======\n')
     search_name = 'hetatm'
     ligand_names_bundle = ' and not solvent and not polymer'
-elif beyond_hetatm == 1:    search_name = 'resn '
-else:    search_name = 'hetatm and resn '
+elif beyond_hetatm == 1:
+    search_name = 'resn '
+else:
+    search_name = 'hetatm and resn '
     
 
 holo_lig_positions = dict()
@@ -813,8 +859,3 @@ if job_id:
         out_q.write(query_full + '\n')
     
 print('\nDone')
-
-    
-
-
-
