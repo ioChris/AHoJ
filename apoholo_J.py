@@ -164,7 +164,7 @@ if d_aa_as_lig == 0:
 
 def get_2level_cwd():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], npath.split(os.sep)[1], npath.split(os.sep)[2])
+    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):
         memo = "Root path found >> " + path0
     else:
@@ -235,7 +235,7 @@ def work_directory(args):
     if args.work_directory is not None:
         return args.work_directory
     else:
-        return get_2level_cwd() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
+        return get_2level_cwd() + '/Documents/Bioinfo_local/Ions/datasets_local/APO_candidates/webserver'  # default work directory
 
 ##########################################################################################################
 
