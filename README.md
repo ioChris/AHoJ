@@ -103,7 +103,19 @@ pip install --upgrade --no-deps pymol-2.6.0a0-cp39-cp39-win_amd64.whl
    
 #### Using conda
 
-*TODO*
+~~~sh
+wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
+source Miniconda3-py39_4.11.0-Linux-x86_64.sh
+conda update conda
+
+conda env create -f conda-env.yml
+conda activate ahoj
+
+# prepare
+python download_n_modify_SIFTS.py --work_dir '../ahoj_workdir'  
+# test
+python apoholo_J.py --work_dir '../ahoj_workdir' --single_line_input '1a73 A,B ZN'
+~~~
 
 #### Without conda
 
