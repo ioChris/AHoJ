@@ -62,7 +62,7 @@ parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angst
 parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
 # Experimental
-parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--water_as_ligand',   type=int,   default=1,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
 parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,    help='0/1: ignore/consider non-standard residues as ligands')
 parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
 parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
@@ -89,7 +89,7 @@ if len(sys.argv)==1:
 ''' Test input (overrides argparse) '''
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 #single_line_input = '1a0u' #hem, big search
-#single_line_input = '3fav zn'#' zn'
+single_line_input = '3fav zn'#' zn'
 #single_line_input = '1a73 a zn'#',MG,HEM'
 #single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
 #single_line_input = '2ZB1 all gk4'
@@ -101,7 +101,7 @@ if len(sys.argv)==1:
 #single_line_input = '5gss all gsh' # slow
 #single_line_input = '1jq8 so4'
 #single_line_input = '1l5h b CLF'
-single_line_input = '1DB1 vdx' #vitamin D3 study
+#single_line_input = '1DB1 vdx' #vitamin D3 study
 
 
 # Basic
@@ -162,7 +162,7 @@ if d_aa_as_lig == 0:
 # Define functions
 ##########################################################################################################
 
-def root_path():
+def get_2level_cwd():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
     path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):
@@ -205,7 +205,7 @@ def add_log(msg, log_file):     # Create error log
         file.write(msg + '\n')
 
 
-def next_path(path_pattern):    # Create incrementing directory name for each job
+def next_job(path_pattern):    # Create incrementing directory name for each job
     i = 1
     while os.path.exists(path_pattern % i):     # First do an exponential search
         i = i * 2
@@ -235,7 +235,7 @@ def work_directory(args):
     if (args.work_directory):
         return args.work_directory
     else:
-        return root_path() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
+        return get_2level_cwd() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
 
 ##########################################################################################################
 
@@ -247,7 +247,7 @@ pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PD
 pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + r'\ligands'          # Directory with ALL pdb ligands (used for fetch/download)
 pathQRS = path_root + r'\queries'           # Directory/index with parameters of previously run jobs
-pathRSLTS = next_path(path_root + r'\results\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
+pathRSLTS = next_job(path_root + r'\results\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
 
 # Get additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
@@ -519,7 +519,7 @@ apo_candidate_structs.add('1hko') #NMR'''
 print('Checking resolution and experimental method of Apo candidate structures')
 for apo_candidate_struct in apo_candidate_structs:
     apo_candidate_structPath = download_mmCIF_gz2(apo_candidate_struct, pathSTRUCTS)
-    resolution = '?'
+    resolution = '?\t'
     with gzip.open (apo_candidate_structPath, 'rt') as mmCIFin:
         for line in mmCIFin:
             try:
