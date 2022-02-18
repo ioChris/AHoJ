@@ -164,7 +164,7 @@ if d_aa_as_lig == 0:
 
 def get_2level_cwd():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], '\\', npath.split(os.sep)[1], npath.split(os.sep)[2])
+    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):
         memo = "Root path found >> " + path0
     else:
@@ -177,7 +177,7 @@ def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCI
     urlA = 'https://files.rcsb.org/download/'
     urlB = '.cif.gz'
     url = urlA + pdb_id.upper() + urlB
-    file_path = destination_path + '\\' + pdb_id + urlB
+    file_path = destination_path + '/' + pdb_id + urlB
     if not os.path.isfile(file_path):
         wget.download(url, destination_path)
         print('Downloading: ', pdb_id + urlB)
@@ -190,7 +190,7 @@ def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands
     urlA = 'https://files.rcsb.org/ligands/view/'
     urlB = '.cif'
     url = urlA + lig_id.upper() + urlB
-    file_path = destination_path + '\\' + lig_id + urlB
+    file_path = destination_path + '/' + lig_id + urlB
     if not os.path.isfile(file_path):
         wget.download(url, destination_path)
         print('Downloading: ', lig_id + urlB)
@@ -201,7 +201,7 @@ def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands
 
 def add_log(msg, log_file):     # Create error log
     msg = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + '\t' + msg
-    with open(path_root + '\\' + log_file, 'a') as file:
+    with open(path_root + '/' + log_file, 'a') as file:
         file.write(msg + '\n')
 
 
@@ -219,7 +219,7 @@ def next_job(path_pattern):    # Create incrementing directory name for each job
 def search_query_history(new_query_name, past_queries_filename):    # Find past job under the same query name, if found, return the job id
     dict_q = dict()
     try:
-        with open (pathQRS + '\\' + past_queries_filename, 'r') as in_q:
+        with open (pathQRS + '/' + past_queries_filename, 'r') as in_q:
             for line in in_q:
                 dict_q[line.split('-')[0]] = line.split('-')[1][:-1]
         if new_query_name in dict_q.keys():
@@ -243,11 +243,11 @@ def work_directory(args):
 ## Set directories, create job_id
 path_root = work_directory(args)
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
-pathSIFTS = path_root + r'\SIFTS'           # Pre compiled files with UniProt PDB mapping
-pathSTRUCTS = path_root + r'\structures'    # Directory with ALL pdb structures (used for fetch/download)
-pathLIGS = path_root + r'\ligands'          # Directory with ALL pdb ligands (used for fetch/download)
-pathQRS = path_root + r'\queries'           # Directory/index with parameters of previously run jobs
-pathRSLTS = next_job(path_root + r'\results\job_%s')     #pathRSLTS = path_root + r'\results' + '\\' + 'job_' + str(job_id)
+pathSIFTS = path_root + r'/SIFTS'           # Pre compiled files with UniProt PDB mapping
+pathSTRUCTS = path_root + r'/structures'    # Directory with ALL pdb structures (used for fetch/download)
+pathLIGS = path_root + r'/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
+pathQRS = path_root + r'/queries'           # Directory/index with parameters of previously run jobs
+pathRSLTS = next_job(path_root + r'/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
 
 # Get additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
@@ -277,8 +277,8 @@ else:
 print('Done\n')
 
 # Declare and load SIFTS input file(s)
-fileSIFTSdict = pathSIFTS + '\\' + "pdb_chain_uniprot_dict.txt" # regular SIFTS file stripped
-fileRSIFTS = pathSIFTS + '\\' + "pdb_chain_uniprot_REVERSE_SPnum.txt" # pre-compiled rSIFTS file (reverse_SIFTS_SPnum.py)
+fileSIFTSdict = pathSIFTS + '/' + "pdb_chain_uniprot_dict.txt" # regular SIFTS file stripped
+fileRSIFTS = pathSIFTS + '/' + "pdb_chain_uniprot_REVERSE_SPnum.txt" # pre-compiled rSIFTS file (reverse_SIFTS_SPnum.py)
 
 print('Loading SIFTS dictionary')   # Load normal SIFTS dictionary as dict_SIFTS
 with open (fileSIFTSdict, 'r') as input1:
@@ -433,10 +433,10 @@ if look_in_archive == 1:
     if old_same_job == 0:
         print('Same job not found, continuing process\n')
     else:
-        if os.path.isdir(os.path.dirname(pathRSLTS) + '\\' + old_same_job):
-            print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '\\' + old_same_job, '\n')
+        if os.path.isdir(os.path.dirname(pathRSLTS) + '/' + old_same_job):
+            print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '/' + old_same_job, '\n')
             print('Printing alignments of old job')
-            with open (os.path.dirname(pathRSLTS) + '\\' + old_same_job + '\\' + 'results.csv', 'r') as old_in:
+            with open (os.path.dirname(pathRSLTS) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
                 for line in old_in:
                     print(line[:-1])
             print('\nDeleting new job folder', job_id)
@@ -601,7 +601,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     
     
     # Find & name specified ligands
-    ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name
+    ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name   # TODO ligand_names_bundle can be undefined here
     if ligands_selection == 0:
         print('No ligands found in author chain, trying PDB chain')
         ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and segi ' + holo_chain)
@@ -725,15 +725,15 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 else:       print('APO')
                 
                 if save_separate == 1:
-                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '\\a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
 
             else:
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
                 print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
                 if save_separate == 1 and save_oppst == 1:
-                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '\\h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
+                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
         
         else: # reverse mode
             # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
@@ -742,15 +742,15 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r))
                 print('HOLO')
                 if save_separate == 1:
-                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '\\h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
             else:
                 apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r.union(found_ligands_xtra)))
                 if len(found_ligands_xtra) > 0:     print('APO*')
                 else:       print('APO')
                 if save_separate == 1 and save_oppst == 1:
-                    if not os.path.isfile(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '\\holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '\\a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
+                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(pathRSLTS + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
             
     
     # Clean objects/selections in session & save
@@ -778,7 +778,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     except:        cmd.center(holo_structchain)
 
     # Save results as session (.pse.gz) or multisave (.cif)
-    filename_body = pathRSLTS + '\\' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '\\' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
+    filename_body = pathRSLTS + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
     filename_pse = filename_body + '.pse.gz'
     filename_multi = filename_body + '_multi.cif'
     if len(apo_holo_dict) > 0:    #len(dictApoCandidates_1) > 0:    #if len(cmd.get_object_list('all')) > 1:
@@ -795,7 +795,7 @@ print('')
 if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
     '''
     # Write dictionary to file
-    filename_aln = pathRSLTS + '\\apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
+    filename_aln = pathRSLTS + '/apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
     if reverse_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
     else:        header = "#HEADER: {holo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
     with open (filename_aln + '.txt', 'wt') as out1:
@@ -803,7 +803,7 @@ if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_ses
         out1.write(str(apo_holo_dict))
     '''
     # Write CSV file
-    filename_csv = pathRSLTS + '\\results_apo.csv'
+    filename_csv = pathRSLTS + '/results_apo.csv'
     if reverse_mode:    header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     else:        header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     #header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
@@ -823,7 +823,7 @@ else:    print('No apo forms found')
 if len(apo_holo_dict_H) > 0:
     '''
     # Write dictionary to file
-    filename_aln = pathRSLTS + '\\holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
+    filename_aln = pathRSLTS + '/holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
     if reverse_mode:    header = "#HEADER: {apo_chain: [holo_chain %UniProt_overlap RMSD TM_score ligands]\n"
     else:   header = "#HEADER: {holo_chain: [holo_chain %UniProt_overlap RMSD TM_score ligands]\n"
     with open (filename_aln + '.txt', 'wt') as out1:
@@ -831,7 +831,7 @@ if len(apo_holo_dict_H) > 0:
         out1.write(str(apo_holo_dict_H))
     '''
     # Write CSV holo file
-    filename_csv = pathRSLTS + '\\results_holo.csv'
+    filename_csv = pathRSLTS + '/results_holo.csv'
     if reverse_mode:    header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     else:   header = "#holo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     with open (filename_csv, 'w') as csv_out:
@@ -855,7 +855,7 @@ if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
 # Append the name of the query and the job_id in the queries.txt
 if job_id:
     print('\nSaving query:', query_full)
-    with open (pathQRS + '\\' + 'queries.txt', 'a') as out_q:
+    with open (pathQRS + '/' + 'queries.txt', 'a') as out_q:
         out_q.write(query_full + '\n')
     
 print('\nDone')
