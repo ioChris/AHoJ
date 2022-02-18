@@ -164,7 +164,7 @@ if d_aa_as_lig == 0:
 
 def get_2level_cwd():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
+    path0 = os.path.join(npath.split(os.sep)[0], npath.split(os.sep)[1], npath.split(os.sep)[2])
     if os.path.exists(path0):
         memo = "Root path found >> " + path0
     else:
@@ -243,11 +243,11 @@ def work_directory(args):
 ## Set directories, create job_id
 path_root = work_directory(args)
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
-pathSIFTS = path_root + r'/SIFTS'           # Pre compiled files with UniProt PDB mapping
-pathSTRUCTS = path_root + r'/structures'    # Directory with ALL pdb structures (used for fetch/download)
-pathLIGS = path_root + r'/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
-pathQRS = path_root + r'/queries'           # Directory/index with parameters of previously run jobs
-pathRSLTS = next_job(path_root + r'/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
+pathSIFTS = path_root + '/SIFTS'           # Pre compiled files with UniProt PDB mapping
+pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
+pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
+pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
+pathRSLTS = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
 
 # Get additional info
 job_id = os.path.basename(os.path.normpath(pathRSLTS))
