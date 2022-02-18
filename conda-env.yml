@@ -8,5 +8,5 @@ dependencies:
   - pymol-open-source=2.5.0
   # - pymol=2.4.1
   - pymol-psico=4.0.2
-  - tmalign=4.0.2
+  - tmalign=20170708
   - python-wget

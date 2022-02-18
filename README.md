@@ -35,7 +35,7 @@ The python version and packages used to run the application appear below:
 * PyMOL		 2.4.1
 * pywget		0.31
 * wget		  3.2
-* tmalign 20170708   (? TODO: check if it is part of psico)   
+* tmalign 20170708 
 * pymol-psico 3.4.19
 
 
