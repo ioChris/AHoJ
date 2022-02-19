@@ -14,7 +14,7 @@ def get_2level_cwd():
 
 
 def get_script_directory():
-    """ Returns the directory the current script (or interpreter) is running in  """
+    """ Get the directory the current script (or interpreter) is running in  """
     path = os.path.realpath(sys.argv[0])
     if os.path.isdir(path):
         return path
@@ -26,13 +26,14 @@ def get_default_workdir():
     if os.name == 'nt':
         return get_2level_cwd() + '/Documents/Bioinfo_local/Ions/datasets_local/APO_candidates/webserver'
     else:
-        return os.path.join(get_script_directory(), '..', 'ahoj_workdir')
+        return os.path.normpath(os.path.join(get_script_directory(), '..', 'ahoj_workdir'))
 
 
 def get_workdir(args):
-    # TODO add override from local config
+    """ Get path to global work directory  """
     if args.work_directory is not None:
         return args.work_directory
     else:
         return get_default_workdir()
+    # TODO add an override from local config or ENV variable
 

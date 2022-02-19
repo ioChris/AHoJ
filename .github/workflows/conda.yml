@@ -28,32 +28,32 @@ jobs:
           conda info
           conda list
       - name: Run prepare script
-        run: python download_n_modify_SIFTS.py
+        run: python prepare.py
       - name: Test apoholo_J.py
         run: | 
-          python apoholo_J.py --single_line_input '1a73 A,B ZN'
-          python apoholo_J.py --single_line_input '1a73 ALL ZN'
-          python apoholo_J.py --single_line_input '1a73 ZN' 
-          python apoholo_J.py --single_line_input '1a73' 
-          python apoholo_J.py --single_line_input '1a73 A' 
-          python apoholo_J.py --single_line_input '1a73 A ZN,MG'
+          python apoholo_J.py --query '1a73 A,B ZN'
+          python apoholo_J.py --query '1a73 ALL ZN'
+          python apoholo_J.py --query '1a73 ZN' 
+          python apoholo_J.py --query '1a73' 
+          python apoholo_J.py --query '1a73 A' 
+          python apoholo_J.py --query '1a73 A ZN,MG'
           # some of the following ones are too slow:  TODO select few fast ones
-          # python apoholo_J.py --single_line_input '1a0u'  # hem, big search
-          # python apoholo_J.py --single_line_input '3fav'  #
-          # python apoholo_J.py --single_line_input '1a73 a zn'  # ',MG,HEM'
-          # python apoholo_J.py --single_line_input '5ok3 all tpo' # phosphothreonine, no apos
-          # python apoholo_J.py --single_line_input '2ZB1 all gk4'
-          # python apoholo_J.py --single_line_input '7l1f all F86'
-          # python apoholo_J.py --single_line_input '3CQV hem'  # ,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
-          # python apoholo_J.py --single_line_input '1SI4 cyn'
-          # python apoholo_J.py --single_line_input '2v0v a'  # this is a fully apo structure
-          # python apoholo_J.py --single_line_input '2v7c a'
-          # python apoholo_J.py --single_line_input '5gss all gsh'  # slow
-          # python apoholo_J.py --single_line_input '1jq8 so4'
-          # python apoholo_J.py --single_line_input '1l5h b CLF'
-          # python apoholo_J.py --single_line_input '1DB1 vdx'  # vitamin D3 study
+          # python apoholo_J.py --query '1a0u'  # hem, big search
+          # python apoholo_J.py --query '3fav'  #
+          # python apoholo_J.py --query '1a73 a zn'  # ',MG,HEM'
+          # python apoholo_J.py --query '5ok3 all tpo' # phosphothreonine, no apos
+          # python apoholo_J.py --query '2ZB1 all gk4'
+          # python apoholo_J.py --query '7l1f all F86'
+          # python apoholo_J.py --query '3CQV hem'  # ,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+          # python apoholo_J.py --query '1SI4 cyn'
+          # python apoholo_J.py --query '2v0v a'  # this is a fully apo structure
+          # python apoholo_J.py --query '2v7c a'
+          # python apoholo_J.py --query '5gss all gsh'  # slow
+          # python apoholo_J.py --query '1jq8 so4'
+          # python apoholo_J.py --query '1l5h b CLF'
+          # python apoholo_J.py --query '1DB1 vdx'  # vitamin D3 study
       - name: Test apoholo_J.py for expected failure   # test doesn't work yet
-        run: python apoholo_J.py --single_line_input 'INVALID_INPUT'  # should fail with exit code 1
+        run: python apoholo_J.py --query 'INVALID_INPUT'  # should fail with exit code 1
           
           
           
