@@ -7,6 +7,7 @@ Created on Sat Jan 22 18:27:43 2022
 from common import get_workdir
 
 import os
+import sys
 import gzip
 import wget
 import shutil
@@ -179,17 +180,18 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 ##########################################################################################################
 
 
-def main():
+def main(argv):
     # Input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--work_directory',  type=str,   default=None,   help='root working directory for pre-computed and intermediary data')
     parser.add_argument('--pdb_uniprot_url', type=str,   default='http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     workdir = get_workdir(args)
     download_n_modify_sifts(workdir, args.pdb_uniprot_url)
     print('All done')
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv[1:]))
