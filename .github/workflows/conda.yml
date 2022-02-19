@@ -32,12 +32,12 @@ jobs:
         run: python prepare.py
       - name: Test apoholo_J.py
         run: | 
-          python apoholo_J.py --query '1a73 A,B ZN'
-          python apoholo_J.py --query '1a73 ALL ZN'
-          python apoholo_J.py --query '1a73 ZN' 
-          python apoholo_J.py --query '1a73' 
-          python apoholo_J.py --query '1a73 A' 
-          python apoholo_J.py --query '1a73 A ZN,MG'
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A,B ZN'
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 ALL ZN'
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 ZN' 
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73' 
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A' 
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A ZN,MG'
           # some of the following ones are too slow:  TODO select few fast ones
           # python apoholo_J.py --query '1a0u'  # hem, big search
           # python apoholo_J.py --query '3fav'  #
