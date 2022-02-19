@@ -32,8 +32,8 @@ args = parser.parse_args()
 
 
 # Saving options (default = 1)
-del_old_sifts = 0 # 0 means processing existing SIFTS file and not downloading the new one
-save_dicts = 0 # if 0, overrides following settings
+del_old_sifts = 1 # 0 means processing existing SIFTS file and not downloading the new one
+save_dicts = 1 # if 0, overrides following settings
 
 save_r_spnum = 1    # save dict_R_SPnum dictionary to file (includes readable version w headers)
 save_plaindict = 1  # save dict_SIFTS dictionary to file (includes readable version w headers)
