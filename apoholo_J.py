@@ -5,20 +5,7 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
-'''Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
-    The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
-    
-    The user can specify the following input arguments depending on the mode of search
-    i) When looking for apo from holo:
-    -Min arguments: PDB code
-    -Max arguments: PDB code, chain(s), ligand(s)
-    ii) When looking for holo from apo:
-    -Min arguments: PDB code
-    -Max arguments: PDB code, chain(s)
-    '''
-#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
-#TODO adjust radius according to mol. weight of ligand
-#TODO add star categories in APO and HOLO verdicts and amend results accordingly
+from common import get_workdir
 
 import __main__
 __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
@@ -35,6 +22,20 @@ import time
 import argparse
 import sys
 
+'''Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
+    The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
+    
+    The user can specify the following input arguments depending on the mode of search
+    i) When looking for apo from holo:
+    -Min arguments: PDB code
+    -Max arguments: PDB code, chain(s), ligand(s)
+    ii) When looking for holo from apo:
+    -Min arguments: PDB code
+    -Max arguments: PDB code, chain(s)
+    '''
+#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
+#TODO adjust radius according to mol. weight of ligand
+#TODO add star categories in APO and HOLO verdicts and amend results accordingly
 
 
 ## User arguments
@@ -163,17 +164,6 @@ if d_aa_as_lig == 0:
 # Define functions
 ##########################################################################################################
 
-def get_2level_cwd():
-    npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
-    if os.path.exists(path0):
-        memo = "Root path found >> " + path0
-    else:
-        memo = 'Error finding root path in working dir:' + npath
-    # print(memo)
-    return path0
-
-
 def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCIF gz (without exception handling)
     urlA = 'https://files.rcsb.org/download/'
     urlB = '.cif.gz'
@@ -231,16 +221,8 @@ def search_query_history(new_query_name, past_queries_filename):    # Find past 
         return 0
 
 
-def work_directory(args):
-    # TODO add override from local config
-    if args.work_directory is not None:
-        return args.work_directory
-    else:
-        return get_2level_cwd() + '/Documents/Bioinfo_local/Ions/datasets_local/APO_candidates/webserver'  # default work directory
-
-
-def wrong_input_action():#arg_job_id, arg_pathRSLTS):
-    print('Wrong input format\nPlease use a whitespace character to separate input arguments')
+def wrong_input_error(): # arg_job_id, arg_pathRSLTS):
+    print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
     print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
     print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
     print('Exiting & deleting new results folder', job_id)
@@ -252,7 +234,7 @@ def wrong_input_action():#arg_job_id, arg_pathRSLTS):
 
 
 ## Set directories, create job_id
-path_root = work_directory(args)
+path_root = get_workdir(args)
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + '/SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
@@ -338,9 +320,9 @@ if len(single_line_input.split()[0]) == 4:
         user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
         ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
     else:
-        wrong_input_action() # exit with error
+        wrong_input_error() # exit with error
 else:
-     wrong_input_action() # exit with error
+     wrong_input_error() # exit with error
 #user_position = single_line_input.split()[3]  # TODO ?
 
 # Parse chains

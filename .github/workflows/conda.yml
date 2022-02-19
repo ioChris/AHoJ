@@ -1,0 +1,68 @@
+name: Conda via conda-incubator/setup-miniconda@v2
+
+on: [push]
+
+jobs:
+  test-conda:
+    name: Test Conda (${{ matrix.python-version }}, ${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # note: pymol-open-source is not available for macos, may be possible to setup testing with normal pymol
+        os: [ubuntu-latest, windows-latest]
+        python-version: [3.8, 3.9]
+    defaults:
+      run:
+        shell: bash -l {0}  # necessary on linux to run commands within conda env
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: false   # faster
+          python-version: ${{ matrix.python-version }}
+          environment-file: conda-env.yml
+          activate-environment: ahoj
+      - name: Conda info
+        run: |
+          conda info
+          conda list
+      - name: Run prepare script
+        run: python download_n_modify_SIFTS.py
+      - name: Test apoholo_J.py
+        run: | 
+          python apoholo_J.py --single_line_input '1a73 A,B ZN'
+          python apoholo_J.py --single_line_input '1a73 ALL ZN'
+          python apoholo_J.py --single_line_input '1a73 ZN' 
+          python apoholo_J.py --single_line_input '1a73' 
+          python apoholo_J.py --single_line_input '1a73 A' 
+          python apoholo_J.py --single_line_input '1a73 A ZN,MG'
+          # some of the following ones are too slow:  TODO select few fast ones
+          # python apoholo_J.py --single_line_input '1a0u'  # hem, big search
+          # python apoholo_J.py --single_line_input '3fav'  #
+          # python apoholo_J.py --single_line_input '1a73 a zn'  # ',MG,HEM'
+          # python apoholo_J.py --single_line_input '5ok3 all tpo' # phosphothreonine, no apos
+          # python apoholo_J.py --single_line_input '2ZB1 all gk4'
+          # python apoholo_J.py --single_line_input '7l1f all F86'
+          # python apoholo_J.py --single_line_input '3CQV hem'  # ,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+          # python apoholo_J.py --single_line_input '1SI4 cyn'
+          # python apoholo_J.py --single_line_input '2v0v a'  # this is a fully apo structure
+          # python apoholo_J.py --single_line_input '2v7c a'
+          # python apoholo_J.py --single_line_input '5gss all gsh'  # slow
+          # python apoholo_J.py --single_line_input '1jq8 so4'
+          # python apoholo_J.py --single_line_input '1l5h b CLF'
+          # python apoholo_J.py --single_line_input '1DB1 vdx'  # vitamin D3 study
+      - name: Test apoholo_J.py for expected failure   # test doesn't work yet
+        run: python apoholo_J.py --single_line_input 'INVALID_INPUT'  # should fail with exit code 1
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          
+          

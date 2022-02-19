@@ -4,6 +4,16 @@ Created on Sat Jan 22 18:27:43 2022
 
 @author: ChrisX
 """
+from common import get_workdir
+
+import os
+import gzip
+import wget
+import shutil
+import time
+import argparse
+
+
 '''
 Download new SIFTS file with PDB chain mapping and unzip it in specified folder
 Create 2 dictionaries: 
@@ -12,14 +22,8 @@ Create 2 dictionaries:
     
     -backups and deletes old SIFTS and dict files
 
-    
 '''
-import os
-import gzip
-import wget
-import shutil
-import time
-import argparse
+
 
 # Input arguments
 
@@ -45,31 +49,7 @@ if save_dicts == 0:
 use_old_sifts = False
 
 
-##########################################################################################################
-# Define functions
-##########################################################################################################
-
-def get_2level_cwd():
-    npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
-    if os.path.exists(path0):
-        memo = "Detected current working >> " + path0
-    else:
-        memo = 'Error detecting current working dir:' + npath
-    print(memo)
-    return path0
-
-
-def work_directory(args):
-    if (args.work_directory):
-        return args.work_directory
-    else:
-        return get_2level_cwd() + r'\Documents\Bioinfo_local\Ions\datasets_local\APO_candidates\webserver'  # default work directory
-
-##########################################################################################################
-
-
-path_root = work_directory(args)
+path_root = get_workdir(args)
 pathSIFTS = path_root + r'/SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathOLD = path_root + r'/oldSIFTS'          # old SIFTS files, keep as backup
 # pathSIFTS = get_2level_cwd() + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
