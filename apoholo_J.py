@@ -175,7 +175,7 @@ def process_query(query, workdir, args):
         nolig_resn.extend(d_aminoacids)
 
     # Set directories, create job_id
-    path_root = get_workdir(args)
+    path_root = workdir
     #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
     pathSIFTS = path_root + '/SIFTS'           # Pre compiled files with UniProt PDB mapping
     pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
