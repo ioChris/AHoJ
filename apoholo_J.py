@@ -116,9 +116,9 @@ reverse_search = args.reverse_search
 
 # Advanced
 save_separate = args.save_separate
+save_oppst = args.save_oppst
 save_session = args.save_session
 multisave = args.multisave
-save_oppst = args.save_oppst
 
 overlap_threshold = args.overlap_threshold
 lig_scan_radius = args.lig_scan_radius
