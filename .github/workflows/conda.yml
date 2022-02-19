@@ -11,7 +11,7 @@ jobs:
       matrix:
         # note: pymol-open-source is not available for macos, may be possible to setup testing with normal pymol
         os: [ubuntu-latest, windows-latest]
-        python-version: [3.8, 3.9]
+        python-version: [3.8, 3.9, 3.10]
     defaults:
       run:
         shell: bash -l {0}  # necessary on linux to run commands within conda env
