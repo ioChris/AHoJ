@@ -89,7 +89,7 @@ if len(sys.argv)==1:
 ''' Test input (overrides argparse) '''
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 #single_line_input = '1a0u' #hem, big search
-single_line_input = '3fav zn'#' zn'
+single_line_input = '3fav'#' zn'#' zn'
 #single_line_input = '1a73 a zn'#',MG,HEM'
 #single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
 #single_line_input = '2ZB1 all gk4'
@@ -237,6 +237,16 @@ def work_directory(args):
     else:
         return get_2level_cwd() + '/Documents/Bioinfo_local/Ions/datasets_local/APO_candidates/webserver'  # default work directory
 
+
+def wrong_input_action():#arg_job_id, arg_pathRSLTS):
+    print('Wrong input format\nPlease use a whitespace character to separate input arguments')
+    print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
+    print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
+    print('Exiting & deleting new results folder', job_id)
+    if os.path.isdir(pathRSLTS):
+        os.rmdir(pathRSLTS)
+    sys.exit(1)  # exit with error
+
 ##########################################################################################################
 
 
@@ -257,6 +267,7 @@ log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_
 
 # Create directories if they don't exist
 print('Setting up directories')
+
 if os.path.isdir(pathSTRUCTS):
     print('Structure directory:\t', pathSTRUCTS)
 else:
@@ -272,7 +283,7 @@ if os.path.isdir(pathRSLTS):
     print('Results directory:\t', pathRSLTS)
 else:
     print('Results directory:\t', pathRSLTS)
-os.makedirs(pathRSLTS)
+    os.makedirs(pathRSLTS)
 if os.path.isdir(pathQRS):
     print('Queries directory:\t', pathQRS)
 else:
@@ -302,34 +313,33 @@ print('Parsing input')
 input_arguments = single_line_input.split()
 
 
-ligand_names = None
+ligand_names = None # this seems redundant, maybe we can remove it
 
-if len(input_arguments) == 1 and autodetect_lig == 1:
-    struct = single_line_input.split()[0].lower()
-    user_chains = 'ALL'
-    # ligand_names = 'autodetect'
-elif len(input_arguments) == 1 and len(single_line_input) == 4:
-    autodetect_lig = 1 # automatically activate ligand auto-detection mode
-    struct = single_line_input.split()[0].lower()
-    user_chains = 'ALL'
-elif len(input_arguments) == 2 and autodetect_lig == 1:
-    struct = single_line_input.split()[0].lower()
-    user_chains = single_line_input.split()[1].upper()
-    # ligand_names = single_line_input.split()[1].upper() # adjust case, ligands = upper
-elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
-    struct = single_line_input.split()[0].lower()
-    user_chains = 'ALL'
-    ligand_names = single_line_input.split()[1].upper()
-elif len(input_arguments) == 3:
-    struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
-    user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
-    ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+if len(single_line_input.split()[0]) == 4:
+    
+    if len(input_arguments) == 1 and autodetect_lig == 1:
+        struct = single_line_input.split()[0].lower()
+        user_chains = 'ALL'
+        # ligand_names = 'autodetect'
+    elif len(input_arguments) == 1: # and len(single_line_input) == 4:
+        autodetect_lig = 1 # automatically activate ligand auto-detection mode
+        struct = single_line_input.split()[0].lower()
+        user_chains = 'ALL'
+    elif len(input_arguments) == 2 and autodetect_lig == 1:
+        struct = single_line_input.split()[0].lower()
+        user_chains = single_line_input.split()[1].upper()
+    elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
+        struct = single_line_input.split()[0].lower()
+        user_chains = 'ALL'
+        ligand_names = single_line_input.split()[1].upper()
+    elif len(input_arguments) == 3:
+        struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
+        user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
+        ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+    else:
+        wrong_input_action() # exit with error
 else:
-    print('Wrong input format\nPlease use a whitespace character to separate input arguments\nInput examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
-    print('Exiting & deleting new results folder', job_id)
-    if os.path.isdir(pathRSLTS):
-        os.rmdir(pathRSLTS)
-    sys.exit(1)  # exit with error
+     wrong_input_action() # exit with error
 #user_position = single_line_input.split()[3]  # TODO ?
 
 # Parse chains
@@ -343,7 +353,7 @@ if not user_chains == 'ALL':
         user_structchain = struct.lower() + user_chain.upper()
         user_structchains.append(user_structchain)
 
-if ligand_names is None:
+if ligand_names is None: # This should be safe to remove as well
     print("Input ligands were not defined!")
     # sys.exit(1) ?
 
