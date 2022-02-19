@@ -190,7 +190,7 @@ python apoholo_J.py --single_line_input '1a73 ZN' (with ligand auto-detection OF
 ~~~
 -considers ZN ligands in all chains of 1a73
 ~~~
-python apoholo_J.py --single_line_input '1a73' (with ligand auto-detection ON)
+python apoholo_J.py --single_line_input '1a73' (with ligand auto-detection ON or OFF)
 ~~~
 -finds and considers all ligands in all chains of 1a73
 ~~~
