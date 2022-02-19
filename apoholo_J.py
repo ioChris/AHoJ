@@ -5,20 +5,7 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
-'''Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
-    The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
-    
-    The user can specify the following input arguments depending on the mode of search
-    i) When looking for apo from holo:
-    -Min arguments: PDB code
-    -Max arguments: PDB code, chain(s), ligand(s)
-    ii) When looking for holo from apo:
-    -Min arguments: PDB code
-    -Max arguments: PDB code, chain(s)
-    '''
-#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
-#TODO adjust radius according to mol. weight of ligand
-#TODO add star categories in APO and HOLO verdicts and amend results accordingly
+from common import get_workdir
 
 import __main__
 __main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
@@ -35,13 +22,27 @@ import time
 import argparse
 import sys
 
+'''Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
+    The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
+    
+    The user can specify the following input arguments depending on the mode of search
+    i) When looking for apo from holo:
+    -Min arguments: PDB code
+    -Max arguments: PDB code, chain(s), ligand(s)
+    ii) When looking for holo from apo:
+    -Min arguments: PDB code
+    -Max arguments: PDB code, chain(s)
+    '''
+#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
+#TODO adjust radius according to mol. weight of ligand
+#TODO add star categories in APO and HOLO verdicts and amend results accordingly
 
 
 ## User arguments
 parser = argparse.ArgumentParser()  # Create the parser, add arguments
 
 # Main user query
-parser.add_argument('--single_line_input', type=str,   default='1a73 a zn', help='main input query')
+parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
 
 # Basic
 parser.add_argument('--res_threshold',     type=float, default=3.5,  help='resolution cut-off for apo chains (angstrom), condition is <=')
@@ -84,25 +85,25 @@ if len(sys.argv)==1:
 ## Map old parameters to argparse arguments
 
 # Main user query
-single_line_input = args.single_line_input
+query = args.query
 
 
 ''' Test input (overrides argparse) '''
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
-#single_line_input = '1a0u' #hem, big search
-single_line_input = '3fav'#' zn'#' zn'
-#single_line_input = '1a73 a zn'#',MG,HEM'
-#single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
-#single_line_input = '2ZB1 all gk4'
-#single_line_input = '7l1f all F86'
-#single_line_input = '3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
-#single_line_input = '1SI4 cyn'
-#single_line_input = '2v0v a' # this is a fully apo structure
-#single_line_input = '2v7c a'
-#single_line_input = '5gss all gsh' # slow
-#single_line_input = '1jq8 so4'
-#single_line_input = '1l5h b CLF'
-#single_line_input = '1DB1 vdx' #vitamin D3 study
+#query = '1a0u' #hem, big search
+#query = '3fav'#' zn'#' zn'
+#query = '1a73 a zn'#',MG,HEM'
+#query = '5ok3 all tpo' #phosphothreonine, no apos
+#query = '2ZB1 all gk4'
+#query = '7l1f all F86'
+#query = '3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#query = '1SI4 cyn'
+#query = '2v0v a' # this is a fully apo structure
+#query = '2v7c a'
+#query = '5gss all gsh' # slow
+#query = '1jq8 so4'
+#query = '1l5h b CLF'
+#query = '1DB1 vdx' #vitamin D3 study
 
 
 # Basic
@@ -163,17 +164,6 @@ if d_aa_as_lig == 0:
 # Define functions
 ##########################################################################################################
 
-def get_2level_cwd():
-    npath = os.path.normpath(os.getcwd())   # Normalize the path string for the OS
-    path0 = os.path.join(npath.split(os.sep)[0], '/', npath.split(os.sep)[1], npath.split(os.sep)[2])
-    if os.path.exists(path0):
-        memo = "Root path found >> " + path0
-    else:
-        memo = 'Error finding root path in working dir:' + npath
-    # print(memo)
-    return path0
-
-
 def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCIF gz (without exception handling)
     urlA = 'https://files.rcsb.org/download/'
     urlB = '.cif.gz'
@@ -231,40 +221,34 @@ def search_query_history(new_query_name, past_queries_filename):    # Find past 
         return 0
 
 
-def work_directory(args):
-    # TODO add override from local config
-    if args.work_directory is not None:
-        return args.work_directory
-    else:
-        return get_2level_cwd() + '/Documents/Bioinfo_local/Ions/datasets_local/APO_candidates/webserver'  # default work directory
-
-
-def wrong_input_action():#arg_job_id, arg_pathRSLTS):
-    print('Wrong input format\nPlease use a whitespace character to separate input arguments')
+def wrong_input_error(): # arg_job_id, arg_pathRSLTS):
+    print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
     print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
     print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
     print('Exiting & deleting new results folder', job_id)
-    if os.path.isdir(pathRSLTS):
-        os.rmdir(pathRSLTS)
+    if os.path.isdir(path_job_results):
+        os.rmdir(path_job_results)
     sys.exit(1)  # exit with error
 
 ##########################################################################################################
 
 
 ## Set directories, create job_id
-path_root = work_directory(args)
+path_root = get_workdir(args)
 #path_root = r'C:\Users\TopOffice\Documents\GitHub\workDir\apoholo_web'
 pathSIFTS = path_root + '/SIFTS'           # Pre compiled files with UniProt PDB mapping
 pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
 pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
 pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
-pathRSLTS = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
+path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
 
 # Get additional info
-job_id = os.path.basename(os.path.normpath(pathRSLTS))
-script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
-log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
-#print('PyMOL version: ', cmd.get_version())
+job_id = os.path.basename(os.path.normpath(path_job_results))
+# script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
+# log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
+log_file_dnld = path_root + '/download_errors.log'
+
+print('PyMOL version: ', cmd.get_version())
 
 # Create directories if they don't exist
 print('Setting up directories')
@@ -280,11 +264,11 @@ else:
     print('Creating ligands directory:\t', pathLIGS)
     os.makedirs(pathLIGS)
 #if save_separate == 1 or multisave == 1 or save_session == 1: # bypass
-if os.path.isdir(pathRSLTS):
-    print('Results directory:\t', pathRSLTS)
+if os.path.isdir(path_job_results):
+    print('Results directory:\t', path_job_results)
 else:
-    print('Results directory:\t', pathRSLTS)
-    os.makedirs(pathRSLTS)
+    print('Results directory:\t', path_job_results)
+    os.makedirs(path_job_results)
 if os.path.isdir(pathQRS):
     print('Queries directory:\t', pathQRS)
 else:
@@ -308,40 +292,40 @@ dict_rSIFTS = ast.literal_eval(data)
 print('Done\n')
 
 
-## Parse single line input (line by line mode, 1 holo structure per line)
+# Parse single line input (line by line mode, 1 holo structure per line)
 # if no chains specified, consider all chains
 print('Parsing input')
-input_arguments = single_line_input.split()
+input_arguments = query.split()
 
 
 ligand_names = None # this seems redundant, maybe we can remove it
 
-if len(single_line_input.split()[0]) == 4:
+if len(query.split()[0]) == 4:
     
     if len(input_arguments) == 1 and autodetect_lig == 1:
-        struct = single_line_input.split()[0].lower()
+        struct = query.split()[0].lower()
         user_chains = 'ALL'
         # ligand_names = 'autodetect'
-    elif len(input_arguments) == 1: # and len(single_line_input) == 4:
+    elif len(input_arguments) == 1: # and len(query) == 4:
         autodetect_lig = 1 # automatically activate ligand auto-detection mode
-        struct = single_line_input.split()[0].lower()
+        struct = query.split()[0].lower()
         user_chains = 'ALL'
     elif len(input_arguments) == 2 and autodetect_lig == 1:
-        struct = single_line_input.split()[0].lower()
-        user_chains = single_line_input.split()[1].upper()
+        struct = query.split()[0].lower()
+        user_chains = query.split()[1].upper()
     elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
-        struct = single_line_input.split()[0].lower()
+        struct = query.split()[0].lower()
         user_chains = 'ALL'
-        ligand_names = single_line_input.split()[1].upper()
+        ligand_names = query.split()[1].upper()
     elif len(input_arguments) == 3:
-        struct = single_line_input.split()[0].lower()       # adjust case, struct = lower
-        user_chains = single_line_input.split()[1].upper()  # adjust case, chains = upper
-        ligand_names = single_line_input.split()[2].upper() # adjust case, ligands = upper
+        struct = query.split()[0].lower()       # adjust case, struct = lower
+        user_chains = query.split()[1].upper()  # adjust case, chains = upper
+        ligand_names = query.split()[2].upper() # adjust case, ligands = upper
     else:
-        wrong_input_action() # exit with error
+        wrong_input_error() # exit with error
 else:
-     wrong_input_action() # exit with error
-#user_position = single_line_input.split()[3]  # TODO ?
+     wrong_input_error() # exit with error
+#user_position = query.split()[3]  # TODO ?
 
 # Parse chains
 if not user_chains == 'ALL':
@@ -378,7 +362,7 @@ else:
 print('Done\n')
 
 
-## Download or get path to query structure & ligand
+# Download or get path to query structure & ligand
 try:
     struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
     print('Loading structure:\t', struct_path, '\n')
@@ -447,15 +431,15 @@ if look_in_archive == 1:
     if old_same_job == 0:
         print('Same job not found, continuing process\n')
     else:
-        if os.path.isdir(os.path.dirname(pathRSLTS) + '/' + old_same_job):
-            print('Same job found in history, printing path of old job results: ', os.path.dirname(pathRSLTS) + '/' + old_same_job, '\n')
+        if os.path.isdir(os.path.dirname(path_job_results) + '/' + old_same_job):
+            print('Same job found in history, printing path of old job results: ', os.path.dirname(path_job_results) + '/' + old_same_job, '\n')
             print('Printing alignments of old job')
-            with open (os.path.dirname(pathRSLTS) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
+            with open (os.path.dirname(path_job_results) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
                 for line in old_in:
                     print(line[:-1])
             print('\nDeleting new job folder', job_id)
-            if os.path.isdir(pathRSLTS):
-                os.rmdir(pathRSLTS)
+            if os.path.isdir(path_job_results):
+                os.rmdir(path_job_results)
             print('Done\nExiting')
             sys.exit(0)
         print('Old job directory not found, continuing process\n')
@@ -741,17 +725,17 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                     print('APO')
                 
                 if save_separate == 1:
-                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):
-                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                    if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
+                        cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
 
             else:
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
                 print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
                 if save_separate == 1 and save_oppst == 1:
-                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):
-                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
+                    if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
+                        cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
         
         else: # reverse mode
             # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
@@ -760,17 +744,17 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r))
                 print('HOLO')
                 if save_separate == 1:
-                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):
-                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                    if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
+                        cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
             else:
                 apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r.union(found_ligands_xtra)))
                 if len(found_ligands_xtra) > 0:     print('APO*')
                 else:       print('APO')
                 if save_separate == 1 and save_oppst == 1:
-                    if not os.path.isfile(pathRSLTS + '/holo_' + holo_struct + '.cif.gz'):
-                        cmd.save(pathRSLTS + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(pathRSLTS + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
+                    if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
+                        cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                    cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
             
     
     # Clean objects/selections in session & save
@@ -798,7 +782,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
     except:        cmd.center(holo_structchain)
 
     # Save results as session (.pse.gz) or multisave (.cif)
-    filename_body = pathRSLTS + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
+    filename_body = path_job_results + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
     filename_pse = filename_body + '.pse.gz'
     filename_multi = filename_body + '_multi.cif'
     if len(apo_holo_dict) > 0:    #len(dictApoCandidates_1) > 0:    #if len(cmd.get_object_list('all')) > 1:
@@ -828,7 +812,7 @@ if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_ses
         out1.write(str(apo_holo_dict))
     '''
     # Write CSV file
-    filename_csv = pathRSLTS + '/results_apo.csv'
+    filename_csv = path_job_results + '/results_apo.csv'
     if reverse_mode:
         header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     else:
@@ -860,7 +844,7 @@ if len(apo_holo_dict_H) > 0:
         out1.write(str(apo_holo_dict_H))
     '''
     # Write CSV holo file
-    filename_csv = pathRSLTS + '/results_holo.csv'
+    filename_csv = path_job_results + '/results_holo.csv'
     if reverse_mode:
         header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
     else:
@@ -880,16 +864,19 @@ else:
 
 if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:    
     print('\nConsider reversing the search')
-    print('\nDeleting empty results folder')    # Delete empty results folder
-    try:
-        os.rmdir(pathRSLTS)
-    except OSError as error:
-        print('Results folder not empty, job ID: ', job_id, error)
+    # Note: we don't want to delete empty results folder but keep it for potential further processing by the webserver
+    # print('\nDeleting empty results folder')    # Delete empty results folder
+    # try:
+    #     os.rmdir(pathRSLTS)
+    # except OSError as error:
+    #     print('Results folder not empty, job ID: ', job_id, error)
 
 # Append the name of the query and the job_id in the queries.txt
 if job_id:
     print('\nSaving query:', query_full)
     with open (pathQRS + '/' + 'queries.txt', 'a') as out_q:
         out_q.write(query_full + '\n')
-    
+
+print('Results saved to directory:\t', path_job_results)
+
 print('\nDone')
