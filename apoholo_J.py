@@ -54,9 +54,9 @@ parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: 
 
 # Advanced
 parser.add_argument('--save_separate',     type=int,   default=0,    help='0/1: save each chain object in a separate file (default save)')
+parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
 parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
 parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
-parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
 
 parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
 parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
@@ -354,7 +354,7 @@ if user_chains == 'ALL':
     print('Input chains:\t\t', user_chains)
 else:
     print('Input chains:\t\t', user_chains) #, '\t', user_chains_bundle)
-    print('Input structchains:\t', user_structchains)  # TODO user_structchains may be undefiend here
+    print('Input structchains:\t', user_structchains)  # TODO user_structchains may be undefined here
 if autodetect_lig == 1:
     print('Input ligands:\t\tauto-detect')
 else:
@@ -496,7 +496,7 @@ for key, values in dictApoCandidates.items():
         apo_candidate_structs.add(struct)
 print('Total structures to download for parsing: ', len(apo_candidate_structs), '\n')
 
-# Download/fetch/load the Apo candidate structures to specified directory [this should be replaced by fetch later #TODO]
+# Download/load the Apo candidate structures to specified directory [this should be replaced by load later #TODO]
 for apo_candidate_structure in apo_candidate_structs:
     try:
         structPath = download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
@@ -686,7 +686,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
                 for a_atom in cmd.identify(apo_structchain + '_arnd_' + ligand_):
                     cmd.iterate('id ' + str(a_atom), 'a_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_a)
                 
-                # Transfer dict[key] values (just resn) into set (for easier handling)
+                # Transfer dict[key] values (just resn) into set for easier handling
                 apo_lig_names = set()
                 for a_position in myspace_a['a_positions']:
                     a_atom_lig_name = a_position.split()[2]
@@ -706,7 +706,7 @@ for holo_structchain, apo_structchains in dictApoCandidates_1.items():
             myspace_r = {'r_positions': []}
             for r_atom in cmd.identify('holo_ligands_' + apo_structchain, mode=0):
                 cmd.iterate('id ' + str(r_atom), 'r_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_r)
-            # Transfer dict[key] values (just resn) into set (for easier handling)
+            # Transfer dict[key] values (just resn) into set for easier handling
             for r_position in myspace_r['r_positions']:
                 r_atom_lig_name = r_position.split()[2]
                 if r_atom_lig_name not in nolig_resn: # exclude non ligands
