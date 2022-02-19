@@ -8,7 +8,7 @@ Created on Mon Dec 20 16:24:57 2021
 from common import get_workdir
 
 import __main__
-__main__.pymol_argv = [ 'pymol', '-qc'] # Quiet and no GUI
+__main__.pymol_argv = [ 'pymol', '-qc']  # Quiet and no GUI
 import pymol
 import pymol.cmd as cmd
 pymol.finish_launching()
@@ -35,9 +35,9 @@ ii) When looking for holo from apo:
 -Max arguments: PDB code, chain(s)
 '''
 
-#TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
-#TODO adjust radius according to mol. weight of ligand
-#TODO add star categories in APO and HOLO verdicts and amend results accordingly
+# TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
+# TODO adjust radius according to mol. weight of ligand
+# TODO add star categories in APO and HOLO verdicts and amend results accordingly
 
 
 ##########################################################################################################
@@ -90,7 +90,7 @@ def next_job(path_pattern):    # Create incrementing directory name for each job
 def search_query_history(pathQRS, new_query_name, past_queries_filename):    # Find past job under the same query name, if found, return the job id
     dict_q = dict()
     try:
-        with open (pathQRS + '/' + past_queries_filename, 'r') as in_q:
+        with open(pathQRS + '/' + past_queries_filename, 'r') as in_q:
             for line in in_q:
                 dict_q[line.split('-')[0]] = line.split('-')[1][:-1]
         if new_query_name in dict_q.keys():
@@ -222,12 +222,12 @@ def process_query(query, workdir, args):
     fileRSIFTS = pathSIFTS + '/' + "pdb_chain_uniprot_REVERSE_SPnum.txt" # pre-compiled rSIFTS file (reverse_SIFTS_SPnum.py)
 
     print('Loading SIFTS dictionary')   # Load normal SIFTS dictionary as dict_SIFTS
-    with open (fileSIFTSdict, 'r') as input1:
+    with open(fileSIFTSdict, 'r') as input1:
         data = input1.read()
     dict_SIFTS = ast.literal_eval(data)
 
     print('Loading reverse SIFTS dictionary')   # Load reverse_SIFTS (SPnum) dictionary as dict_rSIFTS
-    with open (fileRSIFTS, 'r') as input2:
+    with open(fileRSIFTS, 'r') as input2:
         data = input2.read()
     dict_rSIFTS = ast.literal_eval(data)
     print('Done\n')
@@ -314,7 +314,7 @@ def process_query(query, workdir, args):
         for lig_id in ligand_names:
             try:
                 lig_path = download_mmCIF_lig(lig_id, pathLIGS)
-                with open (lig_path, 'r') as in_lig:
+                with open(lig_path, 'r') as in_lig:
                     for line in in_lig:
                         if line.startswith('_chem_comp.name'):
                             lig_name = line.split()[1:]
@@ -375,7 +375,7 @@ def process_query(query, workdir, args):
             if os.path.isdir(os.path.dirname(path_job_results) + '/' + old_same_job):
                 print('Same job found in history, printing path of old job results: ', os.path.dirname(path_job_results) + '/' + old_same_job, '\n')
                 print('Printing alignments of old job')
-                with open (os.path.dirname(path_job_results) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
+                with open(os.path.dirname(path_job_results) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
                     for line in old_in:
                         print(line[:-1])
                 print('\nDeleting new job folder', job_id)
@@ -393,8 +393,8 @@ def process_query(query, workdir, args):
     uniprot_overlap = dict()
 
     for user_structchain in user_structchains:
-        for key, values in dict_rSIFTS.items(): # iterate over reverse SIFTS chains/uniprot IDs
-            for i in values: # iterate over the values in each key, i = struct/chain combo
+        for key, values in dict_rSIFTS.items():  # iterate over reverse SIFTS chains/uniprot IDs
+            for i in values:  # iterate over the values in each key, i = struct/chain combo
                 if i.split()[0] == user_structchain:
                     #uniprot_id = key # not needed
                     structchain = i.split()[0] # pass structchain to variable
@@ -422,7 +422,8 @@ def process_query(query, workdir, args):
                             if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0:
                                 dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
 
-    print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ', sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
+    print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ',
+          sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
     print('')
 
 
@@ -437,10 +438,10 @@ def process_query(query, workdir, args):
             apo_candidate_structs.add(struct)
     print('Total structures to download for parsing: ', len(apo_candidate_structs), '\n')
 
-    # Download/load the Apo candidate structures to specified directory [this should be replaced by load later #TODO]
+    # Download/load the Apo candidate structures to specified directory [TODO this should be replaced by load later]
     for apo_candidate_structure in apo_candidate_structs:
         try:
-            structPath = download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
+            structPath = download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)  # TODO structPath not used?
         except Exception as ex1:
             template = "Exception {0} occurred. \n\t\t\t\t\tArguments:{1!r}"
             message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
@@ -464,22 +465,22 @@ def process_query(query, workdir, args):
                         if method == 'SOLUTION NMR': # break fast if method is 'NMR'
                             break
                     elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
-                        resolution = round(float(line.split()[1]), 3) # X-ray highest resolution
+                        resolution = round(float(line.split()[1]), 3)  # X-ray highest resolution
                         break
                     elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
-                        resolution = round(float(line.split()[1]), 3) # EM resolution
+                        resolution = round(float(line.split()[1]), 3)  # EM resolution
                         break
-                except: # Exception as ex: # getting weird but harmless exceptions
-                    print('Problem parsing structure: ', apo_candidate_struct)#, ex)
+                except:  # Exception as ex: # getting weird but harmless exceptions
+                    print('Problem parsing structure: ', apo_candidate_struct)  #, ex)
             try:
                 if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
-                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS') # Xray/EM
+                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
                 else:
                     discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL') # Xray/EM
+                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL')  # Xray/EM
             except:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print(apo_candidate_struct, ' resolution:\t', resolution, '\t\t', method, '\t\tFAIL') # NMR
+                print(apo_candidate_struct, ' resolution:\t', resolution, '\t\t', method, '\t\tFAIL')  # NMR
     print('Done\n')
 
 
@@ -539,7 +540,7 @@ def process_query(query, workdir, args):
 
 
         # Find & name specified ligands
-        ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain) # resn<->name   # TODO ligand_names_bundle can be undefined here
+        ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain)  # resn<->name   # TODO ligand_names_bundle can be undefined here
         if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
             ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and segi ' + holo_chain)
@@ -605,7 +606,7 @@ def process_query(query, workdir, args):
             # Transfer dict[key] values (just resn) into set for easier handling
             for r_position in myspace_r['r_positions']:
                 r_atom_lig_name = r_position.split()[2]
-                if r_atom_lig_name not in nolig_resn: # exclude non ligands
+                if r_atom_lig_name not in nolig_resn:  # exclude non ligands
                     found_ligands_r.add(r_atom_lig_name)
 
 
@@ -623,7 +624,7 @@ def process_query(query, workdir, args):
                 if save_separate == 1:
                     if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                         cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                    cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save apo chain
 
         # Start Apo chain loop. Align and mark atom selections around holo ligand
         for apo_structchain in apo_structchains:
@@ -693,7 +694,7 @@ def process_query(query, workdir, args):
                 # Transfer dict[key] values (just resn) into set for easier handling
                 for r_position in myspace_r['r_positions']:
                     r_atom_lig_name = r_position.split()[2]
-                    if r_atom_lig_name not in nolig_resn: # exclude non ligands
+                    if r_atom_lig_name not in nolig_resn:  # exclude non ligands
                         found_ligands_r.add(r_atom_lig_name)
 
 
@@ -732,9 +733,11 @@ def process_query(query, workdir, args):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
                 else:
-                    apo_holo_dict.setdefault(holo_structchain , []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r.union(found_ligands_xtra)))
-                    if len(found_ligands_xtra) > 0:     print('APO*')
-                    else:       print('APO')
+                    apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r.union(found_ligands_xtra)))
+                    if len(found_ligands_xtra) > 0:
+                        print('APO*')
+                    else:
+                        print('APO')
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
@@ -757,13 +760,16 @@ def process_query(query, workdir, args):
                 cmd.delete(i)
         all_selections = cmd.get_names('all')
         for i in all_selections:    # Delete 0 atom selections
-            if cmd.count_atoms(i) == 0:            cmd.delete(i)
-        cmd.disable('all') # toggle off the display of all objects
+            if cmd.count_atoms(i) == 0:
+                cmd.delete(i)
+        cmd.disable('all')  # toggle off the display of all objects
         cmd.enable(holo_struct)
         cmd.deselect()
         cmd.reset()
-        try:        cmd.center('query_ligands')
-        except:        cmd.center(holo_structchain)
+        try:
+            cmd.center('query_ligands')
+        except:
+            cmd.center(holo_structchain)
 
         # Save results as session (.pse.gz) or multisave (.cif)
         filename_body = path_job_results + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
@@ -802,11 +808,11 @@ def process_query(query, workdir, args):
         else:
             header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
         #header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
-        with open (filename_csv, 'w') as csv_out:
+        with open(filename_csv, 'w') as csv_out:
             csv_out.write(header)
             for key, values in apo_holo_dict.items():
                 for value in values:
-                    csv_out.write("%s,%s\n"%(key,','.join(value.split())))
+                    csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print apo dict
         print('Apo results: ')
@@ -833,11 +839,11 @@ def process_query(query, workdir, args):
             header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
         else:
             header = "#holo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
-        with open (filename_csv, 'w') as csv_out:
+        with open(filename_csv, 'w') as csv_out:
             csv_out.write(header)
             for key, values in apo_holo_dict_H.items():
                 for value in values:
-                    csv_out.write("%s,%s\n"%(key,','.join(value.split())))
+                    csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print holo dict
         print('\nHolo results: ')
