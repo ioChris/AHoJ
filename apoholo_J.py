@@ -90,7 +90,7 @@ single_line_input = args.single_line_input
 ''' Test input (overrides argparse) '''
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
 #single_line_input = '1a0u' #hem, big search
-single_line_input = '3fav'#' zn'#' zn'
+#single_line_input = '3fav'#' zn'#' zn'
 #single_line_input = '1a73 a zn'#',MG,HEM'
 #single_line_input = '5ok3 all tpo' #phosphothreonine, no apos
 #single_line_input = '2ZB1 all gk4'
