@@ -201,7 +201,10 @@ python apoholo_J.py --single_line_input '1a73 A' (with ligand auto-detection ON)
 python apoholo_J.py --single_line_input '1a73 A ZN,MG'
 ~~~
 -considers ZN and MG ligands in chain A of 1a73
-
+~~~
+python apoholo_J.py --single_line_input '3fav ZN'
+~~~
+-considers ZN ligands in all chains of 3fav
 
 ##  Parameters
 
