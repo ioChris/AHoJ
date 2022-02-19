@@ -81,7 +81,7 @@ There are several pre-compiled Open-source PyMOL distributions from "Christoph G
 https://www.lfd.uci.edu/~gohlke/pythonlibs/#pymol-open-source
 Here, we download the following files:
 ~~~
-pymol-2.6.0a0-cp39-cp39-win_amd64.whl
+pymol‑2.5.0‑cp39‑cp39‑win_amd64.whl
 pymol_launcher-2.1-cp39-cp39-win_amd64.whl
 ~~~
 
