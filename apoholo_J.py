@@ -62,7 +62,7 @@ parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angst
 parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
 # Experimental
-parser.add_argument('--water_as_ligand',   type=int,   default=1,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
 parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,    help='0/1: ignore/consider non-standard residues as ligands')
 parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
 parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
@@ -84,7 +84,8 @@ if len(sys.argv)==1:
 ## Map old parameters to argparse arguments
 
 # Main user query
-#single_line_input = args.single_line_input
+single_line_input = args.single_line_input
+
 
 ''' Test input (overrides argparse) '''
 #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
