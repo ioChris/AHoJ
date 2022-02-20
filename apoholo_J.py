@@ -126,14 +126,11 @@ def process_query(query, workdir, args):
     ''' Test input (overrides argparse) '''
     #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
     #query = '1a0u' #hem, big search
-    #query = '3fav all zn' # [OK]
     #query = '1a73 a zn'#',MG,HEM'
     #query = '5ok3 all tpo' #phosphothreonine, no apos
     #query = '2ZB1 all gk4'
     #query = '7l1f all F86' # too long
-    #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '1SI4 cyn'
-    #query = '2v0v a' # this is a fully apo structure
     #query = '2v7c a'
     #query = '5gss all gsh' # slow
     #query = '1jq8 so4'
@@ -142,6 +139,10 @@ def process_query(query, workdir, args):
     #query = '3IXJ all 586' # beta-secretase 1 with inhibitor (cryptic?) # too long
     #query = '2jds all L20' # cAMP-dependent protein kinase w inhibitor #202 chains 145 structs, long
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
+    
+    query = '2v0v' # this is a fully apo structure
+    #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
+    #query = '3fav all zn' # [OK]
     #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
     #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
@@ -560,6 +561,7 @@ def process_query(query, workdir, args):
     apo_holo_dict_H = dict()
     for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         print('')
+        print(f'=== Processing query chain {holo_structchain} ===')
         holo_struct = holo_structchain[:4]
         holo_chain = holo_structchain[4:]
         holo_struct_path = download_mmCIF_gz2(holo_struct, pathSTRUCTS)
@@ -588,13 +590,13 @@ def process_query(query, workdir, args):
                 reverse_mode = True
                 cmd.delete('query_ligands')
 
-        # start reverse mode, where query (holo) is apo (no ligands). Find identical structures with/wo ligands
-        if not reverse_mode:  # if query = APO
+        
+        if not reverse_mode:  # If query is not APO
 
+            # Identify atom IDs of selected ligand atoms
             ligands_atoms = cmd.identify('query_ligands', mode=0)
-            print('Query ligand selection atoms:\t', ligands_atoms, holo_chain)
-
-            # Get positions of specified ligands (better than atom ids to specify during alignment)
+            
+            # Get positions of specified ligands (better than atom IDs to specify during alignment)
             myspace = {'positions': []}  # temporary dict with fixed key name
             for atom in ligands_atoms:  # this is a bulk of atoms for all ligands, many atoms can belong to a single ligand
                 cmd.iterate('id ' + str(atom), 'positions.append(resi +" "+ chain +" "+ resn)', space = myspace)
@@ -603,7 +605,11 @@ def process_query(query, workdir, args):
             for key, values in myspace.items():
                 for i in values:
                     holo_lig_positions.setdefault(holo_structchain, []).append(i)
-            print('Holo ligands positions for chain: ', holo_structchain, holo_lig_positions.get(holo_structchain))
+            
+            print('Ligand information')
+            print('Atom IDs: ', ligands_atoms)
+            print('Total atoms: ', len(ligands_atoms))
+            print('Atom positions/chains/names: ', set(holo_lig_positions.get(holo_structchain)))#, '/', len(holo_lig_positions.get(holo_structchain)))
 
             # Name holo ligands as PyMOL selections. Put real (detected) ligand names into set
             holo_lig_names = set()
@@ -632,6 +638,7 @@ def process_query(query, workdir, args):
             cmd.select(apo_struct + apo_chain, apo_struct + '& chain ' + apo_chain)
 
             # Align apo-holo
+            print('')
             try:
                 aln_rms = cmd.align(apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, cutoff=10.0, cycles=1)
                 aln_tm = psico.fitting.tmalign(apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, quiet=1, transform=0)
@@ -677,8 +684,10 @@ def process_query(query, workdir, args):
                         elif i not in nolig_resn:
                             found_ligands_xtra.add(i)
 
-            else:  # reverse mode
+            # Start reverse mode, where query is apo (no ligands). Find identical structures with/wo ligands
+            else:  # reverse mode (if query = APO)
                 found_ligands_r = set()
+                found_ligands_xtra = set()
                 # Find ligands in holo candidate
                 cmd.select('holo_ligands_' + apo_structchain, apo_struct + '& chain ' + apo_chain + '& hetatm & not (polymer or solvent)')
                 myspace_r = {'r_positions': []}
@@ -887,7 +896,7 @@ def parse_args(argv):
     parser.add_argument('--xray_only',         type=int,   default=0,    help='0/1: only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
     parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
-    parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
+    parser.add_argument('--reverse_search',    type=int,   default=1,    help='0/1: look for holo structures from apo')
 
     # Advanced
     parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
