@@ -140,7 +140,8 @@ def process_query(query, workdir, args):
     #query = '2jds all L20' # cAMP-dependent protein kinase w inhibitor #202 chains 145 structs, long
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
     
-    query = '2v0v' # this is a fully apo structure
+    # Fast examples
+    #query = '2v0v' # this is a fully apo structure
     #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '3fav all zn' # [OK]
     #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
