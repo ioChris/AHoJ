@@ -40,23 +40,6 @@ ii) When looking for holo from apo:
 # TODO add star categories in APO and HOLO verdicts and amend results accordingly
 
 
-''' Test input (overrides argparse) '''
-#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
-#query = '1a0u' #hem, big search
-#query = '3fav'#' zn'#' zn'
-#query = '1a73 a zn'#',MG,HEM'
-#query = '5ok3 all tpo' #phosphothreonine, no apos
-#query = '2ZB1 all gk4'
-#query = '7l1f all F86'
-#query = '3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
-#query = '1SI4 cyn'
-#query = '2v0v a' # this is a fully apo structure
-#query = '2v7c a'
-#query = '5gss all gsh' # slow
-#query = '1jq8 so4'
-#query = '1l5h b CLF'
-#query = '1DB1 vdx' #vitamin D3 study
-
 
 ##########################################################################################################
 # Define functions
@@ -139,7 +122,25 @@ def process_query(query, workdir, args):
     :param args: all parsed cmd line args
     :return:
     """
+    
+    ''' Test input (overrides argparse) '''
+    #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+    #query = '1a0u' #hem, big search
+    #query = '3fav'#' zn'#' zn'
+    #query = '1a73 a zn'#',MG,HEM'
+    #query = '5ok3 all tpo' #phosphothreonine, no apos
+    #query = '2ZB1 all gk4'
+    #query = '7l1f all F86'
+    query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study
+    #query = '1SI4 cyn'
+    #query = '2v0v a' # this is a fully apo structure
+    #query = '2v7c a'
+    #query = '5gss all gsh' # slow
+    #query = '1jq8 so4'
+    #query = '1l5h b CLF'
+    #query = '1DB1 vdx' #vitamin D3 study
 
+    
     # Basic
     res_threshold = args.res_threshold
     NMR = args.NMR
@@ -877,8 +878,8 @@ def parse_args(argv):
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
-    parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=0,    help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
     parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
