@@ -28,9 +28,6 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Unit tests
-        run:  pytest -rP tests.py
-        # run: python -m unittest tests.py
       - name: Test prepare.py directly
         run: python prepare.py
       - name: Test apoholo_J.py directly
@@ -57,3 +54,6 @@ jobs:
           # python apoholo_J.py --query '1jq8 so4'
           # python apoholo_J.py --query '1l5h b CLF'
           # python apoholo_J.py --query '1DB1 vdx'  # vitamin D3 study
+      - name: Unit tests
+        run:  pytest -rP tests.py
+        # run: python -m unittest tests.py
