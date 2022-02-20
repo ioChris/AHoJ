@@ -47,18 +47,21 @@ class T02ApoholoTests(unittest.TestCase):
         self.do_test("--save_oppst 1 --save_separate 1 --query '1a73' ")
         self.do_test("--save_oppst 1 --save_separate 1 --query '1a73 A' ")
         self.do_test("--save_oppst 1 --save_separate 1 --query '1a73 A ZN,MG' ")
-        # TODO add more tests cases
+
+        self.do_test("--save_oppst 1 --save_separate 1 --query '3CQV A HEM' ")
+        self.do_test("--save_oppst 1 --save_separate 1 --query '3fav all zn' ")
+        self.do_test("--save_oppst 1 --save_separate 1 --query '2hka all c3s' ")  # bovine NPC2 complex with cholesterol sulfate
+        self.do_test("--save_oppst 1 --save_separate 1 --query '2v57 a,c prl' ")  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
     def test_expected_failures(self):
         self.do_test("--invalid_param ",               expect_failure=True)
         self.do_test("--query 'INVALID_QUERY X X X' ", expect_failure=True)
         # TODO add more tests cases
 
-    def test_fail_1(self):
-        self.assertEqual(1, 2)
+    # test if github action fails correctly on test error
+    #def test_fail_1(self):
+    #    self.assertEqual(1, 2)
 
-    def test_fail_2(self):
-        assert 1 == 2
 
 if __name__ == '__main__':
     sys.exit(unittest.main())
