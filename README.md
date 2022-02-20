@@ -86,7 +86,7 @@ pymol‑2.5.0‑cp39‑cp39‑win_amd64.whl
 pymol_launcher-2.1-cp39-cp39-win_amd64.whl
 ~~~
 
-In the conda ahoj environment, switch to download directory (e.g., D:\Downloads)
+In the conda `ahoj` environment, switch to download directory (e.g., `D:\Downloads`)
 * Switch to Drive D:
 * Enter the downloads directory (`cd Downloads`)
 * Install pymol_launcher (PyMOL will be installed automatically)
@@ -101,7 +101,7 @@ pip install --upgrade --no-deps pymol-2.6.0a0-cp39-cp39-win_amd64.whl
 
 ### Windows (alternative)
 
-Clean installation on Linux using `conda` (Miniconda3) package manager. 
+Clean installation on Windows using `conda` (Miniconda3) package manager. 
        
 1. Install conda manually with installer https://repo.anaconda.com/miniconda/Miniconda3-latest-Windows-x86_64.exe
 2. Execute the following commands in cmd or PowerShell:

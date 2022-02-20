@@ -7,6 +7,7 @@ Created on Sat Jan 22 18:27:43 2022
 from common import get_workdir
 
 import os
+import sys
 import gzip
 import wget
 import shutil
@@ -16,12 +17,17 @@ import argparse
 
 def download_n_modify_sifts(workdir, pdb_uniprot_url):
     """
-    Download new SIFTS file with PDB chain mapping and unzip it in specified folder
-    Create 2 dictionaries:
-        i) a shorter version of the SIFTS file with joined structure and chain
-        ii) a reverse version with structchains as values of UniProt ID(s)
+    Download new SIFTS file with PDB chain mapping and unzip it in specified folder.
 
-        -backups and deletes old SIFTS and dict files
+    Create 2 dictionaries:
+    i) a shorter version of the SIFTS file with joined structure and chain
+    ii) a reverse version with structchains as values of UniProt ID(s)
+
+    Backups and deletes old SIFTS and dict files.
+
+    :param workdir: global work directory
+    :param pdb_uniprot_url: URL of pdb_chain_uniprot.tsv.gz file
+    :return:
     """
 
     # Saving options (default = 1)
@@ -81,7 +87,7 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
     # Unzip new .gz file (and overwrite old)
     if not use_old_sifts:
-        with gzip.open(pathSIFTS + "/" + filename ,"rb") as infile, open(pathSIFTS + "/" + filename[:-3], "wb") as outfile:
+        with gzip.open(pathSIFTS + "/" + filename, "rb") as infile, open(pathSIFTS + "/" + filename[:-3], "wb") as outfile:
             print('Unzipping new file')
             for line in infile:
                 outfile.write(line)
@@ -150,11 +156,11 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
         outfile2 = outfile1[:-4] + "_readable.txt"
         print('Saving output of dict_R_SPnum as:\n', outfile1, '\t', outfile2)
 
-        with open (pathSIFTS + '/' + outfile1, 'wt') as out1:
+        with open(pathSIFTS + '/' + outfile1, 'wt') as out1:
             out1.write(str(dict_R_SPnum))
 
         # Write same dict in a more readable format (new line per key)
-        with open (pathSIFTS + '/' + outfile2, 'wt') as out2:
+        with open(pathSIFTS + '/' + outfile2, 'wt') as out2:
             for key, value, in dict_R_SPnum.items():
                 out2.write('{0}: {1}\n'.format(key, value))
 
@@ -164,11 +170,11 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
         outfile_SIFTS_readable = outfile_SIFTS[:-4] + "_readable.txt"
         print('Saving output of dict_SIFTS as:\n', outfile_SIFTS, '\t', outfile_SIFTS_readable)
 
-        with open (pathSIFTS + '/' + outfile_SIFTS, 'wt') as out3:
+        with open(pathSIFTS + '/' + outfile_SIFTS, 'wt') as out3:
             out3.write(str(dict_SIFTS))
 
         # Write  dict2 in a more readable format (new line per key)
-        with open (pathSIFTS + '/' + outfile_SIFTS_readable, 'wt') as out4:
+        with open(pathSIFTS + '/' + outfile_SIFTS_readable, 'wt') as out4:
             #header = '#HEADER: HOLO_chain SP_BEG SP_END : APO_chain SP_BEG SP_END SP_LEN overlap_len %overlap\n'
             out4.write(header1)
             out4.write(header2)
@@ -179,17 +185,18 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 ##########################################################################################################
 
 
-def main():
+def main(argv):
     # Input arguments
     parser = argparse.ArgumentParser()
     parser.add_argument('--work_directory',  type=str,   default=None,   help='root working directory for pre-computed and intermediary data')
     parser.add_argument('--pdb_uniprot_url', type=str,   default='http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz')
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     workdir = get_workdir(args)
     download_n_modify_sifts(workdir, args.pdb_uniprot_url)
     print('All done')
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main(sys.argv[1:]))
