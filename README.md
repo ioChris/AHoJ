@@ -129,7 +129,7 @@ Clean installation on Linux using `conda` (Miniconda3) package manager.
 ~~~sh
 # install conda
 wget https://repo.anaconda.com/miniconda/Miniconda3-py39_4.11.0-Linux-x86_64.sh
-bash Miniconda3-py39_4.11.0-Linux-x86_64.sh && bash
+bash Miniconda3-py39_4.11.0-Linux-x86_64.sh -b && bash
 
 # clone repo
 git clone git@github.com:ioChris/AHoJ.git && cd AHoJ
