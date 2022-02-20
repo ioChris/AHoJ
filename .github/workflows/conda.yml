@@ -1,10 +1,10 @@
 name: Conda via conda-incubator/setup-miniconda@v2
 
-on: [push]
+on: [push, pull_request, pull_request_target]
 
 jobs:
   test-conda:
-    name: Test Conda (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test with Conda (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -12,7 +12,8 @@ jobs:
         # note: pymol-open-source is not available for macos, may be possible to setup testing with normal pymol
         os: [ubuntu-latest, windows-latest]
         # note: '3.10' is causing dependency in conflicts, conda+packages support still not great
-        python-version: ['3.8', '3.9']
+        # '3.9' works fine, disabled to save free CI minutes
+        python-version: ['3.8']
     defaults:
       run:
         shell: bash -l {0}  # necessary on linux to run commands within conda env
@@ -24,10 +25,29 @@ jobs:
           python-version: ${{ matrix.python-version }}
           environment-file: conda-env.yml
           activate-environment: ahoj
+      - name: Unit tests (Linux)
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          python -m pytest -x -v -ra tests.py
+          exit $?                             # necessary to fail correctly on test error on Linux
+      - name: Unit tests (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh                           # necessary to fail correctly on test error Windows
+        run: |
+          python -m pytest -x -v -ra tests.py
+          exit $?
+      - name: Test prepare.py script directly
+        run: python prepare.py
+      - name: Test apoholo_J.py script directly
+        run: |
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A,B ZN'
       - name: Conda info
         run: |
           conda info
           conda list
+          # conda config --show-sources
+          # conda config --show
+          # printenv | sort
       - name: Test prepare.py directly
         run: python prepare.py
       - name: Test apoholo_J.py directly
@@ -58,6 +78,3 @@ jobs:
           # python apoholo_J.py --query '1jq8 so4'
           # python apoholo_J.py --query '1l5h b CLF'
           # python apoholo_J.py --query '1DB1 vdx'  # vitamin D3 study
-      - name: Unit tests
-        run:  pytest -rP tests.py
-        # run: python -m unittest tests.py

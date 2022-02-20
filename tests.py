@@ -54,6 +54,11 @@ class T02ApoholoTests(unittest.TestCase):
         self.do_test("--query 'INVALID_QUERY X X X' ", expect_failure=True)
         # TODO add more tests cases
 
+    def test_fail_1(self):
+        self.assertEqual(1, 2)
+
+    def test_fail_2(self):
+        assert 1 == 2
 
 if __name__ == '__main__':
     sys.exit(unittest.main())
