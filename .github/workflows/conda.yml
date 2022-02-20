@@ -27,15 +27,15 @@ jobs:
           activate-environment: ahoj
       - name: Unit tests (Linux)
         if: matrix.os == 'ubuntu-latest'
+        # necessary to fail correctly on test error on Linux
         run: |
-          python -m pytest -x -v -ra tests.py
-          exit $?                             # necessary to fail correctly on test error on Linux
+          python -m pytest -x -v -ra tests.py || exit $?
       - name: Unit tests (Windows)
         if: matrix.os == 'windows-latest'
-        shell: pwsh                           # necessary to fail correctly on test error Windows
+        # necessary to fail correctly on test error Windows
+        shell: pwsh
         run: |
-          python -m pytest -x -v -ra tests.py
-          exit $?
+          python -m pytest -x -v -ra tests.py || exit $?
       - name: Test prepare.py directly
         run: python prepare.py
       - name: Test apoholo_J.py directly
