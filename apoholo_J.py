@@ -444,7 +444,8 @@ def process_query(query, workdir, args):
           sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
     print('')
 
-    fail()
+    # test fail on purpose
+    # fail()
 
     ## Apo/holo candidate evaluation
 
