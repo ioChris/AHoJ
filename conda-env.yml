@@ -8,3 +8,4 @@ dependencies:
   - pymol-psico=4.0.2
   - tmalign=20170708
   - python-wget
+  - pytest

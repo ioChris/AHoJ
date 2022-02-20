@@ -28,11 +28,9 @@ jobs:
         run: |
           conda info
           conda list
-      - name: Test fail
-        run: exit 1
       - name: Run unit tests
-        run: python tests.py
-        # run:  python -m pytest -rP tests.py
+        run:  python -m pytest -rP tests.py
+        # run: python -m unittest tests.py
       - name: Test prepare.py directly
         run: python prepare.py
       - name: Test apoholo_J.py directly
