@@ -258,6 +258,14 @@ def process_query(query, workdir, args):
 
 
     ligand_names = None # this seems redundant, maybe we can remove it ... see***
+    
+    # ^Note: if ligand names are fatally not defined, this should fail - with exit(1) - in the lower section (parsing input), 
+    # otherwise it should be safe to permit (I don't remember running into errors). 
+    # There should be provision for it with "autodetect_lig", the script will turn it on automatically in some cases.
+    # There is currently an outstanding case where the script will mistake the chain(s) argument for a ligand(s) argument when: 
+    # the user does not specify ligand(s) AND does not turn autodetect_lig ON AND specifies chain(s). 
+    # This will usually result in an empty/failed search, but it's hard to catch.
+    
 
     if len(query.split()[0]) == 4:
 
@@ -290,7 +298,7 @@ def process_query(query, workdir, args):
     if not user_chains == 'ALL':
         user_chains = ''.join(user_chains)
         user_chains = user_chains.split(',')
-        user_chains_bundle = '+'.join(user_chains)
+        #user_chains_bundle = '+'.join(user_chains)
         # Convert chains to structchain combos
         user_structchains = list()
         for user_chain in user_chains:
@@ -369,7 +377,7 @@ def process_query(query, workdir, args):
                 user_chains.remove(user_structchain[4:])
                 user_structchains.remove(user_structchain)
                 discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
-    user_chains_bundle = '+'.join(user_chains)
+    #user_chains_bundle = '+'.join(user_chains)
     print('Input chains verified:\t', user_structchains, user_chains)
     if len(discarded_chains) > 0:
         print('Input chains rejected:\t', discarded_chains)
@@ -460,7 +468,7 @@ def process_query(query, workdir, args):
     # Download/load the Apo candidate structures to specified directory [TODO this should be replaced by load later]
     for apo_candidate_structure in apo_candidate_structs:
         try:
-            structPath = download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)  # TODO structPath not used?
+            download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS) # structPath = # TODO structPath not used?
         except Exception as ex1:
             template = "Exception {0} occurred. \n\t\t\t\t\tArguments:{1!r}"
             message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
@@ -596,7 +604,7 @@ def process_query(query, workdir, args):
                 resn = ligand.split()[2]
                 ligand_ = ligand.replace(' ', '_')
                 holo_lig_names.add(resn)
-                s1 = cmd.select('holo_' + ligand_, 'model ' + holo_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn)
+                cmd.select('holo_' + ligand_, 'model ' + holo_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
             if autodetect_lig == 1:
                 ligand_names = holo_lig_names.copy()
 
@@ -640,7 +648,7 @@ def process_query(query, workdir, args):
                     # Around selection [looks for ligands in every (valid) chain alignment, not just the standard locus of holo ligand(s)]
                     ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
                     #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
-                    s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
+                    cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_) # s2
 
                     # Put selected atoms in a list, check their name identifiers to see if holo ligand name is present
                     myspace_a = {'a_positions': []}
@@ -829,7 +837,7 @@ def process_query(query, workdir, args):
         print('No holo forms found')
 
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
-        print('\nConsider reversing the search')
+        print('\nConsider reversing the search or revising the input query')
         # Note: we don't want to delete empty results folder but keep it for potential further processing by the webserver
         # print('\nDeleting empty results folder')    # Delete empty results folder
         # try:
