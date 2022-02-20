@@ -126,12 +126,12 @@ def process_query(query, workdir, args):
     ''' Test input (overrides argparse) '''
     #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
     #query = '1a0u' #hem, big search
-    #query = '3fav'#' zn'#' zn'
+    #query = '3fav all zn' # [OK]
     #query = '1a73 a zn'#',MG,HEM'
     #query = '5ok3 all tpo' #phosphothreonine, no apos
     #query = '2ZB1 all gk4'
-    #query = '7l1f all F86'
-    query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study
+    #query = '7l1f all F86' # too long
+    #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '1SI4 cyn'
     #query = '2v0v a' # this is a fully apo structure
     #query = '2v7c a'
@@ -139,6 +139,14 @@ def process_query(query, workdir, args):
     #query = '1jq8 so4'
     #query = '1l5h b CLF'
     #query = '1DB1 vdx' #vitamin D3 study
+    #query = '3IXJ all 586' # beta-secretase 1 with inhibitor (cryptic?) # too long
+    #query = '2jds all L20' # cAMP-dependent protein kinase w inhibitor #202 chains 145 structs, long
+    #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
+    #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
+    #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
+    #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
+    
+    
 
     
     # Basic
@@ -836,7 +844,7 @@ def process_query(query, workdir, args):
         for key in apo_holo_dict_H:
             print(key, apo_holo_dict_H.get(key))
     else:
-        print('No holo forms found')
+        print('\nNo holo forms found')
 
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
@@ -853,8 +861,12 @@ def process_query(query, workdir, args):
         with open (pathQRS + '/' + 'queries.txt', 'a') as out_q:
             out_q.write(query_full + '\n')
 
-    print('Results saved to directory:\t', path_job_results)
-
+    # Print argparse arguments
+    #print('\n', args)
+    #print(vars(args))
+    
+    print('\nResults saved to directory:\t', path_job_results)
+    
     print('\nDone processing query: ', query)
 
 # end process_query()
@@ -878,8 +890,8 @@ def parse_args(argv):
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
-    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_separate',     type=int,   default=0,    help='0/1: save each chain object in a separate file (default save)')
     parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
