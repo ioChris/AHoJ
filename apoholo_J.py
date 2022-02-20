@@ -40,6 +40,24 @@ ii) When looking for holo from apo:
 # TODO add star categories in APO and HOLO verdicts and amend results accordingly
 
 
+''' Test input (overrides argparse) '''
+#multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
+#query = '1a0u' #hem, big search
+#query = '3fav'#' zn'#' zn'
+#query = '1a73 a zn'#',MG,HEM'
+#query = '5ok3 all tpo' #phosphothreonine, no apos
+#query = '2ZB1 all gk4'
+#query = '7l1f all F86'
+#query = '3CQV hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' #hem
+#query = '1SI4 cyn'
+#query = '2v0v a' # this is a fully apo structure
+#query = '2v7c a'
+#query = '5gss all gsh' # slow
+#query = '1jq8 so4'
+#query = '1l5h b CLF'
+#query = '1DB1 vdx' #vitamin D3 study
+
+
 ##########################################################################################################
 # Define functions
 ##########################################################################################################
@@ -572,59 +590,16 @@ def process_query(query, workdir, args):
             # Name holo ligands as PyMOL selections. Put real (detected) ligand names into set
             holo_lig_names = set()
             for ligand in holo_lig_positions[holo_structchain]:
-
-                # Around selection [looks for ligands in every (valid) chain alignment, not just the standard locus of holo ligand(s)]
-                ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
-                #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
-                s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
-            
-                # Put selected atoms in a list, check their name identifiers to see if holo ligand name is present
-                myspace_a = {'a_positions': []}
-                for a_atom in cmd.identify(apo_structchain + '_arnd_' + ligand_):
-                    cmd.iterate('id ' + str(a_atom), 'a_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_a)
-                
-                # Transfer dict[key] values (just resn) into set for easier handling
-                apo_lig_names = set()
-                for a_position in myspace_a['a_positions']:
-                    a_atom_lig_name = a_position.split()[2]
-                    apo_lig_names.add(a_atom_lig_name)
-                
-                # Assess apo ligands
-                for i in apo_lig_names:
-                    if i in holo_lig_names or i in ligand_names:    # check in both lists (detected holo ligs + query ligs)
-                        found_ligands.add(i)    #print('Holo ligand found in Apo: ', apo_structchain, i)
-                    elif i not in nolig_resn:
-                        found_ligands_xtra.add(i)
-        
-        else:  # reverse mode
-            found_ligands_r = set()
-            # Find ligands in holo candidate
-            cmd.select('holo_ligands_' + apo_structchain, apo_struct + '& chain ' + apo_chain + '& hetatm & not (polymer or solvent)')
-            myspace_r = {'r_positions': []}
-            for r_atom in cmd.identify('holo_ligands_' + apo_structchain, mode=0):
-                cmd.iterate('id ' + str(r_atom), 'r_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_r)
-            # Transfer dict[key] values (just resn) into set for easier handling
-            for r_position in myspace_r['r_positions']:
-                r_atom_lig_name = r_position.split()[2]
-                if r_atom_lig_name not in nolig_resn:  # exclude non ligands
-                    found_ligands_r.add(r_atom_lig_name)
+                resi = ligand.split()[0]
+                chain = ligand.split()[1]
+                resn = ligand.split()[2]
+                ligand_ = ligand.replace(' ', '_')
+                holo_lig_names.add(resn)
+                s1 = cmd.select('holo_' + ligand_, 'model ' + holo_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn)
+            if autodetect_lig == 1:
+                ligand_names = holo_lig_names.copy()
 
 
-        # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
-        if not reverse_mode:
-            print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
-            if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
-                apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
-                
-                if len(found_ligands_xtra) > 0:
-                    print('APO*')
-                else:
-                    print('APO')
-                
-                if save_separate == 1:
-                    if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
-                        cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                    cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save apo chain
 
         # Start Apo chain loop. Align and mark atom selections around holo ligand
         for apo_structchain in apo_structchains:
