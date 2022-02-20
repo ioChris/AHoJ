@@ -770,7 +770,8 @@ def process_query(query, workdir, args):
     print('')
 
 
-    ## Save results output
+    ## Save results in text output
+    
     #if reverse_mode:    query_chain = 'apo_chain'
     #else:   query_chain = holo_chain
 
@@ -838,12 +839,12 @@ def process_query(query, workdir, args):
 
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
-        # Note: we don't want to delete empty results folder but keep it for potential further processing by the webserver
-        # print('\nDeleting empty results folder')    # Delete empty results folder
+        # Note: we don't want to delete empty job folder but keep it for potential further processing by the webserver
+        # print('\nDeleting empty job folder')    # Delete empty job folder
         # try:
         #     os.rmdir(pathRSLTS)
         # except OSError as error:
-        #     print('Results folder not empty, job ID: ', job_id, error)
+        #     print('Job folder not empty, job ID: ', job_id, error)
 
     # Append the name of the query and the job_id in the queries.txt
     if job_id:
@@ -871,7 +872,7 @@ def parse_args(argv):
     parser.add_argument('--res_threshold',     type=float, default=3.5,  help='resolution cut-off for apo chains (angstrom), condition is <=')
     parser.add_argument('--NMR',               type=int,   default=1,    help='0/1: discard/include NMR structures')
     parser.add_argument('--xray_only',         type=int,   default=0,    help='0/1: only consider X-ray structures')
-    parser.add_argument('--lig_free_sites',    type=int,   default=0,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
+    parser.add_argument('--lig_free_sites',    type=int,   default=1,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
     parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
