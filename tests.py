@@ -3,6 +3,7 @@ import unittest
 import prepare
 import apoholo_J
 import os
+import sys
 import shlex
 from common import get_default_workdir
 
@@ -55,4 +56,4 @@ class T02ApoholoTests(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    sys.exit(unittest.main())
