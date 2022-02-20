@@ -1,6 +1,6 @@
 name: Conda via conda-incubator/setup-miniconda@v2
 
-on: [push, pull_request, pull_request_target]
+on: [push, pull_request] # pull_request_target?
 
 jobs:
   test-conda:
