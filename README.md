@@ -206,7 +206,7 @@ python apoholo_J.py --query '1a73 ZN'  # (with ligand auto-detection OFF)
 # find and consider all ligands in all chains of 1a73
 python apoholo_J.py --query '1a73'  # (with ligand auto-detection ON or OFF)
 
-# find and consider all bound ligands in chain A of 1a73
+# find and consider all ligands in chain A of 1a73
 python apoholo_J.py --query '1a73 A'  # (with ligand auto-detection ON)
 
 # consider ZN and MG ligands in chain A of 1a73
