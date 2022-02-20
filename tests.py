@@ -15,7 +15,7 @@ def exists_not_empty(path):
     return os.path.exists(path) and os.path.getsize(path) > 0
 
 
-class PrepareTests(unittest.TestCase):
+class T01PrepareTests(unittest.TestCase):   # T01 to ensure it is run first TODO find better way to enforce test order
 
     def test_prepare(self):
         exit_code = prepare.main([])
@@ -24,15 +24,18 @@ class PrepareTests(unittest.TestCase):
         self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.txt'))
 
 
-class ApoholoTests(unittest.TestCase):
+class T02ApoholoTests(unittest.TestCase):
 
     def do_test(self, args_str, expect_failure=False):
         argv = shlex.split(args_str)
         print("Testing with args:", argv)
-        exit_code = apoholo_J.main(argv)
+
         if expect_failure:
-            self.assertNotEqual(0, exit_code)
+            with self.assertRaises(SystemExit):
+                exit_code = apoholo_J.main(argv)
+                # self.assertNotEqual(0, exit_code)
         else:
+            exit_code = apoholo_J.main(argv)
             self.assertEqual(0, exit_code)
             # TODO test correctness of actual output
 
