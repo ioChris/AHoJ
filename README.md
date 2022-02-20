@@ -232,7 +232,7 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 0 or 1. When set to 1 (ON), only X-ray structures are considered. It overrides the NMR setting.
 
-**`--lig_free_sites`** : ligand-free sites [default = `0`]
+**`--lig_free_sites`** : ligand-free sites [default = `1`]
 
 0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s).
 
