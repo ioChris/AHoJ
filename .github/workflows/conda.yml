@@ -33,6 +33,7 @@ jobs:
       - name: Test apoholo_J.py directly
         run: | 
           python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A,B ZN'
+          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '3CQV A HEM'
           # all of the following stuff is tested in unit tests...
           # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 ALL ZN'
           # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 ZN' 
