@@ -938,9 +938,6 @@ def parse_args(argv):
 
 
 def main(argv):
-    #fail()       # test fail on purpose
-    #sys.exit(8)  # test fail on purpose
-
     args = parse_args(argv)
 
     workdir = get_workdir(args)
@@ -953,6 +950,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    #sys.exit(9)  # test fail on purpose
-
     sys.exit(main(sys.argv[1:]))

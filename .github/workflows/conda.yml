@@ -9,9 +9,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # note: pymol-open-source is not available for macOS, may be possible to set up testing with normal pymol
+        # macOS doesn't work, pymol-open-source is not available, may be possible to set up testing with normal pymol
+        # windows-latest works fine, disabled to save free CI minutes
         os: [ubuntu-latest]
-        # note: '3.10' is causing dependency in conflicts, conda+packages support still not great
+
+        # '3.10' is causing dependency in conflicts, conda+packages support still not great
         # '3.9' works fine, disabled to save free CI minutes
         python-version: ['3.8']
     defaults:
