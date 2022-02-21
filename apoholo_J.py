@@ -21,6 +21,7 @@ import wget
 import time
 import argparse
 import sys
+from dataclasses import dataclass
 
 '''
 Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
@@ -113,14 +114,25 @@ def wrong_input_error(job_id, path_job_results): # arg_job_id, arg_pathRSLTS):
 
     
 # Join list of ligand codes to a single string, sorted
+# separator: '-'
+# if the list is empty return '-'
 def join_ligands(ligands):
+    if not ligands:
+        return '-'
     return '-'.join(sorted(ligands))
 
 
 ##########################################################################################################
 
+@dataclass
+class QueryResult:
+    """ Result of a single query """
+    result_dir: str
+    num_apo_chains: int = 0
+    num_holo_chains: int = 0
 
-def process_query(query, workdir, args):
+
+def process_query(query, workdir, args) -> QueryResult:
     """
     Process single line query
     :param query: single line query with format "<pdb_id> <chains> <ligands>" (see README.md)
@@ -302,13 +314,13 @@ def process_query(query, workdir, args):
             user_chains = 'ALL'
             ligand_names = query.split()[1].upper()
         elif len(input_arguments) == 3:
-            struct = query.split()[0].lower()       # adjust case, struct = lower
-            user_chains = query.split()[1].upper()  # adjust case, chains = upper
-            ligand_names = query.split()[2].upper() # adjust case, ligands = upper
+            struct = query.split()[0].lower()        # adjust case, struct = lower
+            user_chains = query.split()[1].upper()   # adjust case, chains = upper
+            ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
         else:
-            wrong_input_error(job_id, path_job_results) # exit with error
+            wrong_input_error(job_id, path_job_results)  # exit with error
     else:
-        wrong_input_error(job_id, path_job_results) # exit with error
+        wrong_input_error(job_id, path_job_results)  # exit with error
     #user_position = query.split()[3]  # TODO ?
 
     # Parse chains
@@ -802,6 +814,7 @@ def process_query(query, workdir, args):
     #else:   query_chain = holo_chain
 
     # apo results
+    num_apo_chains = 0  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         '''
         # Write dictionary to file
@@ -823,6 +836,7 @@ def process_query(query, workdir, args):
             csv_out.write(header)
             for key, values in apo_holo_dict.items():
                 for value in values:
+                    num_apo_chains += 1
                     csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print apo dict
@@ -834,6 +848,7 @@ def process_query(query, workdir, args):
 
 
     # holo results
+    num_holo_chains = 0  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
         '''
         # Write dictionary to file
@@ -854,6 +869,7 @@ def process_query(query, workdir, args):
             csv_out.write(header)
             for key, values in apo_holo_dict_H.items():
                 for value in values:
+                    num_holo_chains += 1
                     csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print holo dict
@@ -885,6 +901,11 @@ def process_query(query, workdir, args):
     print('\nResults saved to directory:\t', path_job_results)
     
     print('\nDone processing query: ', query)
+
+    return QueryResult(
+        result_dir=path_job_results,
+        num_apo_chains=num_apo_chains,
+        num_holo_chains=num_holo_chains)
 
 # end process_query()
 
