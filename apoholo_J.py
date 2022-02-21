@@ -159,7 +159,7 @@ def process_query(query, workdir, args) -> QueryResult:
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
     
     # Fast examples
-    #query = '2v0v' # this is a fully apo structure
+    #query = '2v0v' # Fully apo structure
     #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '3fav all zn' # [OK]
     #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
@@ -814,7 +814,7 @@ def process_query(query, workdir, args) -> QueryResult:
     #else:   query_chain = holo_chain
 
     # apo results
-    num_apo_chains = 0  # number of found APO chains
+    num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         '''
         # Write dictionary to file
@@ -836,7 +836,6 @@ def process_query(query, workdir, args) -> QueryResult:
             csv_out.write(header)
             for key, values in apo_holo_dict.items():
                 for value in values:
-                    num_apo_chains += 1
                     csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print apo dict
@@ -848,7 +847,7 @@ def process_query(query, workdir, args) -> QueryResult:
 
 
     # holo results
-    num_holo_chains = 0  # number of found HOLO chains
+    num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
         '''
         # Write dictionary to file
@@ -869,7 +868,6 @@ def process_query(query, workdir, args) -> QueryResult:
             csv_out.write(header)
             for key, values in apo_holo_dict_H.items():
                 for value in values:
-                    num_holo_chains += 1
                     csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print holo dict
