@@ -1,6 +1,6 @@
 name: Conda via conda-incubator/setup-miniconda@v2
 
-on: [push, pull_request] # pull_request_target?
+on: [push, pull_request, pull_request_target]
 
 jobs:
   test-conda:
@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # note: pymol-open-source is not available for macos, may be possible to setup testing with normal pymol
+        # note: pymol-open-source is not available for macOS, may be possible to set up testing with normal pymol
         os: [ubuntu-latest]
         # note: '3.10' is causing dependency in conflicts, conda+packages support still not great
         # '3.9' works fine, disabled to save free CI minutes
@@ -41,20 +41,20 @@ jobs:
       - name: Test apoholo_J.py directly
         if: always()
         run: | 
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A,B ZN'
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '3CQV A HEM'
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '3fav all zn'
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '2hka all c3s'  # bovine NPC2 complex with cholesterol sulfate
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --query '2v57 a,c prl'  # SS changes in transcriptional regulator LfrR in complex with proflavine
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --reverse_search 1 --query '2v0v'  # test for reverse search (this is a fully apo structure)
-          python apoholo_J.py --save_oppst 1 --save_separate 1 --reverse_search 1 --query '2v0v a,b'
+          python apoholo_J.py --query '1a73 A,B ZN'
+          python apoholo_J.py --query '3CQV A HEM'
+          python apoholo_J.py --query '3fav all zn'
+          python apoholo_J.py --query '2hka all c3s'  # bovine NPC2 complex with cholesterol sulfate
+          python apoholo_J.py --query '2v57 a,c prl'  # SS changes in transcriptional regulator LfrR in complex with proflavine
+          python apoholo_J.py --reverse_search 1 --query '2v0v'  # test for reverse search (this is a fully apo structure)
+          python apoholo_J.py --reverse_search 1 --query '2v0v a,b'
           
         # all of the following stuff is tested in unit tests...
-        # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 ALL ZN'
-        # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 ZN'
-        # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73'
-        # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A'
-        # python apoholo_J.py --save_oppst 1 --save_separate 1 --query '1a73 A ZN,MG'
+        # python apoholo_J.py  --query '1a73 ALL ZN'
+        # python apoholo_J.py  --query '1a73 ZN'
+        # python apoholo_J.py  --query '1a73'
+        # python apoholo_J.py  --query '1a73 A'
+        # python apoholo_J.py  --query '1a73 A ZN,MG'
         # some of the following ones are too slow:  TODO select few fast ones
         # python apoholo_J.py --query '1a0u'  # hem, big search
         # python apoholo_J.py --query '3fav'  #
