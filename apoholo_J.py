@@ -9,9 +9,9 @@ from common import get_workdir
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
-import pymol
+#import pymol
 import pymol.cmd as cmd
-# pymol.finish_launching()
+#pymol.finish_launching()
 import psico.fitting
 
 import ast
@@ -897,8 +897,8 @@ def parse_args(argv):
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
-    parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=0,    help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
     parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
