@@ -111,6 +111,12 @@ def wrong_input_error(job_id, path_job_results): # arg_job_id, arg_pathRSLTS):
         os.rmdir(path_job_results)
     sys.exit(1)  # exit with error
 
+    
+# Join list of ligand codes to a single string, sorted
+def join_ligands(ligands):
+    return '-'.join(sorted(ligands))
+
+
 ##########################################################################################################
 
 
@@ -702,7 +708,8 @@ def process_query(query, workdir, args):
             if not reverse_mode:
                 print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
-                    apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
+                    ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
+                    apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
 
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
@@ -715,7 +722,8 @@ def process_query(query, workdir, args):
                         cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
 
                 else:
-                    apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands.union(found_ligands_xtra)))
+                    ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
+                    apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
@@ -726,14 +734,16 @@ def process_query(query, workdir, args):
                 # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
                 print('Found ligands: ', found_ligands_r)
                 if len(found_ligands_r) > 0:
-                    apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r))
+                    ligands_str = join_ligands(found_ligands_r)
+                    apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     print('HOLO')
                     if save_separate == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
                 else:
-                    apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + '-'.join(found_ligands_r.union(found_ligands_xtra)))
+                    ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
+                    apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:

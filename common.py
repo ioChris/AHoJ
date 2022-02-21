@@ -15,7 +15,8 @@ def get_2level_cwd():
 
 def get_script_directory():
     """ Get the directory the current script (or interpreter) is running in  """
-    path = os.path.realpath(sys.argv[0])
+    # path = os.path.realpath(sys.argv[0]) # doesn't work in tests
+    path = os.path.realpath(__file__)      # doesn't work in the interpreter
     if os.path.isdir(path):
         return path
     else:
