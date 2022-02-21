@@ -8,7 +8,7 @@ Created on Mon Dec 20 16:24:57 2021
 from common import get_workdir
 
 import __main__
-__main__.pymol_argv = [ 'pymol', '-qc']  # Quiet and no GUI
+__main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 import pymol
 import pymol.cmd as cmd
 pymol.finish_launching()
@@ -462,9 +462,6 @@ def process_query(query, workdir, args):
     print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ',
           sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
     print('')
-
-    # test fail on purpose
-    # fail()
 
     ## Apo/holo candidate evaluation
 
@@ -931,6 +928,9 @@ def parse_args(argv):
 
 
 def main(argv):
+    #fail()       # test fail on purpose
+    #sys.exit(8)  # test fail on purpose
+
     args = parse_args(argv)
 
     workdir = get_workdir(args)
@@ -943,4 +943,6 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    #sys.exit(9)  # test fail on purpose
+
     sys.exit(main(sys.argv[1:]))
