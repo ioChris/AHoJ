@@ -11,7 +11,7 @@ import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 import pymol
 import pymol.cmd as cmd
-pymol.finish_launching()
+# pymol.finish_launching()
 import psico.fitting
 
 import ast
