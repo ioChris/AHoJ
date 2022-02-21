@@ -11,7 +11,7 @@ import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 import pymol
 import pymol.cmd as cmd
-pymol.finish_launching()
+#pymol.finish_launching()
 import psico.fitting
 
 import ast
@@ -142,7 +142,7 @@ def process_query(query, workdir, args):
     
     # Fast examples
     #query = '2v0v' # this is a fully apo structure
-    #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
+    query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '3fav all zn' # [OK]
     #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
@@ -897,8 +897,8 @@ def parse_args(argv):
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
-    parser.add_argument('--save_oppst',        type=int,   default=0,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=0,    help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
     parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
