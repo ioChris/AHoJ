@@ -53,13 +53,15 @@ class T02_ApoholoTests(unittest.TestCase):
         args = apoholo_J.parse_args(argv)
         res = apoholo_J.process_query(args.query, workdir, args)
 
+        print("Query result:", res)
+
         if expect_apo > 0:
             assert res.num_apo_chains >= expect_apo, "Found less APO chains"  # may be > due to future data
-            assert non_blank_lines(res.result_dir + '/results_apo.csv') == 1 + expect_apo
+            assert non_blank_lines(res.result_dir + '/results_apo.csv') == 1 + expect_apo, "Bad results_apo.csv"
 
         if expect_holo > 0:
             assert res.num_holo_chains >= expect_holo, "Found less HOLO chains"  # may be > due to future data
-            assert non_blank_lines(res.result_dir + '/results_holo.csv') == 1 + expect_apo
+            assert non_blank_lines(res.result_dir + '/results_holo.csv') == 1 + expect_holo, "Bad results_holo.csv"
 
         assert count_files(res.result_dir, '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
 
