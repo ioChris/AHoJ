@@ -9,7 +9,7 @@ from common import get_workdir
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
-import pymol
+#import pymol
 import pymol.cmd as cmd
 #pymol.finish_launching()
 import psico.fitting
@@ -142,7 +142,7 @@ def process_query(query, workdir, args):
     
     # Fast examples
     #query = '2v0v' # this is a fully apo structure
-    query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
+    #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '3fav all zn' # [OK]
     #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
