@@ -8,7 +8,7 @@ Created on Mon Dec 20 16:24:57 2021
 from common import get_workdir
 
 import __main__
-__main__.pymol_argv = [ 'pymol', '-qc']  # Quiet and no GUI
+__main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 import pymol
 import pymol.cmd as cmd
 pymol.finish_launching()
@@ -463,9 +463,6 @@ def process_query(query, workdir, args):
           sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
     print('')
 
-    # test fail on purpose
-    # fail()
-
     ## Apo/holo candidate evaluation
 
     # Put all structures for downloading into set
@@ -906,7 +903,7 @@ def parse_args(argv):
     parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
-    parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
+    parser.add_argument('--lig_scan_cradius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
     parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
     # Experimental
@@ -931,6 +928,9 @@ def parse_args(argv):
 
 
 def main(argv):
+    #fail()       # test fail on purpose
+    #sys.exit(8)  # test fail on purpose
+
     args = parse_args(argv)
 
     workdir = get_workdir(args)
@@ -943,4 +943,6 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    #sys.exit(9)  # test fail on purpose
+
     sys.exit(main(sys.argv[1:]))

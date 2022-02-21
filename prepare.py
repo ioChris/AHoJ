@@ -199,4 +199,5 @@ def main(argv):
 
 
 if __name__ == "__main__":
+    # fail() # test fail on purpose
     sys.exit(main(sys.argv[1:]))
