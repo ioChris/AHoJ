@@ -4,7 +4,7 @@ on: [push, pull_request] # pull_request_target?
 
 jobs:
   test-conda:
-    name: Test Conda Lin (${{ matrix.python-version }}, ${{ matrix.os }})
+    name: Test Conda Linux (${{ matrix.python-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
