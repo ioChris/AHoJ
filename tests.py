@@ -63,7 +63,9 @@ class T02_ApoholoTests(unittest.TestCase):
             assert res.num_holo_chains >= expect_holo, "Found less HOLO chains"  # may be > due to future data
             assert non_blank_lines(res.result_dir + '/results_holo.csv') == 1 + expect_holo, "Bad results_holo.csv"
 
-        assert count_files(res.result_dir, '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
+        # Test produced structure files
+        if expect_apo + expect_holo > 0:
+            assert count_files(res.result_dir, '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
 
     # TODO instead of running main, test by running subprocess and capture stdout/stderr, test for presence of expected error messages
     def tst_main_fail(self, args_str):
