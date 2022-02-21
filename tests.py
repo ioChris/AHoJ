@@ -46,6 +46,7 @@ class T01_PrepareScriptTests(unittest.TestCase):
 
 class T02_ApoholoTests(unittest.TestCase):
 
+    # Test successful query
     def tst_query(self, args_str, expect_apo=0, expect_holo=0):
         argv = shlex.split(args_str)  # split but preserve '...' as substrings
         print("Testing with args:", argv)
@@ -95,7 +96,7 @@ class T02_ApoholoTests(unittest.TestCase):
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
         self.tst_main_fail("--query 'INVALID_QUERY X X X' ")
-        # self.do_test("--query 'XXXX' ",                expect_failure=True)  # XXXX is not in PDB    TODO fix failing test
+        # self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in PDB    TODO fix failing test, this query should fail
         # TODO add more tests cases
 
 
@@ -111,10 +112,6 @@ class T02_ApoholoTests(unittest.TestCase):
     #        exit_code = apoholo_J.main(argv)
     #        self.assertEqual(0, exit_code)
     #        # TODO test correctness of actual output
-
-    # test if github action fails correctly on test error
-    # def test_fail_1(self):
-    #     self.assertEqual(1, 2)
 
 
 if __name__ == '__main__':
