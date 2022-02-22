@@ -1,5 +1,6 @@
 import os
 import sys
+import pickle
 
 
 def get_2level_cwd():
@@ -38,3 +39,10 @@ def get_workdir(args):
         return get_default_workdir()
     # TODO add an override from local config or ENV variable
 
+
+def load_dict_binary(path):
+    return pickle.load(open(path, "rb"))
+
+
+def save_dict_binary(dict, path):
+    return pickle.dump(dict, open(path, "wb"))

@@ -5,6 +5,8 @@ import apoholo_J
 import os
 import sys
 import shlex
+
+from apoholo_J import load_precompiled_data
 from common import get_default_workdir
 
 
@@ -42,9 +44,14 @@ class T01_Prepare(unittest.TestCase):
         self.assertEqual(0, exit_code)
         self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.txt'))
         self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.txt'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.bin'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.bin'))
 
 
 class T02_Apoholo(unittest.TestCase):
+
+    def setUp(self):
+        self.precompiled_data = load_precompiled_data(workdir)
 
     # Test successful query
     def tst_query(self, args_str, expect_apo=0, expect_holo=0):
@@ -52,7 +59,7 @@ class T02_Apoholo(unittest.TestCase):
         print("Testing with args:", argv)
 
         args = apoholo_J.parse_args(argv)
-        res = apoholo_J.process_query(args.query, workdir, args)
+        res = apoholo_J.process_query(args.query, workdir, args, self.precompiled_data)
 
         print("Query result:", res)
 

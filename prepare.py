@@ -4,7 +4,7 @@ Created on Sat Jan 22 18:27:43 2022
 
 @author: ChrisX
 """
-from common import get_workdir
+from common import get_workdir, save_dict_binary
 
 import os
 import sys
@@ -160,6 +160,9 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
         with open(pathSIFTS + '/' + outfile1, 'wt') as out1:
             out1.write(str(dict_R_SPnum))
 
+        outfile_bin = filenameSIFTS[:-4] + "_REVERSE_SPnum.bin"
+        save_dict_binary(dict_R_SPnum, pathSIFTS + '/' + outfile_bin)
+
         # Write same dict in a more readable format (new line per key)
         with open(pathSIFTS + '/' + outfile2, 'wt') as out2:
             for key, value, in dict_R_SPnum.items():
@@ -173,6 +176,9 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
         with open(pathSIFTS + '/' + outfile_SIFTS, 'wt') as out3:
             out3.write(str(dict_SIFTS))
+
+        outfile_SIFTS_bin = filenameSIFTS[:-4] + '_dict.bin'
+        save_dict_binary(dict_SIFTS, pathSIFTS + '/' + outfile_SIFTS_bin)
 
         # Write  dict2 in a more readable format (new line per key)
         with open(pathSIFTS + '/' + outfile_SIFTS_readable, 'wt') as out4:
