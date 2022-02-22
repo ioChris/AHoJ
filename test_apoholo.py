@@ -5,6 +5,8 @@ import apoholo_J
 import os
 import sys
 import shlex
+
+from apoholo_J import load_precompiled_data
 from common import get_default_workdir
 
 
@@ -35,16 +37,21 @@ def count_files(dir, suffix):
 
 # T01 prefix to ensure it is run first
 # TODO find better way to enforce test order
-class T01_PrepareScriptTests(unittest.TestCase):
+class T01_Prepare(unittest.TestCase):
 
     def test_prepare_script(self):
         exit_code = prepare.main([])
         self.assertEqual(0, exit_code)
         self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.txt'))
         self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.txt'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.bin'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.bin'))
 
 
-class T02_ApoholoTests(unittest.TestCase):
+class T02_Apoholo(unittest.TestCase):
+
+    def setUp(self):
+        self.precompiled_data = load_precompiled_data(workdir)
 
     # Test successful query
     def tst_query(self, args_str, expect_apo=0, expect_holo=0):
@@ -52,7 +59,7 @@ class T02_ApoholoTests(unittest.TestCase):
         print("Testing with args:", argv)
 
         args = apoholo_J.parse_args(argv)
-        res = apoholo_J.process_query(args.query, workdir, args)
+        res = apoholo_J.process_query(args.query, workdir, args, self.precompiled_data)
 
         print("Query result:", res)
 
@@ -98,20 +105,6 @@ class T02_ApoholoTests(unittest.TestCase):
         self.tst_main_fail("--query 'INVALID_QUERY X X X' ")
         # self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in PDB    TODO fix failing test, this query should fail
         # TODO add more tests cases
-
-
-    #def tst_main(self, args_str, expect_failure=False):
-    #    argv = shlex.split(args_str)
-    #    print("Testing with args:", argv)
-    #
-    #    if expect_failure:
-    #        with self.assertRaises(SystemExit):
-    #            exit_code = apoholo_J.main(argv)
-    #            # self.assertNotEqual(0, exit_code)
-    #    else:
-    #        exit_code = apoholo_J.main(argv)
-    #        self.assertEqual(0, exit_code)
-    #        # TODO test correctness of actual output
 
 
 if __name__ == '__main__':

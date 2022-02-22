@@ -34,7 +34,7 @@ jobs:
 
       - name: Unit tests
         if: always()
-        run: pytest -x -v -ra tests.py
+        run: pytest -v -ra
 
       - name: Test prepare.py directly
         if: always()
