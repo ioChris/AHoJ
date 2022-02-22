@@ -24,6 +24,7 @@ Ligands are named and defined according to their (up to) 3-character code from P
 The application is conducting a search within the experimentally determined protein structures in the Protein Data Bank. 
 It retrieves identical proteins with known structures, and then looks whether the specified ligand(s) are present or absent. 
 
+Depending on the user’s input, the application can look for the specified ligand(s) in a single specified chain, or the whole protein (all chains).
 It can find apo-proteins that i) simply lack the specified ligand in a given binding site (but may bind a different ligand at the same site), or ii) 
 lack any known ligand in a given binding site and thus constitute universal apo- sites.
 
