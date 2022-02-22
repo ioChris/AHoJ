@@ -210,7 +210,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '2v0v' # Fully apo structure
     #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '3fav all zn' # [OK]
-    query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
+    #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
     #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
 
