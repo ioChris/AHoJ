@@ -9,9 +9,7 @@ from common import get_workdir
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
-#import pymol
 import pymol.cmd as cmd
-#pymol.finish_launching()
 import psico.fitting
 
 import ast
@@ -39,7 +37,6 @@ ii) When looking for holo from apo:
 # TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
 # TODO adjust radius according to mol. weight of ligand
 # TODO add star categories in APO and HOLO verdicts and amend results accordingly
-
 
 
 ##########################################################################################################
@@ -84,7 +81,7 @@ def next_job(path_pattern):    # Create incrementing directory name for each job
         i = i * 2
     a, b = (i // 2, i)  # Result lies somewhere in the interval (i/2..i]    # We call this interval (a..b] and narrow it down until a + 1 = b
     while a + 1 < b:
-        c = (a + b) // 2 # interval midpoint
+        c = (a + b) // 2  # interval midpoint
         a, b = (c, b) if os.path.exists(path_pattern % c) else (a, c)
     return path_pattern % b
 
@@ -103,7 +100,7 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
         return 0
 
 
-def wrong_input_error(job_id, path_job_results): # arg_job_id, arg_pathRSLTS):
+def wrong_input_error(job_id, path_job_results):  # arg_job_id, arg_pathRSLTS):
     print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
     print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
     print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
@@ -165,8 +162,6 @@ def process_query(query, workdir, args) -> QueryResult:
     #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
     #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
-    
-    
 
     
     # Basic
@@ -324,7 +319,7 @@ def process_query(query, workdir, args) -> QueryResult:
     #user_position = query.split()[3]  # TODO ?
 
     # Parse chains
-    if not user_chains == 'ALL':
+    if not user_chains == 'ALL':            # TODO user_chains may be undefined here
         user_chains = ''.join(user_chains)
         user_chains = user_chains.split(',')
         #user_chains_bundle = '+'.join(user_chains)
@@ -334,7 +329,7 @@ def process_query(query, workdir, args) -> QueryResult:
             user_structchain = struct.lower() + user_chain.upper()
             user_structchains.append(user_structchain)
 
-    if ligand_names is None: # This should be safe to remove as well
+    if ligand_names is None:  # This should be safe to remove as well
         print("Input ligands were not defined!")
         # sys.exit(1) ?
 
@@ -364,6 +359,7 @@ def process_query(query, workdir, args) -> QueryResult:
         print('Loading structure:\t', struct_path, '\n')
     except:
         print('Error downloading structure:\t', struct, '\n')
+        # TODO fail
     if autodetect_lig == 0:
         print('Verifying ligands:\t', ligand_names)
         for lig_id in ligand_names:
@@ -379,6 +375,7 @@ def process_query(query, workdir, args) -> QueryResult:
                             break
             except:
                 print('Error verifying ligand:\t', lig_id)
+                # TODO fail
 
 
 
@@ -494,12 +491,13 @@ def process_query(query, workdir, args) -> QueryResult:
     # Download/load the Apo candidate structures to specified directory [TODO this should be replaced by load later]
     for apo_candidate_structure in apo_candidate_structs:
         try:
-            download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS) # structPath = # TODO structPath not used?
+            download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
         except Exception as ex1:
             template = "Exception {0} occurred. \n\t\t\t\t\tArguments:{1!r}"
             message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
             add_log(message, log_file_dnld)
             print(f'*apo file {apo_candidate_structure} not found')
+            # TODO fail?
 
     '''# Add extra structures for testing [NMR struct: 1hko | cryo-em struct: 6nt5]
     apo_candidate_structs.add('6nt5') #EM
@@ -514,8 +512,8 @@ def process_query(query, workdir, args) -> QueryResult:
             for line in mmCIFin:
                 try:
                     if line.split()[0] == '_exptl.method':
-                        method = line.split("'")[1] # capture experimental method #method = ' '.join(line.split()[1:])
-                        if method == 'SOLUTION NMR': # break fast if method is 'NMR'
+                        method = line.split("'")[1]  # capture experimental method #method = ' '.join(line.split()[1:])
+                        if method == 'SOLUTION NMR':  # break fast if method is 'NMR'
                             break
                     elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
                         resolution = round(float(line.split()[1]), 3)  # X-ray highest resolution
@@ -525,6 +523,7 @@ def process_query(query, workdir, args) -> QueryResult:
                         break
                 except:  # Exception as ex: # getting weird but harmless exceptions
                     print('Problem parsing structure: ', apo_candidate_struct)  #, ex)
+                    # TODO fail?
             try:
                 if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
@@ -534,6 +533,7 @@ def process_query(query, workdir, args) -> QueryResult:
             except:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
                 print(apo_candidate_struct, ' resolution:\t', resolution, '\t\t', method, '\t\tFAIL')  # NMR
+                # TODO fail?
     print('Done\n')
 
 
@@ -583,7 +583,7 @@ def process_query(query, workdir, args) -> QueryResult:
         holo_struct_path = download_mmCIF_gz2(holo_struct, pathSTRUCTS)
 
         # Initialize PyMOL but don't reload Holo if present
-        if holo_struct in cmd.get_object_list('all'): # object names
+        if holo_struct in cmd.get_object_list('all'):  # object names
             #if holo_struct in cmd.get_names('all'): # object and selection names
             cmd.delete('not ' + holo_struct)
         else:
@@ -625,7 +625,7 @@ def process_query(query, workdir, args) -> QueryResult:
             print('Ligand information')
             print('Atom IDs: ', ligands_atoms)
             print('Total atoms: ', len(ligands_atoms))
-            print('Atom positions/chains/names: ', set(holo_lig_positions.get(holo_structchain)))#, '/', len(holo_lig_positions.get(holo_structchain)))
+            print('Atom positions/chains/names: ', set(holo_lig_positions.get(holo_structchain)))  #, '/', len(holo_lig_positions.get(holo_structchain)))
 
             # Name holo ligands as PyMOL selections. Put real (detected) ligand names into set
             holo_lig_names = set()
@@ -695,7 +695,7 @@ def process_query(query, workdir, args) -> QueryResult:
 
                     # Assess apo ligands
                     for i in apo_lig_names:
-                        if i in holo_lig_names or i in ligand_names:    # check in both lists (detected holo ligs + query ligs)
+                        if i in holo_lig_names or i in ligand_names:    # check in both lists (detected holo ligs + query ligs)   # TODO holo_lig_names may be undefined
                             found_ligands.add(i)    #print('Holo ligand found in Apo: ', apo_structchain, i)
                         elif i not in nolig_resn:
                             found_ligands_xtra.add(i)
@@ -742,9 +742,9 @@ def process_query(query, workdir, args) -> QueryResult:
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
 
-            else: # reverse mode
+            else:  # reverse mode
                 # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
-                print('Found ligands: ', found_ligands_r)
+                print('Found ligands: ', found_ligands_r)  # TODO found_ligands_r may be undefined
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
@@ -762,8 +762,8 @@ def process_query(query, workdir, args) -> QueryResult:
                         print('APO')
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
-                            cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                        cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
+                            cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct)  # save query structure
+                        cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save holo chain
 
 
         # Clean objects/selections in session & save
@@ -889,7 +889,7 @@ def process_query(query, workdir, args) -> QueryResult:
     # Append the name of the query and the job_id in the queries.txt
     if job_id:
         print('\nSaving query:', query_full)
-        with open (pathQRS + '/' + 'queries.txt', 'a') as out_q:
+        with open(pathQRS + '/' + 'queries.txt', 'a') as out_q:
             out_q.write(query_full + '\n')
 
     # Print argparse arguments

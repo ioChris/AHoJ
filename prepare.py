@@ -56,7 +56,7 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
     # Check if SIFTS directory exists, if not, create it
     if not os.path.exists(pathSIFTS):
-        print('Working directory does not exist, creating new directory\n')
+        print('SIFTS directory does not exist, creating new directory\n')
         try:
             os.makedirs(pathSIFTS)
         except:
@@ -68,7 +68,8 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
             # Archive old SIFTS files before deleting/replacing
             print('Backing up current SIFTS and dict files')
-            if not os.path.exists(pathOLD):            os.makedirs(pathOLD)
+            if not os.path.exists(pathOLD):
+                os.makedirs(pathOLD)
             time_str = time.strftime("%Y%m%d_%H%M%S", time.gmtime())
             output_archive_pathname = pathOLD + '/oldSIFTS_' + time_str
             shutil.make_archive(output_archive_pathname, 'zip', pathSIFTS)
@@ -186,10 +187,9 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
 
 def main(argv):
-    # Input arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('--work_directory',  type=str,   default=None,   help='root working directory for pre-computed and intermediary data')
-    parser.add_argument('--pdb_uniprot_url', type=str,   default='http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz')
+    parser.add_argument('--work_directory',  type=str, default=None,   help='root working directory for pre-computed and intermediary data')
+    parser.add_argument('--pdb_uniprot_url', type=str, default='http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz')
     args = parser.parse_args(argv)
 
     workdir = get_workdir(args)
@@ -199,5 +199,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    # fail() # test fail on purpose
     sys.exit(main(sys.argv[1:]))
