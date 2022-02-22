@@ -35,7 +35,7 @@ def count_files(dir, suffix):
 
 # T01 prefix to ensure it is run first
 # TODO find better way to enforce test order
-class T01_PrepareScriptTests(unittest.TestCase):
+class T01_Prepare(unittest.TestCase):
 
     def test_prepare_script(self):
         exit_code = prepare.main([])
@@ -44,7 +44,7 @@ class T01_PrepareScriptTests(unittest.TestCase):
         self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.txt'))
 
 
-class T02_ApoholoTests(unittest.TestCase):
+class T02_Apoholo(unittest.TestCase):
 
     # Test successful query
     def tst_query(self, args_str, expect_apo=0, expect_holo=0):
