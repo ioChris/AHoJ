@@ -46,7 +46,6 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
     pathSIFTS = path_root + r'/SIFTS'           # Pre compiled files with UniProt PDB mapping
     pathOLD = path_root + r'/oldSIFTS'          # old SIFTS files, keep as backup
     # pathSIFTS = get_2level_cwd() + r'\ownCloud\Bioinfo_ownCloud\Projects\Ions\Uniprot_PDBchain\autodownload'
-    # pathSIFTS = r'C:\Users\TopOffice\Documents\GitHub\workDir\files'
     filename = pdb_uniprot_url.split('/')[-1]
 
     print('Downloading SIFTS files from EBI ftp to local folder')
@@ -113,7 +112,7 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
             structure = line.split("\t")[0]
             chain = line.split("\t")[1]
-            uniprot_id = line.split("\t")[2]    #uniprot_id = line.split()[2]
+            uniprot_id = line.split("\t")[2]
             SIFTSstructchain = structure + chain
 
             SP_BEG = int(line.split("\t")[7])
@@ -133,7 +132,7 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
             elif sp_length < 0:
                 counter_neg += 1
                 #print(uniprot_id, structure+chain+' '+str(SP_BEG)+' '+str(SP_END)+' '+str(sp_length))
-
+        
         print('Done')
 
     print('Dict keys, values:')
