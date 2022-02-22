@@ -561,7 +561,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         break
                 except:  # Exception as ex: # getting weird but harmless exceptions
                     print('Problem parsing structure: ', apo_candidate_struct)  #, ex)
-                    # TODO fail?
             try:
                 if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
