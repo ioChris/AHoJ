@@ -210,7 +210,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '2v0v' # Fully apo structure
     #query = '3CQV all hem'#,coh'# hem,f86,mg,tpo,act,jkl,ue7,909' # apohaemoglobin study [OK]
     #query = '3fav all zn' # [OK]
-    #query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
+    query = '1py2 d frh' # 228 chains, 180 valid, long - run only on one chain [OK*]
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
     #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
 
@@ -538,7 +538,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
             add_log(message, log_file_dnld)
             print(f'*apo file {apo_candidate_structure} not found')
-            # TODO fail?
+            # TODO fail? - Instead of fail, remove structure from queue
 
     '''# Add extra structures for testing [NMR struct: 1hko | cryo-em struct: 6nt5]
     apo_candidate_structs.add('6nt5') #EM
@@ -572,8 +572,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL')  # Xray/EM
             except:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print(apo_candidate_struct, ' resolution:\t', resolution, '\t\t', method, '\t\tFAIL')  # NMR
-                # TODO fail?
+                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
+
     print('Done\n')
 
 
@@ -979,7 +979,7 @@ def parse_args(argv):
     parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,    help='0/1: ignore/consider non-standard residues as ligands')
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
-    parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue [might need to apply this to apo search too #TODO]')
+    parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO]
     parser.add_argument('--look_in_archive',   type=int,   default=0,    help='0/1: search if the same query has been processed in the past (can give very fast results)')
 
     # Internal
