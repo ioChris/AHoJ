@@ -115,8 +115,11 @@ conda activate ahoj
 
 # prepare
 python prepare.py  
- 
+
 # test
+pytest -v 
+ 
+# use
 python apoholo_J.py --query "1a73 A,B ZN"
 ~~~
 
@@ -142,6 +145,9 @@ conda activate ahoj
 python prepare.py   
 
 # test
+pytest -v 
+
+# use
 python apoholo_J.py --query "1a73 A,B ZN"
 ~~~
 

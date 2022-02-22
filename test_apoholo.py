@@ -100,19 +100,5 @@ class T02_ApoholoTests(unittest.TestCase):
         # TODO add more tests cases
 
 
-    #def tst_main(self, args_str, expect_failure=False):
-    #    argv = shlex.split(args_str)
-    #    print("Testing with args:", argv)
-    #
-    #    if expect_failure:
-    #        with self.assertRaises(SystemExit):
-    #            exit_code = apoholo_J.main(argv)
-    #            # self.assertNotEqual(0, exit_code)
-    #    else:
-    #        exit_code = apoholo_J.main(argv)
-    #        self.assertEqual(0, exit_code)
-    #        # TODO test correctness of actual output
-
-
 if __name__ == '__main__':
     sys.exit(unittest.main())
