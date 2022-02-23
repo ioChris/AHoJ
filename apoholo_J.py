@@ -35,7 +35,7 @@ ii) When looking for holo from apo:
 '''
 
 # TODO add smart synching with PDB
-# TODO adjust search radius according to mol. weight of ligand (?)
+# TODO adjust search radius according to mol. weight of ligand
 
 
 ##########################################################################################################
@@ -205,6 +205,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '2jds all L20' # cAMP-dependent protein kinase w inhibitor #202 chains 145 structs, long
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
     #query = '1qsh d heg' # long
+    
+    query = '3N3I all roc' # HIV mutations
+    #query = '2whh a ppn' # related to upper example, multiple identical structchains in values of dict
     
     # Fast examples
     #query = '2v0v' # Fully apo structure
@@ -478,46 +481,67 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 sys.exit(0)
             print('Old job directory not found, continuing process\n')
 
-
-
-    # Get apo candidates from rSIFTS dict
-    print('\nLooking for apo/holo candidates')
+    
+    # Get apo candidates from rSIFTS dict, calculate sequence overlap
+    print('\nstart - end - length of UniProt numbering for query')
     dictApoCandidates = dict()
     uniprot_overlap = dict()
-
+    
     for user_structchain in user_structchains:
-        for key, values in dict_rSIFTS.items():  # iterate over reverse SIFTS chains/uniprot IDs
-            for i in values:  # iterate over the values in each key, i = struct/chain combo
+        top_xlength = False # reset top_xlength for new query chain
+        # Iterate through UniProt IDs and their structchains
+        for key, values in dict_rSIFTS.items():  # key = UniProt accession, values = structchains + SP_BEG + SP_END
+            # Iterate through each structchain
+            for i in values:  # i = structchain SP_BEG SP_END
+                # Find the match(es) for the query structchain
                 if i.split()[0] == user_structchain:
-                    #uniprot_id = key # not needed
-                    structchain = i.split()[0] # pass structchain to variable
-                    x1 = i.split()[1]    # holo SP BEG
-                    x2 = i.split()[2]    # holo SP END
-
-                    # Find apo candidates by filtering by coverage
-                    for candidate in values:
-
-                        # Discard same structure and/or chain with input (holo)
-                        if candidate.split()[0][:4] != structchain[:4]: # discard any structure same with query (stricter)
+                    
+                    #uniprot_id = key  # UniProt ID where query belongs
+                    structchain_s = i.split()[0] # pass structchain to variable
+                    x1s = i.split()[1]    # query SP BEG
+                    x2s = i.split()[2]    # query SP END
+                    xlength = int(x2s) - int(x1s)
+                    print(x1s, x2s, xlength)
+                    
+                    # Keep only longest UniProt stretch
+                    if not top_xlength or xlength > top_xlength:
+                        top_xlength = xlength
+                        x1 = x1s
+                        x2 = x2s
+                        structchain = structchain_s
+                        print('*Considering ', structchain, x1, x2, xlength, top_xlength)
+                        
+                        # Find apo candidates by filtering by coverage
+                        print('\nLooking for apo/holo candidates')
+                        for candidate in values:
+                            
+                            # Discard same structure and/or chain with input (holo)
+                            if candidate.split()[0][:4] != structchain[:4]: # discard any structure same with query (stricter)
                             #if candidate.split(' ')[0] != structchain: # only discard same chain
-
-                            y1 = candidate.split()[1]
-                            y2 = candidate.split()[2]
-
-                            # Calculate overlap and % of overlap on query (x1,x2)
-                            result =  min(int(x2), int(y2)) - max(int(x1), int(y1))
-                            percent = result / (int(x2) - int(x1)) * 100
-                            percent = round(percent, 1)     # round the float
-
-                            # Only consider positive overlap (negative overlap may occur cause of numbering)
-                            #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
-                            uniprot_overlap.setdefault(candidate.split()[0], []).append(i.split()[0] + ' ' + str(percent))
-                            if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0:
-                                dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
+                                    
+                                y1 = candidate.split()[1]    # candidate SP BEG
+                                y2 = candidate.split()[2]    # candidate SP END
+    
+                                # Calculate overlap and % of overlap on query (x1,x2)
+                                result =  min(int(x2), int(y2)) - max(int(x1), int(y1))
+                                percent = result / (int(x2) - int(x1)) * 100
+                                percent = round(percent, 1)     # round the float
+    
+                                # Only consider positive overlap (negative overlap may occur cause of wrong numbering)
+                                #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
+                                uniprot_overlap.setdefault(candidate.split()[0], []).append(i.split()[0] + ' ' + str(percent))
+                                
+                                if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
+                                    dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
 
     print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ',
           sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
     print('')
+
+    #print(dictApoCandidates)
+    sys.exit(0) # force stop run
+
+
 
     ## Apo/holo candidate evaluation
 
@@ -563,7 +587,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         resolution = round(float(line.split()[1]), 3)  # EM resolution
                         break
                 except:  # Exception as ex: # getting weird but harmless exceptions
-                    print('Problem parsing structure: ', apo_candidate_struct)  #, ex)
+                    #print('Problem parsing structure: ', apo_candidate_struct)
+                    pass  # ignore and hide exceptions from stdout
             try:
                 if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
@@ -572,7 +597,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL')  # Xray/EM
             except:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
+                print('*Exception', apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
 
     print('Done\n')
 
@@ -615,6 +640,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     holo_lig_positions = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
+    print(dictApoCandidates_1) # helper print, delete later
     for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         print('')
         print(f'=== Processing query chain {holo_structchain} ===')
@@ -978,7 +1004,7 @@ def parse_args(argv):
 
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
     parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
-    parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+    parser.add_argument('--min_tmscore',       type=float, default=0.4,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
     # Experimental
     parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')

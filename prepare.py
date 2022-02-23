@@ -121,6 +121,8 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 
             # Build basic dict with structchain as keys, uniprot IDs as values
             dict_SIFTS[SIFTSstructchain] = uniprot_id
+            #dict_SIFTS.setdefault(SIFTSstructchain, []).append(uniprot_id)
+            #dict_SIFTS.setdefault(SIFTSstructchain, uniprot_id)
 
             # Append values to the R_SPnum dict (SP_BEG, SP_END, sp_length)
             dict_R_SPnum.setdefault(uniprot_id, []).append(structure+chain+' '+str(SP_BEG)+' '+str(SP_END))
