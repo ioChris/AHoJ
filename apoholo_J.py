@@ -34,9 +34,8 @@ ii) When looking for holo from apo:
 -Max arguments: PDB code, chain(s)
 '''
 
-# TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
-# TODO adjust radius according to mol. weight of ligand
-# TODO add star categories in APO and HOLO verdicts and amend results accordingly
+# TODO add smart synching with PDB
+# TODO adjust search radius according to mol. weight of ligand (?)
 
 
 ##########################################################################################################
@@ -205,6 +204,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '3IXJ all 586' # beta-secretase 1 with inhibitor (cryptic?) # too long
     #query = '2jds all L20' # cAMP-dependent protein kinase w inhibitor #202 chains 145 structs, long
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
+    #query = '1qsh d heg' # long
     
     # Fast examples
     #query = '2v0v' # Fully apo structure
@@ -776,7 +776,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 else:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
-                    print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
+                    
+                    if len(found_ligands) > 0:
+                        print('HOLO')
+                    else:
+                        print('HOLO*')
+                        
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
