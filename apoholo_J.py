@@ -206,7 +206,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
     #query = '1qsh d heg' # long
     
-    query = '3N3I all roc' # HIV mutations
+    #query = '3N3I all roc' # HIV mutations
     #query = '2whh a ppn' # related to upper example, multiple identical structchains in values of dict
     
     # Fast examples
@@ -539,7 +539,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('')
 
     #print(dictApoCandidates)
-    sys.exit(0) # force stop run
+    #sys.exit(0) # force stop run
 
 
 
