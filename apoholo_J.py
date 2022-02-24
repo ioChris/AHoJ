@@ -698,10 +698,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 for i in values:
                     holo_lig_positions.setdefault(holo_structchain, []).append(i)
 
+            # Remove duplicate values from holo_lig_positions
+            for key,value in holo_lig_positions.items():
+                holo_lig_positions[key] = list(holo_lig_positions.fromkeys(value))   # preserves the order of values
+
             print('Ligand information')
             print('Atom IDs: ', ligands_atoms)
             print('Total atoms: ', len(ligands_atoms))
-            print('Atom positions/chains/names: ', set(holo_lig_positions.get(holo_structchain)))  #, '/', len(holo_lig_positions.get(holo_structchain)))
+            print('Atom positions/chains/names: ', holo_lig_positions.get(holo_structchain))  #, '/', len(holo_lig_positions.get(holo_structchain)))
 
             # Name holo ligands as PyMOL selections. Put real (detected) ligand names into set
             holo_lig_names = set()
@@ -757,6 +761,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
                     #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
                     cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
+                    #cmd.select(apo_structchain + '_arnd_' + ligand_, apo_struct + '& hetatm & not (polymer or solvent)' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
 
                     # Put selected atoms in a list, check their name identifiers to see if holo ligand name is present
                     myspace_a = {'a_positions': []}
