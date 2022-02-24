@@ -6,7 +6,7 @@ import os
 import sys
 import shlex
 
-from apoholo_J import load_precompiled_data
+from apoholo_J import load_precompiled_data, Query, parse_query
 from common import get_default_workdir
 
 
@@ -82,6 +82,14 @@ class T02_Apoholo(unittest.TestCase):
         with self.assertRaises(SystemExit):
             exit_code = apoholo_J.main(argv)
             # self.assertNotEqual(0, exit_code)
+
+
+    def test_parse_query(self):
+        assert parse_query('1a73',           autodetect_lig=True) == Query(struct='1a73', chains='ALL', ligands=None,    autodetect_lig=1)
+        assert parse_query('1a73 A,B ZN',    autodetect_lig=True) == Query(struct='1a73', chains='A,B', ligands='ZN',    autodetect_lig=1)
+        assert parse_query('1a73 ALL ZN,MG', autodetect_lig=True) == Query(struct='1a73', chains='ALL', ligands='ZN,MG', autodetect_lig=1)
+        assert parse_query('1a73 A',         autodetect_lig=True) == Query(struct='1a73', chains='A',   ligands=None,    autodetect_lig=1)
+
 
     def test_successful_runs(self):
         self.tst_query("--query '1a73 A,B ZN' ",  expect_apo=0, expect_holo=32)
