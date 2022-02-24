@@ -480,11 +480,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('Done\nExiting')
                 sys.exit(0)
             print('Old job directory not found, continuing process\n')
-
+    print('')
+    
     
     # Get apo candidates from rSIFTS dict, calculate sequence overlap
     # Look for longest UniProt mapping of query chains
-    print('')
     dictApoCandidates = dict()
     uniprot_overlap = dict()
     
@@ -675,11 +675,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('No ligands found in PDB chain, skipping: ', holo_structchain)
                 continue
             elif ligands_selection == 0 and reverse_search == 1:
-                print('No ligands found in PDB chain\n====== Reverse mode active, considering input as apo, looking for holo ======\n')
+                print('No ligands found in PDB chain\n====== Reverse mode active, considering input as apo ======\n')
                 reverse_mode = True
                 cmd.delete('query_ligands')
 
-        
+
         if not reverse_mode:  # If query is not APO
 
             # Identify atom IDs of selected ligand atoms
@@ -694,7 +694,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             for key, values in myspace.items():
                 for i in values:
                     holo_lig_positions.setdefault(holo_structchain, []).append(i)
-            
+
             print('Ligand information')
             print('Atom IDs: ', ligands_atoms)
             print('Total atoms: ', len(ligands_atoms))
@@ -753,7 +753,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Around selection [looks for ligands in every (valid) chain alignment, not just the standard locus of holo ligand(s)]
                     ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
                     #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
-                    cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_) # s2
+                    cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
 
                     # Put selected atoms in a list, check their name identifiers to see if holo ligand name is present
                     myspace_a = {'a_positions': []}
@@ -773,8 +773,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         elif i not in nolig_resn:
                             found_ligands_xtra.add(i)
 
-            # Start reverse mode, where query is apo (no ligands). Find identical structures with/wo ligands
-            else:  # reverse mode (if query = APO)
+            # Start reverse mode, if query = APO (no ligands). Find identical structures with/wo ligands
+            else:
                 found_ligands_r = set()
                 found_ligands_xtra = set()
                 # Find ligands in holo candidate
@@ -789,40 +789,41 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         found_ligands_r.add(r_atom_lig_name)
 
 
-            # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
+            # Print verdict for chain & save it as ".cif.gz"
             if not reverse_mode:
+
                 print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
+                
+                # Apo
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
                     apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
-
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
                         print('APO')
-
                     if save_separate == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
-
+                # Holo
                 else:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
-                    
                     if len(found_ligands) > 0:
                         print('HOLO')
                     else:
                         print('HOLO*')
-                        
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
 
             else:  # reverse mode
-                # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
+                
                 print('Found ligands: ', found_ligands_r)  # TODO found_ligands_r may be undefined
+                
+                # Holo
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
@@ -831,6 +832,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                # Apo
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
                     apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
@@ -844,7 +846,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save holo chain
 
 
-        # Clean objects/selections in session & save
+        # Clean objects/selections in PyMOL session
         apo_win_structs = set()
         for key, values in apo_holo_dict.items():
             for value in values:
@@ -891,7 +893,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #if reverse_mode:    query_chain = 'apo_chain'
     #else:   query_chain = holo_chain
 
-    # apo results
+    # Apo results
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         '''
@@ -924,7 +926,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('No apo forms found')
 
 
-    # holo results
+    # Holo results
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
         '''
@@ -936,7 +938,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             out1.write(header)
             out1.write(str(apo_holo_dict_H))
         '''
-        # Write CSV holo file
+        # Write CSV file
         filename_csv = path_job_results + '/results_holo.csv'
         if reverse_mode:
             header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
@@ -958,7 +960,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
         # Note: we don't want to delete empty job folder but keep it for potential further processing by the webserver
-        # print('\nDeleting empty job folder')    # Delete empty job folder
+        # Delete empty job folder
+        # print('\nDeleting empty job folder')    
         # try:
         #     os.rmdir(pathRSLTS)
         # except OSError as error:
