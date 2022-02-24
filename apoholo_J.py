@@ -99,13 +99,13 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
         return 0
 
 
-def wrong_input_error(job_id, path_job_results):  # arg_job_id, arg_pathRSLTS):
+def wrong_input_error(path_job_results):  # arg_job_id, arg_pathRSLTS):
     print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
     print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
     print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
-    print('Exiting & deleting new results folder', job_id)
-    if os.path.isdir(path_job_results):
-        os.rmdir(path_job_results)
+    #print('Exiting & deleting new results folder:', path_job_results)
+    #if os.path.isdir(path_job_results):
+    #    os.rmdir(path_job_results)
     sys.exit(1)  # exit with error
 
     
@@ -275,7 +275,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
     pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
-    path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
+
+    # TODO make less clumsy
+    generated_path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
+    if args.out_dir is not None:
+        path_results = args.out_dir
+    else:
+        path_results = generated_path_job_results
+    job_id = os.path.basename(os.path.normpath(path_results))
 
     if not data:
         data = load_precompiled_data(workdir)
@@ -284,7 +291,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Get additional info
-    job_id = os.path.basename(os.path.normpath(path_job_results))
     # script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
     # log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
     log_file_dnld = path_root + '/download_errors.log'
@@ -305,11 +311,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Creating ligands directory:\t', pathLIGS)
         os.makedirs(pathLIGS)
     #if save_separate == 1 or multisave == 1 or save_session == 1: # bypass
-    if os.path.isdir(path_job_results):
-        print('Results directory:\t', path_job_results)
-    else:
-        print('Results directory:\t', path_job_results)
-        os.makedirs(path_job_results)
+    if not os.path.isdir(path_results):
+        os.makedirs(path_results)
+    print('Results directory:\t', path_results)
     if os.path.isdir(pathQRS):
         print('Queries directory:\t', pathQRS)
     else:
@@ -357,9 +361,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             user_chains = query.split()[1].upper()   # adjust case, chains = upper
             ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
         else:
-            wrong_input_error(job_id, path_job_results)  # exit with error
+            wrong_input_error(path_results)  # exit with error
     else:
-        wrong_input_error(job_id, path_job_results)  # exit with error
+        wrong_input_error(path_results)  # exit with error
     #user_position = query.split()[3]  # TODO ?
 
     # Parse chains
@@ -468,15 +472,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         if old_same_job == 0:
             print('Same job not found, continuing process\n')
         else:
-            if os.path.isdir(os.path.dirname(path_job_results) + '/' + old_same_job):
-                print('Same job found in history, printing path of old job results: ', os.path.dirname(path_job_results) + '/' + old_same_job, '\n')
+            if os.path.isdir(os.path.dirname(path_results) + '/' + old_same_job):
+                print('Same job found in history, printing path of old job results: ', os.path.dirname(path_results) + '/' + old_same_job, '\n')
                 print('Printing alignments of old job')
-                with open(os.path.dirname(path_job_results) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
+                with open(os.path.dirname(path_results) + '/' + old_same_job + '/' + 'results.csv', 'r') as old_in:
                     for line in old_in:
                         print(line[:-1])
                 print('\nDeleting new job folder', job_id)
-                if os.path.isdir(path_job_results):
-                    os.rmdir(path_job_results)
+                if os.path.isdir(path_results):
+                    os.rmdir(path_results)
                 print('Done\nExiting')
                 sys.exit(0)
             print('Old job directory not found, continuing process\n')
@@ -571,7 +575,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             add_log(message, log_file_dnld)
             print(f'*apo file {apo_candidate_structure} not found')
             # TODO fail? - Instead of fail, remove structure from queue
-
 
 
     # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
@@ -803,9 +806,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     else:
                         print('APO')
                     if save_separate == 1:
-                        if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
-                            cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                        cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                        if not os.path.isfile(path_results + '/holo_' + holo_struct + '.cif.gz'):
+                            cmd.save(path_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                        cmd.save(path_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
                 # Holo
                 else:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
@@ -815,9 +818,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     else:
                         print('HOLO*')
                     if save_separate == 1 and save_oppst == 1:
-                        if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
-                            cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                        cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
+                        if not os.path.isfile(path_results + '/holo_' + holo_struct + '.cif.gz'):
+                            cmd.save(path_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                        cmd.save(path_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
 
             else:  # reverse mode
                 
@@ -829,9 +832,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     print('HOLO')
                     if save_separate == 1:
-                        if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
-                            cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
-                        cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                        if not os.path.isfile(path_results + '/holo_' + holo_struct + '.cif.gz'):
+                            cmd.save(path_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
+                        cmd.save(path_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
                 # Apo
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
@@ -841,9 +844,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     else:
                         print('APO')
                     if save_separate == 1 and save_oppst == 1:
-                        if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
-                            cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct)  # save query structure
-                        cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save holo chain
+                        if not os.path.isfile(path_results + '/holo_' + holo_struct + '.cif.gz'):
+                            cmd.save(path_results + '/holo_' + holo_struct + '.cif.gz', holo_struct)  # save query structure
+                        cmd.save(path_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save holo chain
 
 
         # Clean objects/selections in PyMOL session
@@ -874,7 +877,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cmd.center(holo_structchain)
 
         # Save results as session (.pse.gz) or multisave (.cif)
-        filename_body = path_job_results + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
+        filename_body = path_results + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
         filename_pse = filename_body + '.pse.gz'
         filename_multi = filename_body + '_multi.cif'
         if len(apo_holo_dict) > 0:    #len(dictApoCandidates_1) > 0:    #if len(cmd.get_object_list('all')) > 1:
@@ -906,7 +909,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             out1.write(str(apo_holo_dict))
         '''
         # Write CSV file
-        filename_csv = path_job_results + '/results_apo.csv'
+        filename_csv = path_results + '/results_apo.csv'
         if reverse_mode:
             header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
         else:
@@ -939,7 +942,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             out1.write(str(apo_holo_dict_H))
         '''
         # Write CSV file
-        filename_csv = path_job_results + '/results_holo.csv'
+        filename_csv = path_results + '/results_holo.csv'
         if reverse_mode:
             header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
         else:
@@ -977,12 +980,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #print('\n', args)
     #print(vars(args))
     
-    print('\nResults saved to directory:\t', path_job_results)
+    print('\nResults saved to directory:\t', path_results)
     
     print('\nDone processing query: ', query)
 
     return QueryResult(
-        result_dir=path_job_results,
+        result_dir=path_results,
         num_apo_chains=num_apo_chains,
         num_holo_chains=num_holo_chains)
 
@@ -1025,7 +1028,8 @@ def parse_args(argv):
 
     # Internal
     parser.add_argument('--apo_chain_limit',   type=int,   default=999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
-    parser.add_argument('--work_directory',    type=str,   default=None, help='root working directory for pre-computed and intermediary data')
+    parser.add_argument('--work_dir',          type=str,   default=None, help='global root working directory for pre-computed and intermediary data')
+    parser.add_argument('--out_dir',           type=str,   default=None, help='explicitly specified output directory')
 
     '''
     # print help if there are no arguments
