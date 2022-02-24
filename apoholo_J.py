@@ -34,9 +34,8 @@ ii) When looking for holo from apo:
 -Max arguments: PDB code, chain(s)
 '''
 
-# TODO add force-download mode in mmCIF download function (not needed if we have smart synching with PDB)
-# TODO adjust radius according to mol. weight of ligand
-# TODO add star categories in APO and HOLO verdicts and amend results accordingly
+# TODO add smart synching with PDB
+# TODO adjust search radius according to mol. weight of ligand
 
 
 ##########################################################################################################
@@ -205,6 +204,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '3IXJ all 586' # beta-secretase 1 with inhibitor (cryptic?) # too long
     #query = '2jds all L20' # cAMP-dependent protein kinase w inhibitor #202 chains 145 structs, long
     #query = '1pzo all cbt' # TEM-1 Beta-Lactamase with Core-Disrupting Inhibitor #115 chains, 58 structs, longish
+    #query = '1qsh d heg' # long
+    
+    #query = '3N3I all roc' # HIV mutations
+    #query = '2whh all ppn' # related to upper example, multiple identical structchains in values of dict
     
     # Fast examples
     #query = '2v0v' # Fully apo structure
@@ -477,47 +480,76 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('Done\nExiting')
                 sys.exit(0)
             print('Old job directory not found, continuing process\n')
-
-
-
-    # Get apo candidates from rSIFTS dict
-    print('\nLooking for apo/holo candidates')
+    print('')
+    
+    
+    # Get apo candidates from rSIFTS dict, calculate sequence overlap
+    # Look for longest UniProt mapping of query chains
     dictApoCandidates = dict()
     uniprot_overlap = dict()
-
+    
     for user_structchain in user_structchains:
-        for key, values in dict_rSIFTS.items():  # iterate over reverse SIFTS chains/uniprot IDs
-            for i in values:  # iterate over the values in each key, i = struct/chain combo
+        print('\nLooking for longest UniProt mapping for query chain', user_structchain)
+        query_uniprot_lengths = list()
+        query_uniprot_lengths_dict = dict()
+        
+        # Iterate through UniProt IDs and their structchains
+        for key, values in dict_rSIFTS.items():  # key = UniProt accession, values = structchains + SP_BEG + SP_END
+            # Iterate through each structchain
+            for i in values:  # i = structchain SP_BEG SP_END
+                # Find the match(es) for the query structchain
                 if i.split()[0] == user_structchain:
-                    #uniprot_id = key # not needed
-                    structchain = i.split()[0] # pass structchain to variable
-                    x1 = i.split()[1]    # holo SP BEG
-                    x2 = i.split()[2]    # holo SP END
+                    
+                    uniprot_id = key  # UniProt ID where query belongs
+                    structchain_s = i.split()[0] # pass structchain to variable
+                    x1s = i.split()[1]      # query SP BEG
+                    x2s = i.split()[2]      # query SP END
+                    xlength = i.split()[3]  # query SP length
 
-                    # Find apo candidates by filtering by coverage
-                    for candidate in values:
+                    query_uniprot_lengths_dict[xlength] = uniprot_id + ' ' + structchain_s + ' ' + x1s + ' ' + x2s
+                    query_uniprot_lengths.append(int(xlength))
+        
+        # Find longest mapping
+        top_xlength = max(query_uniprot_lengths)
+        top_mapping = query_uniprot_lengths_dict[str(top_xlength)]
+        uniprot_id = top_mapping.split()[0]
+        user_structchain = top_mapping.split()[1]
+        x1 = top_mapping.split()[2]
+        x2 = top_mapping.split()[3]
+        
+        print(query_uniprot_lengths_dict)
+        print('->', query_uniprot_lengths_dict[str(top_xlength)], top_xlength)
 
-                        # Discard same structure and/or chain with input (holo)
-                        if candidate.split()[0][:4] != structchain[:4]: # discard any structure same with query (stricter)
-                            #if candidate.split(' ')[0] != structchain: # only discard same chain
+        # Find candidates overlap for longest stretch
+        print('Calculating apo/holo candidate overlap for mapping:', uniprot_id, user_structchain, x1, x2, top_xlength)
+        #for values in dict_rSIFTS[uniprot_id]:
+        for candidate in dict_rSIFTS[uniprot_id]:
+            if candidate.split()[0][:4] != user_structchain[:4]: # discard any structure same with query (stricter)
+            
+                y1 = candidate.split()[1]    # candidate SP BEG
+                y2 = candidate.split()[2]    # candidate SP END
+    
+                # Calculate overlap and % of overlap on query (x1,x2)
+                result =  min(int(x2), int(y2)) - max(int(x1), int(y1))
+                percent = result / (int(x2) - int(x1)) * 100
+                percent = round(percent, 1)     # round the float
+    
+                # Build dict with calculated overlap
+                #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
+                uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent))
+                
+                # Only consider positive overlap (negative overlap may occur cause of wrong numbering)
+                if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
+                    dict_key = user_structchain+' '+x1+' '+x2
+                    dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
 
-                            y1 = candidate.split()[1]
-                            y2 = candidate.split()[2]
+        print('Total chains for', uniprot_id, ',', len(dict_rSIFTS[uniprot_id]))
+        print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])} - [{dictApoCandidates[dict_key][0].split()[0]}]')
+    
+    total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
+    print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
-                            # Calculate overlap and % of overlap on query (x1,x2)
-                            result =  min(int(x2), int(y2)) - max(int(x1), int(y1))
-                            percent = result / (int(x2) - int(x1)) * 100
-                            percent = round(percent, 1)     # round the float
 
-                            # Only consider positive overlap (negative overlap may occur cause of numbering)
-                            #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
-                            uniprot_overlap.setdefault(candidate.split()[0], []).append(i.split()[0] + ' ' + str(percent))
-                            if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0:
-                                dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
-
-    print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ',
-          sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
-    print('')
 
     ## Apo/holo candidate evaluation
 
@@ -540,9 +572,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f'*apo file {apo_candidate_structure} not found')
             # TODO fail? - Instead of fail, remove structure from queue
 
-    '''# Add extra structures for testing [NMR struct: 1hko | cryo-em struct: 6nt5]
-    apo_candidate_structs.add('6nt5') #EM
-    apo_candidate_structs.add('1hko') #NMR'''
+
 
     # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
     print('Checking resolution and experimental method of Apo candidate structures')
@@ -563,7 +593,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         resolution = round(float(line.split()[1]), 3)  # EM resolution
                         break
                 except:  # Exception as ex: # getting weird but harmless exceptions
-                    print('Problem parsing structure: ', apo_candidate_struct)  #, ex)
+                    #print('Problem parsing structure: ', apo_candidate_struct)
+                    pass  # ignore and hide exceptions from stdout
             try:
                 if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
@@ -572,7 +603,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL')  # Xray/EM
             except:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
+                print('*Exception', apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
 
     print('Done\n')
 
@@ -595,8 +626,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #pass
             else:
                 dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
-    print('\nApo candidate chains satisfying user requirements (method/resolution) [', res_threshold, 'Å ]: ',
-          sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)]))
+    
+    eligible_chains = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
+    print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å ]:\t{eligible_chains}')
 
 
     # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
@@ -615,6 +647,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     holo_lig_positions = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
+    print(dictApoCandidates_1) # helper print, delete later
     for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         print('')
         print(f'=== Processing query chain {holo_structchain} ===')
@@ -642,11 +675,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('No ligands found in PDB chain, skipping: ', holo_structchain)
                 continue
             elif ligands_selection == 0 and reverse_search == 1:
-                print('No ligands found in PDB chain\n====== Reverse mode active, considering input as apo, looking for holo ======\n')
+                print('No ligands found in PDB chain\n====== Reverse mode active, considering input as apo ======\n')
                 reverse_mode = True
                 cmd.delete('query_ligands')
 
-        
+
         if not reverse_mode:  # If query is not APO
 
             # Identify atom IDs of selected ligand atoms
@@ -661,7 +694,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             for key, values in myspace.items():
                 for i in values:
                     holo_lig_positions.setdefault(holo_structchain, []).append(i)
-            
+
             print('Ligand information')
             print('Atom IDs: ', ligands_atoms)
             print('Total atoms: ', len(ligands_atoms))
@@ -720,7 +753,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Around selection [looks for ligands in every (valid) chain alignment, not just the standard locus of holo ligand(s)]
                     ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
                     #s2 = cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& chain ' + apo_chain + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
-                    cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_) # s2
+                    cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
 
                     # Put selected atoms in a list, check their name identifiers to see if holo ligand name is present
                     myspace_a = {'a_positions': []}
@@ -740,8 +773,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         elif i not in nolig_resn:
                             found_ligands_xtra.add(i)
 
-            # Start reverse mode, where query is apo (no ligands). Find identical structures with/wo ligands
-            else:  # reverse mode (if query = APO)
+            # Start reverse mode, if query = APO (no ligands). Find identical structures with/wo ligands
+            else:
                 found_ligands_r = set()
                 found_ligands_xtra = set()
                 # Find ligands in holo candidate
@@ -756,35 +789,41 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         found_ligands_r.add(r_atom_lig_name)
 
 
-            # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
+            # Print verdict for chain & save it as ".cif.gz"
             if not reverse_mode:
+
                 print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
+                
+                # Apo
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
                     apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
-
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
                         print('APO')
-
                     if save_separate == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
-
+                # Holo
                 else:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
-                    print('HOLO') #FAIL   #print('*apo chain', apo_structchain, ' includes query ligands ', found_ligands)
+                    if len(found_ligands) > 0:
+                        print('HOLO')
+                    else:
+                        print('HOLO*')
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save holo chain
 
             else:  # reverse mode
-                # Print verdict for chain & save it as ".cif.gz" [currently doesn't save holo chains]
+                
                 print('Found ligands: ', found_ligands_r)  # TODO found_ligands_r may be undefined
+                
+                # Holo
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
                     apo_holo_dict_H.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
@@ -793,6 +832,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         if not os.path.isfile(path_job_results + '/holo_' + holo_struct + '.cif.gz'):
                             cmd.save(path_job_results + '/holo_' + holo_struct + '.cif.gz', holo_struct) # save query structure
                         cmd.save(path_job_results + '/h_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain) # save apo chain
+                # Apo
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
                     apo_holo_dict.setdefault(holo_structchain, []).append(apo_structchain + ' ' + uniprot_overlap[apo_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
@@ -806,7 +846,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         cmd.save(path_job_results + '/a_' + apo_structchain + '_aln_to_' + holo_structchain + '.cif.gz', apo_structchain)  # save holo chain
 
 
-        # Clean objects/selections in session & save
+        # Clean objects/selections in PyMOL session
         apo_win_structs = set()
         for key, values in apo_holo_dict.items():
             for value in values:
@@ -853,7 +893,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #if reverse_mode:    query_chain = 'apo_chain'
     #else:   query_chain = holo_chain
 
-    # apo results
+    # Apo results
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         '''
@@ -886,7 +926,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('No apo forms found')
 
 
-    # holo results
+    # Holo results
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
         '''
@@ -898,7 +938,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             out1.write(header)
             out1.write(str(apo_holo_dict_H))
         '''
-        # Write CSV holo file
+        # Write CSV file
         filename_csv = path_job_results + '/results_holo.csv'
         if reverse_mode:
             header = "#apo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
@@ -920,7 +960,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
         # Note: we don't want to delete empty job folder but keep it for potential further processing by the webserver
-        # print('\nDeleting empty job folder')    # Delete empty job folder
+        # Delete empty job folder
+        # print('\nDeleting empty job folder')    
         # try:
         #     os.rmdir(pathRSLTS)
         # except OSError as error:

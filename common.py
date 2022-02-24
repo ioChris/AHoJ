@@ -26,7 +26,7 @@ def get_script_directory():
 
 def get_default_workdir():
     if os.name == 'nt':
-        return get_2level_cwd() + '/Documents/Bioinfo_local/Ions/datasets_local/APO_candidates/webserver'
+        return get_2level_cwd() + '/Documents/Bioinfo_local/webserver'
     else:
         return os.path.normpath(os.path.join(get_script_directory(), '..', 'ahoj_workdir'))
 
