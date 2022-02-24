@@ -33,8 +33,8 @@ def get_default_workdir():
 
 def get_workdir(args):
     """ Get path to global work directory  """
-    if args.work_directory is not None:
-        return args.work_directory
+    if args.work_dir is not None:
+        return args.work_dir
     else:
         return get_default_workdir()
     # TODO add an override from local config or ENV variable
