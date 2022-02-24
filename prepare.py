@@ -115,9 +115,9 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
             uniprot_id = line.split("\t")[2]
             SIFTSstructchain = structure + chain
 
-            SP_BEG = int(line.split("\t")[7])
-            SP_END = int(line.split("\t")[8][:-1])    # includes \n cause of EOL
-            sp_length = SP_END - SP_BEG     # Calculate length of chain
+            SP_BEG = line.split("\t")[7]
+            SP_END = line.split("\t")[8][:-1]    # includes \n cause of EOL
+            sp_length = int(SP_END) - int(SP_BEG)     # Calculate length of chain
 
             # Build basic dict with structchain as keys, uniprot IDs as values
             dict_SIFTS[SIFTSstructchain] = uniprot_id
@@ -125,7 +125,7 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
             #dict_SIFTS.setdefault(SIFTSstructchain, uniprot_id)
 
             # Append values to the R_SPnum dict (SP_BEG, SP_END, sp_length)
-            dict_R_SPnum.setdefault(uniprot_id, []).append(structure+chain+' '+str(SP_BEG)+' '+str(SP_END))
+            dict_R_SPnum.setdefault(uniprot_id, []).append(structure+chain+' '+SP_BEG+' '+SP_END+' '+str(sp_length))
             #dict_R_SPnum.setdefault(uniprot_id, []).append(structure + chain)  # basic version with UniProt ID as the key and corresponding PDB structures+chains as values
 
             # Count the cases where the length/coverage is zero

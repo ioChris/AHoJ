@@ -207,7 +207,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '1qsh d heg' # long
     
     #query = '3N3I all roc' # HIV mutations
-    #query = '2whh a ppn' # related to upper example, multiple identical structchains in values of dict
+    #query = '2whh all ppn' # related to upper example, multiple identical structchains in values of dict
     
     # Fast examples
     #query = '2v0v' # Fully apo structure
@@ -483,12 +483,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     
     # Get apo candidates from rSIFTS dict, calculate sequence overlap
-    print('\nstart - end - length of UniProt numbering for query')
+    # Look for longest UniProt mapping of query chains
+    print('')
     dictApoCandidates = dict()
     uniprot_overlap = dict()
     
     for user_structchain in user_structchains:
-        top_xlength = False # reset top_xlength for new query chain
+        print('\nLooking for longest UniProt mapping for query chain', user_structchain)
+        query_uniprot_lengths = list()
+        query_uniprot_lengths_dict = dict()
+        
         # Iterate through UniProt IDs and their structchains
         for key, values in dict_rSIFTS.items():  # key = UniProt accession, values = structchains + SP_BEG + SP_END
             # Iterate through each structchain
@@ -496,50 +500,54 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Find the match(es) for the query structchain
                 if i.split()[0] == user_structchain:
                     
-                    #uniprot_id = key  # UniProt ID where query belongs
+                    uniprot_id = key  # UniProt ID where query belongs
                     structchain_s = i.split()[0] # pass structchain to variable
-                    x1s = i.split()[1]    # query SP BEG
-                    x2s = i.split()[2]    # query SP END
-                    xlength = int(x2s) - int(x1s)
-                    print(x1s, x2s, xlength)
-                    
-                    # Keep only longest UniProt stretch
-                    if not top_xlength or xlength > top_xlength:
-                        top_xlength = xlength
-                        x1 = x1s
-                        x2 = x2s
-                        structchain = structchain_s
-                        print('*Considering ', structchain, x1, x2, xlength, top_xlength)
-                        
-                        # Find apo candidates by filtering by coverage
-                        print('\nLooking for apo/holo candidates')
-                        for candidate in values:
-                            
-                            # Discard same structure and/or chain with input (holo)
-                            if candidate.split()[0][:4] != structchain[:4]: # discard any structure same with query (stricter)
-                            #if candidate.split(' ')[0] != structchain: # only discard same chain
-                                    
-                                y1 = candidate.split()[1]    # candidate SP BEG
-                                y2 = candidate.split()[2]    # candidate SP END
-    
-                                # Calculate overlap and % of overlap on query (x1,x2)
-                                result =  min(int(x2), int(y2)) - max(int(x1), int(y1))
-                                percent = result / (int(x2) - int(x1)) * 100
-                                percent = round(percent, 1)     # round the float
-    
-                                # Only consider positive overlap (negative overlap may occur cause of wrong numbering)
-                                #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
-                                uniprot_overlap.setdefault(candidate.split()[0], []).append(i.split()[0] + ' ' + str(percent))
-                                
-                                if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
-                                    dictApoCandidates.setdefault(i, []).append(candidate+' '+str(result)+' '+str(percent))
+                    x1s = i.split()[1]      # query SP BEG
+                    x2s = i.split()[2]      # query SP END
+                    xlength = i.split()[3]  # query SP length
 
-    print('Candidate chains over user-specified overlap threshold [', overlap_threshold, '%]: ',
-          sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)]))
-    print('')
+                    query_uniprot_lengths_dict[xlength] = uniprot_id + ' ' + structchain_s + ' ' + x1s + ' ' + x2s
+                    query_uniprot_lengths.append(int(xlength))
+        
+        # Find longest mapping
+        top_xlength = max(query_uniprot_lengths)
+        top_mapping = query_uniprot_lengths_dict[str(top_xlength)]
+        uniprot_id = top_mapping.split()[0]
+        user_structchain = top_mapping.split()[1]
+        x1 = top_mapping.split()[2]
+        x2 = top_mapping.split()[3]
+        
+        print(query_uniprot_lengths_dict)
+        print('->', query_uniprot_lengths_dict[str(top_xlength)], top_xlength)
 
-    #print(dictApoCandidates)
-    #sys.exit(0) # force stop run
+        # Find candidates overlap for longest stretch
+        print('Calculating apo/holo candidate overlap for mapping:', uniprot_id, user_structchain, x1, x2, top_xlength)
+        #for values in dict_rSIFTS[uniprot_id]:
+        for candidate in dict_rSIFTS[uniprot_id]:
+            if candidate.split()[0][:4] != user_structchain[:4]: # discard any structure same with query (stricter)
+            
+                y1 = candidate.split()[1]    # candidate SP BEG
+                y2 = candidate.split()[2]    # candidate SP END
+    
+                # Calculate overlap and % of overlap on query (x1,x2)
+                result =  min(int(x2), int(y2)) - max(int(x1), int(y1))
+                percent = result / (int(x2) - int(x1)) * 100
+                percent = round(percent, 1)     # round the float
+    
+                # Build dict with calculated overlap
+                #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
+                uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent))
+                
+                # Only consider positive overlap (negative overlap may occur cause of wrong numbering)
+                if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
+                    dict_key = user_structchain+' '+x1+' '+x2
+                    dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
+
+        print('Total chains for', uniprot_id, ',', len(dict_rSIFTS[uniprot_id]))
+        print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])} - [{dictApoCandidates[dict_key][0].split()[0]}]')
+    
+    total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
+    print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
 
 
@@ -564,9 +572,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f'*apo file {apo_candidate_structure} not found')
             # TODO fail? - Instead of fail, remove structure from queue
 
-    '''# Add extra structures for testing [NMR struct: 1hko | cryo-em struct: 6nt5]
-    apo_candidate_structs.add('6nt5') #EM
-    apo_candidate_structs.add('1hko') #NMR'''
+
 
     # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
     print('Checking resolution and experimental method of Apo candidate structures')
@@ -620,8 +626,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #pass
             else:
                 dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
-    print('\nApo candidate chains satisfying user requirements (method/resolution) [', res_threshold, 'Å ]: ',
-          sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)]))
+    
+    eligible_chains = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
+    print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å ]:\t{eligible_chains}')
 
 
     # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
@@ -1004,7 +1011,7 @@ def parse_args(argv):
 
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
     parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
-    parser.add_argument('--min_tmscore',       type=float, default=0.4,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+    parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
     # Experimental
     parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
