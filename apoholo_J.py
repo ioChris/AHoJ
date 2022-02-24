@@ -99,7 +99,7 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
         return 0
 
 
-def wrong_input_error(path_job_results):  # arg_job_id, arg_pathRSLTS):
+def wrong_input_error():  # arg_job_id, arg_pathRSLTS):
     print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
     print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
     print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
@@ -120,6 +120,13 @@ def join_ligands(ligands):
 
 ##########################################################################################################
 
+@dataclass
+class Query:
+    struct: str
+    chains: str           # maybe even change to list
+    ligands: str          # maybe even change to list
+    autodetect_lig: bool
+
 
 @dataclass
 class QueryResult:
@@ -137,6 +144,37 @@ class PrecompiledData:
     """
     dict_SIFTS: dict   # regular SIFTS dictionary
     dict_rSIFTS: dict  # reverse SIFTS (SPnum) dictionary
+
+
+# TODO make stable format independent of autodetect_lig user param
+def parse_query(query: str, autodetect_lig: bool = False) -> Query:
+
+    # Parse single line input (line by line mode, 1 holo structure per line)
+    # if no chains specified, consider all chains
+    print('Parsing input')
+    parts = query.split()
+
+    struct = parts[0].lower()
+    chains = 'ALL'
+    ligands = None
+
+    if len(struct) != 4:
+        raise ValueError(f"Invalid query: '{struct}' is not a valid PDB structure code")
+
+
+    if len(parts) == 1:
+        autodetect_lig = 1                         # overrides cmd line param
+    elif len(parts) == 2 and autodetect_lig == 1:
+        chains = parts[1].upper()
+    elif len(parts) == 2 and autodetect_lig == 0:  # this triggers "ALL" chains mode
+        ligands = parts[1].upper()
+    elif len(parts) == 3:
+        chains = parts[1].upper()        # adjust case, chains = upper
+        ligands = parts[2].upper()       # adjust case, ligands = upper
+    else:
+        raise ValueError("Invalid query: wrong number of parts")
+
+    return Query(struct=struct, chains=chains, ligands=ligands, autodetect_lig=autodetect_lig)
 
 
 def load_precompiled_data_txt(workdir) -> PrecompiledData:
@@ -339,32 +377,44 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # This will usually result in an empty/failed search, but it's hard to catch.
     
 
-    if len(query.split()[0]) == 4:
+    # if len(query.split()[0]) == 4:
+    #
+    #     if len(input_arguments) == 1 and autodetect_lig == 1:
+    #         struct = query.split()[0].lower()
+    #         user_chains = 'ALL'
+    #         # ligand_names = 'autodetect'
+    #     elif len(input_arguments) == 1: # and len(query) == 4:
+    #         autodetect_lig = 1 # automatically activate ligand auto-detection mode
+    #         struct = query.split()[0].lower()
+    #         user_chains = 'ALL'
+    #     elif len(input_arguments) == 2 and autodetect_lig == 1:
+    #         struct = query.split()[0].lower()
+    #         user_chains = query.split()[1].upper()
+    #     elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
+    #         struct = query.split()[0].lower()
+    #         user_chains = 'ALL'
+    #         ligand_names = query.split()[1].upper()
+    #     elif len(input_arguments) == 3:
+    #         struct = query.split()[0].lower()        # adjust case, struct = lower
+    #         user_chains = query.split()[1].upper()   # adjust case, chains = upper
+    #         ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
+    #     else:
+    #         wrong_input_error(path_results)  # exit with error
+    # else:
+    #     wrong_input_error(path_results)  # exit with error
+    # #user_position = query.split()[3]  # TODO ?
 
-        if len(input_arguments) == 1 and autodetect_lig == 1:
-            struct = query.split()[0].lower()
-            user_chains = 'ALL'
-            # ligand_names = 'autodetect'
-        elif len(input_arguments) == 1: # and len(query) == 4:
-            autodetect_lig = 1 # automatically activate ligand auto-detection mode
-            struct = query.split()[0].lower()
-            user_chains = 'ALL'
-        elif len(input_arguments) == 2 and autodetect_lig == 1:
-            struct = query.split()[0].lower()
-            user_chains = query.split()[1].upper()
-        elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
-            struct = query.split()[0].lower()
-            user_chains = 'ALL'
-            ligand_names = query.split()[1].upper()
-        elif len(input_arguments) == 3:
-            struct = query.split()[0].lower()        # adjust case, struct = lower
-            user_chains = query.split()[1].upper()   # adjust case, chains = upper
-            ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
-        else:
-            wrong_input_error(path_results)  # exit with error
-    else:
-        wrong_input_error(path_results)  # exit with error
-    #user_position = query.split()[3]  # TODO ?
+    try:
+        q = parse_query(query, autodetect_lig)
+    except ValueError as e:
+        print(e)
+        wrong_input_error()
+
+    user_chains = q.chains
+    struct = q.struct
+    ligand_names = q.ligands
+    autodetect_lig = q.autodetect_lig
+    
 
     # Parse chains
     if not user_chains == 'ALL':            # TODO user_chains may be undefined here
