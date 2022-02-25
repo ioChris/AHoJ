@@ -27,8 +27,8 @@ from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import thread
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
 
-global_lock = None
-
+_global_lock = threading.Lock()                      # multi-threading
+# global_lock = multiprocessing.Manager().Lock()    # multi-processing (must be moved to main)
 
 '''
 Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
@@ -334,7 +334,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # TODO make next job_id generation less clumsy
-    with global_lock:
+    global _global_lock
+    if _global_lock is None:
+        _global_lock = threading.Lock()   # to allow unit tests
+    with _global_lock:
         generated_path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
         if args.out_dir is not None:
             path_results = args.out_dir  # user defined
@@ -1170,7 +1173,4 @@ def main(argv):
 
 
 if __name__ == "__main__":
-    global_lock = threading.Lock()                      # multi-threading
-    # global_lock = multiprocessing.Manager().Lock()    # multi-processing
-
     sys.exit(main(sys.argv[1:]))
