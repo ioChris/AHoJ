@@ -5,12 +5,14 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
-from common import get_workdir, load_dict_binary
+from common import get_workdir, load_dict_binary, tmalign2
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
-import pymol.cmd as cmd
+# import pymol.cmd as cmd
 import psico.fitting
+import psico.fullinit
+import pymol2
 
 import ast
 import gzip
@@ -161,7 +163,6 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
     if len(struct) != 4:
         raise ValueError(f"Invalid query: '{struct}' is not a valid PDB structure code")
 
-
     if len(parts) == 1:
         autodetect_lig = 1                         # overrides cmd line param
     elif len(parts) == 2 and autodetect_lig == 1:
@@ -255,7 +256,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
     #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
 
-    
+
+    # Init independent pymol instance
+    pm = pymol2.PyMOL()
+    pm.start()
+    cmd = pm.cmd
+
     # Basic
     res_threshold = args.res_threshold
     NMR = args.NMR
@@ -787,7 +793,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print('')
             try:
                 aln_rms = cmd.align(apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, cutoff=10.0, cycles=1)
-                aln_tm = psico.fitting.tmalign(apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, quiet=1, transform=0)
+                aln_tm = tmalign2(cmd, apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, quiet=1, transform=0)
                 print('Alignment RMSD/TM score:', apo_structchain, holo_structchain, round(aln_rms[0], 3), aln_tm)
             except:
                 discarded_chains.append(apo_structchain + '\t' + 'Alignment error\n')
@@ -1034,10 +1040,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Print argparse arguments
     #print('\n', args)
     #print(vars(args))
-    
+
+    pm.stop()
+
     print('\nResults saved to directory:\t', path_results)
     
     print('\nDone processing query: ', query)
+
+
 
     return QueryResult(
         result_dir=path_results,
