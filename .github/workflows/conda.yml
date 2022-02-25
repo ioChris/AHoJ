@@ -50,6 +50,11 @@ jobs:
           python apoholo_J.py --query '2v57 a,c prl'  # SS changes in transcriptional regulator LfrR in complex with proflavine
           python apoholo_J.py --reverse_search 1 --query '2v0v'  # test for reverse search (this is a fully apo structure)
           python apoholo_J.py --reverse_search 1 --query '2v0v a,b'
+
+      - name: Test apoholo_J.py multi line queries
+        if: always()
+        run: |
+          python apoholo_J.py --query $'1a73 A,B ZN \n 3CQV A HEM \n 3fav all zn'
           
         # all of the following stuff is tested in unit tests...
         # python apoholo_J.py  --query '1a73 ALL ZN'

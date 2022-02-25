@@ -23,6 +23,13 @@ import argparse
 import sys
 from dataclasses import dataclass
 
+from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
+# from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
+
+
+global_lock = None
+
+
 '''
 Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
 The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
@@ -136,6 +143,10 @@ class QueryResult:
     result_dir: str
     num_apo_chains: int = 0
     num_holo_chains: int = 0
+    error: str = None
+
+    def __str__(self):
+        return f"QueryResult[ apo: {self.num_apo_chains}, holo: {self.num_holo_chains}, error: {self.error}, dir: {self.result_dir})]"
 
 
 @dataclass
@@ -153,7 +164,8 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
 
     # Parse single line input (line by line mode, 1 holo structure per line)
     # if no chains specified, consider all chains
-    print('Parsing input')
+    print(f"Parsing query '{query}'")
+    query = query.strip()
     parts = query.split()
 
     struct = parts[0].lower()
@@ -161,7 +173,7 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
     ligands = None
 
     if len(struct) != 4:
-        raise ValueError(f"Invalid query: '{struct}' is not a valid PDB structure code")
+        raise ValueError(f"Invalid query '{query}': '{struct}' is not a valid PDB structure code")
 
     if len(parts) == 1:
         autodetect_lig = 1                         # overrides cmd line param
@@ -173,7 +185,7 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
         chains = parts[1].upper()        # adjust case, chains = upper
         ligands = parts[2].upper()       # adjust case, ligands = upper
     else:
-        raise ValueError("Invalid query: wrong number of parts")
+        raise ValueError(f"Invalid query '{query}': wrong number of parts")
 
     return Query(struct=struct, chains=chains, ligands=ligands, autodetect_lig=autodetect_lig)
 
@@ -320,15 +332,21 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
     pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
 
-    # TODO make less clumsy
-    generated_path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
-    if args.out_dir is not None:
-        path_results = args.out_dir
-    else:
-        path_results = generated_path_job_results
+
+    # TODO make next job_id generation less clumsy
+    with global_lock:
+        generated_path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
+        if args.out_dir is not None:
+            path_results = args.out_dir  # user defined
+        else:
+            path_results = generated_path_job_results   # generated
+        if not os.path.isdir(path_results):
+            os.makedirs(path_results)                     # must be created inside lock to ensure each next_job is unique
+    print('Results directory:\t', path_results)
     job_id = os.path.basename(os.path.normpath(path_results))
 
-    if not data:
+
+    if data is None:
         data = load_precompiled_data(workdir)
     dict_SIFTS = data.dict_SIFTS
     dict_rSIFTS = data.dict_rSIFTS
@@ -355,9 +373,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Creating ligands directory:\t', pathLIGS)
         os.makedirs(pathLIGS)
     #if save_separate == 1 or multisave == 1 or save_session == 1: # bypass
-    if not os.path.isdir(path_results):
-        os.makedirs(path_results)
-    print('Results directory:\t', path_results)
+
     if os.path.isdir(pathQRS):
         print('Queries directory:\t', pathQRS)
     else:
@@ -1044,10 +1060,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     pm.stop()
 
     print('\nResults saved to directory:\t', path_results)
-    
     print('\nDone processing query: ', query)
-
-
 
     return QueryResult(
         result_dir=path_results,
@@ -1058,6 +1071,36 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
 ##########################################################################################################
+
+def try_process_query(query, workdir, args, data: PrecompiledData = None) -> QueryResult:
+    """ Returns QueryResult with error if calculation fails """
+    try:
+        return process_query(query, workdir, args, data)
+    except Exception as ex:
+        print(ex)
+        return QueryResult(result_dir=None, error=ex)
+
+
+def process_queries(query_lines: list[str], workdir, args, data: PrecompiledData = None) -> list[QueryResult]:
+
+    queries = [parse_query(query_str) for query_str in query_lines]  # parse all here to check for possible invalid queries
+
+    if data is None:
+        data = load_precompiled_data(workdir)
+
+    def process_q(query):
+        return try_process_query(query, workdir, args, data)
+
+    with PoolExecutor(max_workers=args.threads) as pool:
+        res = pool.map(process_q, query_lines)
+
+    # TODO better way to print summary results and report errors
+    print('\n--------------------')
+    print('Results:\n')
+    print('\n'.join([str(r) for r in res]))
+    print('--------------------\n')
+
+    return res
 
 
 def parse_args(argv):
@@ -1095,6 +1138,7 @@ def parse_args(argv):
     parser.add_argument('--apo_chain_limit',   type=int,   default=999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
     parser.add_argument('--work_dir',          type=str,   default=None, help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None, help='explicitly specified output directory')
+    parser.add_argument('--threads',           type=int,   default=4,    help='number of concurrent threads for processing multiple queries')
 
     '''
     # print help if there are no arguments
@@ -1112,11 +1156,21 @@ def main(argv):
     workdir = get_workdir(args)
     query = args.query
 
-    process_query(query, workdir, args)
+    # TODO read multi line queries from file
+    query_lines = [q.strip() for q in query.splitlines()]  # TODO ignore blank lines
+    if len(query_lines) > 1:
+        process_queries(query_lines, workdir, args)
+    else:
+        process_query(query.strip(), workdir, args)
 
     print('All done')
     return 0
 
 
+
+
 if __name__ == "__main__":
+    global_lock = threading.Lock()                      # multi-threading
+    # global_lock = multiprocessing.Manager().Lock()    # multi-processing
+
     sys.exit(main(sys.argv[1:]))
