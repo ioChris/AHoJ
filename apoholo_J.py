@@ -5,12 +5,14 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
-from common import get_workdir, load_dict_binary
+from common import get_workdir, load_dict_binary, tmalign2
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
-import pymol.cmd as cmd
+# import pymol.cmd as cmd
 import psico.fitting
+import psico.fullinit
+import pymol2
 
 import ast
 import gzip
@@ -20,6 +22,13 @@ import time
 import argparse
 import sys
 from dataclasses import dataclass
+
+from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
+# from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
+
+
+_global_lock = threading.Lock()                      # multi-threading
+# global_lock = multiprocessing.Manager().Lock()    # multi-processing (must be moved to main)
 
 '''
 Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
@@ -99,7 +108,7 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
         return 0
 
 
-def wrong_input_error(path_job_results):  # arg_job_id, arg_pathRSLTS):
+def wrong_input_error():  # arg_job_id, arg_pathRSLTS):
     print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
     print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
     print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
@@ -120,6 +129,13 @@ def join_ligands(ligands):
 
 ##########################################################################################################
 
+@dataclass
+class Query:
+    struct: str
+    chains: str           # maybe even change to list
+    ligands: str          # maybe even change to list
+    autodetect_lig: bool
+
 
 @dataclass
 class QueryResult:
@@ -127,6 +143,10 @@ class QueryResult:
     result_dir: str
     num_apo_chains: int = 0
     num_holo_chains: int = 0
+    error: str = None
+
+    def __str__(self):
+        return f"QueryResult[ apo: {self.num_apo_chains}, holo: {self.num_holo_chains}, error: {self.error}, dir: {self.result_dir})]"
 
 
 @dataclass
@@ -137,6 +157,37 @@ class PrecompiledData:
     """
     dict_SIFTS: dict   # regular SIFTS dictionary
     dict_rSIFTS: dict  # reverse SIFTS (SPnum) dictionary
+
+
+# TODO make stable format independent of autodetect_lig user param
+def parse_query(query: str, autodetect_lig: bool = False) -> Query:
+
+    # Parse single line input (line by line mode, 1 holo structure per line)
+    # if no chains specified, consider all chains
+    print(f"Parsing query '{query}'")
+    query = query.strip()
+    parts = query.split()
+
+    struct = parts[0].lower()
+    chains = 'ALL'
+    ligands = None
+
+    if len(struct) != 4:
+        raise ValueError(f"Invalid query '{query}': '{struct}' is not a valid PDB structure code")
+
+    if len(parts) == 1:
+        autodetect_lig = 1                         # overrides cmd line param
+    elif len(parts) == 2 and autodetect_lig == 1:
+        chains = parts[1].upper()
+    elif len(parts) == 2 and autodetect_lig == 0:  # this triggers "ALL" chains mode
+        ligands = parts[1].upper()
+    elif len(parts) == 3:
+        chains = parts[1].upper()        # adjust case, chains = upper
+        ligands = parts[2].upper()       # adjust case, ligands = upper
+    else:
+        raise ValueError(f"Invalid query '{query}': wrong number of parts")
+
+    return Query(struct=struct, chains=chains, ligands=ligands, autodetect_lig=autodetect_lig)
 
 
 def load_precompiled_data_txt(workdir) -> PrecompiledData:
@@ -217,7 +268,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #query = '2hka all c3s' # bovine NPC2 complex with cholesterol sulfate [OK]
     #query = '2v57 a,c prl' # apo-holo SS changes in TetR-like transcriptional regulator LfrR in complex with proflavine [OK]
 
-    
+
+    # Init independent pymol instance
+    pm = pymol2.PyMOL()
+    pm.start()
+    cmd = pm.cmd
+
     # Basic
     res_threshold = args.res_threshold
     NMR = args.NMR
@@ -276,15 +332,24 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
     pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
 
-    # TODO make less clumsy
-    generated_path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
-    if args.out_dir is not None:
-        path_results = args.out_dir
-    else:
-        path_results = generated_path_job_results
+
+    # TODO make next job_id generation less clumsy
+    global _global_lock
+    if _global_lock is None:
+        _global_lock = threading.Lock()   # to allow unit tests
+    with _global_lock:
+        generated_path_job_results = next_job(path_root + '/results/job_%s')     #pathRSLTS = path_root + r'/results' + '/' + 'job_' + str(job_id)
+        if args.out_dir is not None:
+            path_results = args.out_dir  # user defined
+        else:
+            path_results = generated_path_job_results   # generated
+        if not os.path.isdir(path_results):
+            os.makedirs(path_results)                     # must be created inside lock to ensure each next_job is unique
+    print('Results directory:\t', path_results)
     job_id = os.path.basename(os.path.normpath(path_results))
 
-    if not data:
+
+    if data is None:
         data = load_precompiled_data(workdir)
     dict_SIFTS = data.dict_SIFTS
     dict_rSIFTS = data.dict_rSIFTS
@@ -311,9 +376,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Creating ligands directory:\t', pathLIGS)
         os.makedirs(pathLIGS)
     #if save_separate == 1 or multisave == 1 or save_session == 1: # bypass
-    if not os.path.isdir(path_results):
-        os.makedirs(path_results)
-    print('Results directory:\t', path_results)
+
     if os.path.isdir(pathQRS):
         print('Queries directory:\t', pathQRS)
     else:
@@ -339,32 +402,44 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # This will usually result in an empty/failed search, but it's hard to catch.
     
 
-    if len(query.split()[0]) == 4:
+    # if len(query.split()[0]) == 4:
+    #
+    #     if len(input_arguments) == 1 and autodetect_lig == 1:
+    #         struct = query.split()[0].lower()
+    #         user_chains = 'ALL'
+    #         # ligand_names = 'autodetect'
+    #     elif len(input_arguments) == 1: # and len(query) == 4:
+    #         autodetect_lig = 1 # automatically activate ligand auto-detection mode
+    #         struct = query.split()[0].lower()
+    #         user_chains = 'ALL'
+    #     elif len(input_arguments) == 2 and autodetect_lig == 1:
+    #         struct = query.split()[0].lower()
+    #         user_chains = query.split()[1].upper()
+    #     elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
+    #         struct = query.split()[0].lower()
+    #         user_chains = 'ALL'
+    #         ligand_names = query.split()[1].upper()
+    #     elif len(input_arguments) == 3:
+    #         struct = query.split()[0].lower()        # adjust case, struct = lower
+    #         user_chains = query.split()[1].upper()   # adjust case, chains = upper
+    #         ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
+    #     else:
+    #         wrong_input_error(path_results)  # exit with error
+    # else:
+    #     wrong_input_error(path_results)  # exit with error
+    # #user_position = query.split()[3]  # TODO ?
 
-        if len(input_arguments) == 1 and autodetect_lig == 1:
-            struct = query.split()[0].lower()
-            user_chains = 'ALL'
-            # ligand_names = 'autodetect'
-        elif len(input_arguments) == 1: # and len(query) == 4:
-            autodetect_lig = 1 # automatically activate ligand auto-detection mode
-            struct = query.split()[0].lower()
-            user_chains = 'ALL'
-        elif len(input_arguments) == 2 and autodetect_lig == 1:
-            struct = query.split()[0].lower()
-            user_chains = query.split()[1].upper()
-        elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
-            struct = query.split()[0].lower()
-            user_chains = 'ALL'
-            ligand_names = query.split()[1].upper()
-        elif len(input_arguments) == 3:
-            struct = query.split()[0].lower()        # adjust case, struct = lower
-            user_chains = query.split()[1].upper()   # adjust case, chains = upper
-            ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
-        else:
-            wrong_input_error(path_results)  # exit with error
-    else:
-        wrong_input_error(path_results)  # exit with error
-    #user_position = query.split()[3]  # TODO ?
+    try:
+        q = parse_query(query, autodetect_lig)
+    except ValueError as e:
+        print(e)
+        wrong_input_error()
+
+    user_chains = q.chains
+    struct = q.struct
+    ligand_names = q.ligands
+    autodetect_lig = q.autodetect_lig
+    
 
     # Parse chains
     if not user_chains == 'ALL':            # TODO user_chains may be undefined here
@@ -737,7 +812,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print('')
             try:
                 aln_rms = cmd.align(apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, cutoff=10.0, cycles=1)
-                aln_tm = psico.fitting.tmalign(apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, quiet=1, transform=0)
+                aln_tm = tmalign2(cmd, apo_struct + '& chain ' + apo_chain, holo_struct + '& chain ' + holo_chain, quiet=1, transform=0)
                 print('Alignment RMSD/TM score:', apo_structchain, holo_structchain, round(aln_rms[0], 3), aln_tm)
             except:
                 discarded_chains.append(apo_structchain + '\t' + 'Alignment error\n')
@@ -984,9 +1059,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Print argparse arguments
     #print('\n', args)
     #print(vars(args))
-    
+
+    pm.stop()
+
     print('\nResults saved to directory:\t', path_results)
-    
     print('\nDone processing query: ', query)
 
     return QueryResult(
@@ -998,6 +1074,36 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
 ##########################################################################################################
+
+def try_process_query(query, workdir, args, data: PrecompiledData = None) -> QueryResult:
+    """ Returns QueryResult with error if calculation fails """
+    try:
+        return process_query(query, workdir, args, data)
+    except Exception as ex:
+        print(ex)
+        return QueryResult(result_dir=None, error=ex)
+
+
+def process_queries(query_lines: list[str], workdir, args, data: PrecompiledData = None) -> list[QueryResult]:
+
+    queries = [parse_query(query_str) for query_str in query_lines]  # parse all here to check for possible invalid queries
+
+    if data is None:
+        data = load_precompiled_data(workdir)
+
+    def process_q(query):
+        return try_process_query(query, workdir, args, data)
+
+    with PoolExecutor(max_workers=args.threads) as pool:
+        res = pool.map(process_q, query_lines)
+
+    # TODO better way to print summary results and report errors
+    print('\n--------------------')
+    print('Results:\n')
+    print('\n'.join([str(r) for r in res]))
+    print('--------------------\n')
+
+    return res
 
 
 def parse_args(argv):
@@ -1035,6 +1141,7 @@ def parse_args(argv):
     parser.add_argument('--apo_chain_limit',   type=int,   default=999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
     parser.add_argument('--work_dir',          type=str,   default=None, help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None, help='explicitly specified output directory')
+    parser.add_argument('--threads',           type=int,   default=4,    help='number of concurrent threads for processing multiple queries')
 
     '''
     # print help if there are no arguments
@@ -1052,10 +1159,17 @@ def main(argv):
     workdir = get_workdir(args)
     query = args.query
 
-    process_query(query, workdir, args)
+    # TODO read multi line queries from file
+    query_lines = [q.strip() for q in query.splitlines()]  # TODO ignore blank lines
+    if len(query_lines) > 1:
+        process_queries(query_lines, workdir, args)
+    else:
+        process_query(query.strip(), workdir, args)
 
     print('All done')
     return 0
+
+
 
 
 if __name__ == "__main__":
