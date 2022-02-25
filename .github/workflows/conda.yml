@@ -14,8 +14,8 @@ jobs:
         os: [ubuntu-latest]
 
         # '3.10' is causing dependency in conflicts, conda+packages support still not great
-        # '3.9' works fine, disabled to save free CI minutes
-        python-version: ['3.8']
+        # '3.8' not supported anymore
+        python-version: ['3.9']
     defaults:
       run:
         shell: bash -l {0}  # necessary on linux to run commands within conda env
