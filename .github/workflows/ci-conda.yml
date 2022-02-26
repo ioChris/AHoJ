@@ -18,15 +18,28 @@ jobs:
         python-version: ['3.9']
     defaults:
       run:
-        shell: bash -l {0}  # necessary on linux to run commands within conda env
+        shell: bash -l {0}   # necessary on linux to run commands within conda env
     steps:
       - uses: actions/checkout@v2
+
+
+      - name: Set cache date
+        run: echo "DATE=$(date +'%Y%m%d')" >> $GITHUB_ENV
+
+      - uses: actions/cache@v2
+        env:
+          CACHE_NUMBER: 0   # increase to reset cache manually
+        with:
+          path: ~/conda_pkgs_dir
+          key: conda-${{ matrix.os }}-${{ hashFiles('_AHoJ/conda-env.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
+        id: cache
+          
       - uses: conda-incubator/setup-miniconda@v2.1.1
         with:
           auto-update-conda: false
           channel-priority: strict
           show-channel-urls: true
-          use-only-tar-bz2: true
+          use-only-tar-bz2: true   # this needs to be set for caching to work properly
           auto-activate-base: false
           python-version: ${{ matrix.python-version }}
           environment-file: conda-env.yml
