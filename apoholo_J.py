@@ -714,8 +714,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # query ligand detection parameters
     if autodetect_lig == 1:
         print('\n====== No ligands specified: auto-detecting ligands ======\n')
-        search_name = 'hetatm'
-        ligand_names_bundle = ' and not solvent and not polymer'
+        search_name = 'hetatm and not solvent and not polymer'
+        ligand_names_bundle = ''
+        #search_name = 'hetatm'
+        #ligand_names_bundle = ' and not solvent and not polymer'
     elif beyond_hetatm == 1:
         search_name = 'resn '
     else:
