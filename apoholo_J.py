@@ -283,11 +283,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     reverse_search = args.reverse_search
 
     # Advanced
-    save_oppst = args.save_oppst
-    save_separate = args.save_separate
-    save_session = args.save_session
-    multisave = args.multisave
-
     overlap_threshold = args.overlap_threshold
     lig_scan_radius = args.lig_scan_radius
     min_tmscore = args.min_tmscore
@@ -302,6 +297,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Internal
     apo_chain_limit = args.apo_chain_limit
 
+    # Saving
+    save_oppst = args.save_oppst
+    save_separate = args.save_separate
+    save_session = args.save_session
+    multisave = args.multisave
 
     # Adjust input, resolve conflicts
     if reverse_search == 1:
@@ -313,7 +313,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
 
 
-    # 3-letter names of amino acids and h2o (inverted selection defines ligands)
+    # Define non-ligands (3-letter names of amino acids and h2o)
     nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
     if water_as_ligand == 0:
         nolig_resn.append('HOH')
@@ -389,7 +389,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Parse single line input (line by line mode, 1 holo structure per line)
     # if no chains specified, consider all chains
     print('Parsing input')
-    input_arguments = query.split()
+    #input_arguments = query.split()
 
 
     ligand_names = None # this seems redundant, maybe we can remove it ... see***
@@ -427,7 +427,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #         wrong_input_error(path_results)  # exit with error
     # else:
     #     wrong_input_error(path_results)  # exit with error
-    # #user_position = query.split()[3]  # TODO ?
+    # #user_position = query.split()[3]  TODO
 
     try:
         q = parse_query(query, autodetect_lig)
@@ -622,8 +622,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     dict_key = user_structchain+' '+x1+' '+x2
                     dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
 
-        print('Total chains for', uniprot_id, ',', len(dict_rSIFTS[uniprot_id]))
-        print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])} - [{dictApoCandidates[dict_key][0].split()[0]}]')
+        print(f'Total chains for {uniprot_id}, {len(dict_rSIFTS[uniprot_id])}')
+        print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
     
     total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
     print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
@@ -744,7 +744,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         cmd.select(holo_struct + holo_chain, holo_struct + '& chain ' + holo_chain)
 
 
-        # Find & name specified ligands
+        # Find & name specified ligands in query structure
         ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain)  # resn<->name   # TODO ligand_names_bundle can be undefined here
         if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
@@ -1121,11 +1121,6 @@ def parse_args(argv):
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
-    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
-    parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
-    parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
-
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
     parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
     parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
@@ -1142,7 +1137,11 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None, help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None, help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,    help='number of concurrent threads for processing multiple queries')
-
+    # Saving
+    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
+    parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
     '''
     # print help if there are no arguments
     if len(argv)==1:
