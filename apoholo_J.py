@@ -134,6 +134,7 @@ class Query:
     struct: str
     chains: str           # maybe even change to list
     ligands: str          # maybe even change to list
+    position: str
     autodetect_lig: bool
 
 
@@ -187,14 +188,32 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
         chains = parts[1].upper()        # adjust case, chains = upper
         ligands = parts[2].upper()       # adjust case, ligands = upper
     # That's for searching around particular position/residue of the protein (there has to be a single ligand/residue specified)
-    elif len(parts) == 4 and len(parts[2]) < 4 and parts[2].split(',') == 1 and int(parts[3]):
+    elif len(parts) == 4 and len(parts[2]) < 4 and len(parts[2].split(',')) == 1 and int(parts[3]):
         chains = parts[1].upper()
         ligands = parts[2].upper()
         position = parts[3]
     else:
         raise ValueError(f"Invalid query '{query}': wrong number of parts")
 
+    if chains == '*' or chains == '?':
+        chains = 'ALL'
+    if ligands == '*' or ligands == '?':
+        ligands = None
+        autodetect_lig = 1
 
+    # Remove star from ligands str
+    if ',*,' in ligands:
+        autodetect_lig = 1
+        ligands = ligands.replace(",*,", "")
+    elif ',*' in ligands:
+        autodetect_lig = 1
+        ligands = ligands.replace(",*", "")
+    elif '*,' in ligands:
+        autodetect_lig = 1
+        ligands = ligands.replace("*,", "")
+    elif '*' in ligands:
+        autodetect_lig = 1
+        ligands = ligands.replace("*", "")
 
     return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig)
 
@@ -398,45 +417,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Parse single line input (line by line mode, 1 holo structure per line)
     # if no chains specified, consider all chains
     print('Parsing input')
-    #input_arguments = query.split()
 
-
-    #ligand_names = None # this seems redundant, maybe we can remove it ... see***
-    
-    # ^Note: if ligand names are fatally not defined, this should fail - with exit(1) - in the lower section (parsing input), 
-    # otherwise it should be safe to permit (I don't remember running into errors). 
-    # There should be provision for it with "autodetect_lig", the script will turn it on automatically in some cases.
-    # There is currently an outstanding case where the script will mistake the chain(s) argument for a ligand(s) argument when: 
-    # the user does not specify ligand(s) AND does not turn autodetect_lig ON AND specifies chain(s). 
-    # This will usually result in an empty/failed search, but it's hard to catch.
-    
-
-    # if len(query.split()[0]) == 4:
-    #
-    #     if len(input_arguments) == 1 and autodetect_lig == 1:
-    #         struct = query.split()[0].lower()
-    #         user_chains = 'ALL'
-    #         # ligand_names = 'autodetect'
-    #     elif len(input_arguments) == 1: # and len(query) == 4:
-    #         autodetect_lig = 1 # automatically activate ligand auto-detection mode
-    #         struct = query.split()[0].lower()
-    #         user_chains = 'ALL'
-    #     elif len(input_arguments) == 2 and autodetect_lig == 1:
-    #         struct = query.split()[0].lower()
-    #         user_chains = query.split()[1].upper()
-    #     elif len(input_arguments) == 2 and autodetect_lig == 0: # this triggers "ALL" chains mode
-    #         struct = query.split()[0].lower()
-    #         user_chains = 'ALL'
-    #         ligand_names = query.split()[1].upper()
-    #     elif len(input_arguments) == 3:
-    #         struct = query.split()[0].lower()        # adjust case, struct = lower
-    #         user_chains = query.split()[1].upper()   # adjust case, chains = upper
-    #         ligand_names = query.split()[2].upper()  # adjust case, ligands = upper
-    #     else:
-    #         wrong_input_error(path_results)  # exit with error
-    # else:
-    #     wrong_input_error(path_results)  # exit with error
-    # #user_position = query.split()[3]  TODO
 
     try:
         q = parse_query(query, autodetect_lig)
@@ -467,22 +448,25 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         # sys.exit(1) ?
 
     # Parse ligands
-    if autodetect_lig == 0:
+    if autodetect_lig == 1 and ligand_names is not None or autodetect_lig == 0:
         ligand_names = ''.join(ligand_names)   # *** TODO is this safe/(expected to be None) if we remove checks?
         ligand_names = ligand_names.split(',')
         ligand_names_bundle = '+'.join(ligand_names)
+    
 
     # Print input info
     print('Input structure:\t', struct)
-    if user_chains == 'ALL':
-        print('Input chains:\t\t', user_chains)
-    else:
-        print('Input chains:\t\t', user_chains) #, '\t', user_chains_bundle)
-        print('Input structchains:\t', user_structchains)  # TODO user_structchains may be undefined here
-    if autodetect_lig == 1:
+    print('Input chains:\t\t', user_chains)
+    if not user_chains == 'ALL':
+        print('Input structchains:\t', user_structchains)
+    if autodetect_lig == 1 and ligand_names is None:
         print('Input ligands:\t\tauto-detect')
+    elif autodetect_lig == 1 and ligand_names is not None:
+        print('Input ligands:\t\t', ligand_names, '+ auto-detect')
     else:
         print('Input ligands:\t\t', ligand_names) #, '\t', ligand_names_bundle)
+    if position is not None:
+        print('Input position:\t', position)
     print('Done\n')
 
 
@@ -493,7 +477,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     except:
         print('Error downloading structure:\t', struct, '\n')
         # TODO fail
-    if autodetect_lig == 0:
+    if autodetect_lig == 0 or ligand_names is not None:
         print('Verifying ligands:\t', ligand_names)
         for lig_id in ligand_names:
             try:
@@ -717,31 +701,38 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     
     eligible_chains = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
     print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å ]:\t{eligible_chains}')
+    print(dictApoCandidates_1) # helper print, delete later
 
-
-    # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
-
-    # Define ligand search query for PyMOL
-    if autodetect_lig == 1 and ligand_names is not None:
-        print('\n====== No ligands specified: auto-detecting ligands ======\n')
-        #search_name = 'hetatm and not solvent and not polymer'
-        ligand_names_bundle = ''
-        search_term = 'resn ' + ligand_names_bundle + ' and (hetatm and not solvent and not polymer)'
-        #search_name = 'hetatm'
-        #ligand_names_bundle = ' and not solvent and not polymer'
     
+
+    # Define ligand search query
+    if position is not None: # assume that everything is specified (chains(taken care of), ligand, position)
+        search_term = 'hetatm near_to ' + lig_scan_radius + ' of resi ' + position #+ ' of resn ' + ligand_names_bundle
+        
+        #cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
+    '''
+    if autodetect_lig == 1 and ligand_names is not None:
+        print('\n====== Ligands specified + auto-detecting ligands ======\n')
+        search_term = 'resn ' + ligand_names_bundle + ' or (hetatm and not solvent and not polymer)'
+        print('\n*Search term = ', search_term)
     elif autodetect_lig == 1 and ligand_names is None:
+        print('\n====== No ligands specified: auto-detecting all ligands ======\n')
         search_term = 'hetatm and not solvent and not polymer'
-    elif beyond_hetatm == 1:
+        print('\n*Search term = ', search_term)
+
+    elif beyond_hetatm == 1: # To be tested
         search_term = 'resn ' + ligand_names_bundle
+        print('\n*Search term = ', search_term)
     else:
         search_term = 'hetatm and resn ' + ligand_names_bundle
+        print('\n*Search term = ', search_term)
+    '''
 
+    ##################  Query ligand detection  ##################
 
     holo_lig_positions = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
-    print(dictApoCandidates_1) # helper print, delete later
     for holo_structchain, apo_structchains in dictApoCandidates_1.items():
         print('')
         print(f'=== Processing query chain {holo_structchain} ===')
@@ -761,10 +752,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
         # Find & name specified ligands in query structure
-        ligands_selection = cmd.select('query_ligands', search_term + ' and chain ' + holo_chain)  # resn<->name   # TODO ligand_names_bundle can be undefined here
+        ligands_selection = cmd.select('query_ligands', holo_struct +' and '+ search_term + ' and chain ' + holo_chain)  # resn<->name
         if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
-            ligands_selection = cmd.select('query_ligands', search_term + ' and segi ' + holo_chain)
+            ligands_selection = cmd.select('query_ligands', holo_struct +' and '+ search_term + ' and segi ' + holo_chain)
             if ligands_selection == 0 and reverse_search == 0:
                 print('No ligands found in PDB chain, skipping: ', holo_structchain)
                 continue
@@ -812,7 +803,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
 
-        # Start Apo chain loop. Align and mark atom selections around holo ligand
+        # Start candidate chain loop
+        # Align chain to query and mark atom selections around superimposed holo ligand binding sites
         for apo_structchain in apo_structchains:
             apo_struct = apo_structchain[:4]
             apo_chain = apo_structchain[4:]
@@ -1126,7 +1118,9 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
 
     # Main user query
-    parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
+    parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query')
+    
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.5,  help='resolution cut-off for apo chains (angstrom), condition is <=')
@@ -1137,7 +1131,7 @@ def parse_args(argv):
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
-    parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will allow (erroneously) negative overlap')
+    parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will not allow (erroneously) negative overlap')
     parser.add_argument('--lig_scan_radius',   type=float, default=5,    help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
     parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
 
