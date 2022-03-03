@@ -171,23 +171,32 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
     struct = parts[0].lower()
     chains = 'ALL'
     ligands = None
+    position = None
 
     if len(struct) != 4:
         raise ValueError(f"Invalid query '{query}': '{struct}' is not a valid PDB structure code")
 
     if len(parts) == 1:
-        autodetect_lig = 1                         # overrides cmd line param
-    elif len(parts) == 2 and autodetect_lig == 1:
+        autodetect_lig = 1               # overrides cmd line param
+    elif len(parts) == 2:  # and autodetect_lig == 1:
         chains = parts[1].upper()
-    elif len(parts) == 2 and autodetect_lig == 0:  # this triggers "ALL" chains mode
-        ligands = parts[1].upper()
+        autodetect_lig = 1
+    #elif len(parts) == 2 and autodetect_lig == 0:  # this triggers "ALL" chains mode
+        #ligands = parts[1].upper()
     elif len(parts) == 3:
         chains = parts[1].upper()        # adjust case, chains = upper
         ligands = parts[2].upper()       # adjust case, ligands = upper
+    # That's for searching around particular position/residue of the protein (there has to be a single ligand/residue specified)
+    elif len(parts) == 4 and len(parts[2]) < 4 and parts[2].split(',') == 1 and int(parts[3]):
+        chains = parts[1].upper()
+        ligands = parts[2].upper()
+        position = parts[3]
     else:
         raise ValueError(f"Invalid query '{query}': wrong number of parts")
 
-    return Query(struct=struct, chains=chains, ligands=ligands, autodetect_lig=autodetect_lig)
+
+
+    return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig)
 
 
 def load_precompiled_data_txt(workdir) -> PrecompiledData:
@@ -392,7 +401,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #input_arguments = query.split()
 
 
-    ligand_names = None # this seems redundant, maybe we can remove it ... see***
+    #ligand_names = None # this seems redundant, maybe we can remove it ... see***
     
     # ^Note: if ligand names are fatally not defined, this should fail - with exit(1) - in the lower section (parsing input), 
     # otherwise it should be safe to permit (I don't remember running into errors). 
@@ -438,8 +447,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     user_chains = q.chains
     struct = q.struct
     ligand_names = q.ligands
+    position = q.position
     autodetect_lig = q.autodetect_lig
-    
 
     # Parse chains
     if not user_chains == 'ALL':            # TODO user_chains may be undefined here
@@ -454,6 +463,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     if ligand_names is None:  # This should be safe to remove as well
         print("Input ligands were not defined!")
+        #ligand_names = 'autodetect'
         # sys.exit(1) ?
 
     # Parse ligands
@@ -711,17 +721,21 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Open apo winner structures, align to holo, and check if the superimposed (ligand) sites are ligand-free
 
-    # query ligand detection parameters
-    if autodetect_lig == 1:
+    # Define ligand search query for PyMOL
+    if autodetect_lig == 1 and ligand_names is not None:
         print('\n====== No ligands specified: auto-detecting ligands ======\n')
-        search_name = 'hetatm and not solvent and not polymer'
+        #search_name = 'hetatm and not solvent and not polymer'
         ligand_names_bundle = ''
+        search_term = 'resn ' + ligand_names_bundle + ' and (hetatm and not solvent and not polymer)'
         #search_name = 'hetatm'
         #ligand_names_bundle = ' and not solvent and not polymer'
+    
+    elif autodetect_lig == 1 and ligand_names is None:
+        search_term = 'hetatm and not solvent and not polymer'
     elif beyond_hetatm == 1:
-        search_name = 'resn '
+        search_term = 'resn ' + ligand_names_bundle
     else:
-        search_name = 'hetatm and resn '
+        search_term = 'hetatm and resn ' + ligand_names_bundle
 
 
     holo_lig_positions = dict()
@@ -747,10 +761,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
         # Find & name specified ligands in query structure
-        ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and chain ' + holo_chain)  # resn<->name   # TODO ligand_names_bundle can be undefined here
+        ligands_selection = cmd.select('query_ligands', search_term + ' and chain ' + holo_chain)  # resn<->name   # TODO ligand_names_bundle can be undefined here
         if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
-            ligands_selection = cmd.select('query_ligands', search_name + ligand_names_bundle + ' and segi ' + holo_chain)
+            ligands_selection = cmd.select('query_ligands', search_term + ' and segi ' + holo_chain)
             if ligands_selection == 0 and reverse_search == 0:
                 print('No ligands found in PDB chain, skipping: ', holo_structchain)
                 continue
