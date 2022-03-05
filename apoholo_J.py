@@ -214,6 +214,12 @@ def parse_query(query: str, autodetect_lig: bool = False) -> Query:
     elif '*' in ligands:
         autodetect_lig = 1
         ligands = ligands.replace("*", "")
+        
+    if ligands == 'HOH' and position is not None:
+        water_as_ligand = 1 # TODO this should become bool like autodetect_lig
+    elif 'HOH' in ligands and position is None:
+        raise ValueError(f"Invalid query '{query}': specify position of HOH molecule") 
+                
 
     return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig)
 
@@ -343,6 +349,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Define non-ligands (3-letter names of amino acids and h2o)
     nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
+    std_rsds = list(nolig_resn)
     if water_as_ligand == 0:
         nolig_resn.append('HOH')
     # Non-standard residues [SEP TPO PSU MSE MSO][1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG]
@@ -632,7 +639,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         for i in values:    # iterate over the values in each key, i = struct/chain combo & SP_BEG SP_END etc
             struct = i.split()[0][:4] # split value strings to get structure only
             apo_candidate_structs.add(struct)
-    print('Total structures to download for parsing: ', len(apo_candidate_structs), '\n')
+    print('Total structures to be parsed: ', len(apo_candidate_structs), '\n')
 
     # Download/load the Apo candidate structures to specified directory [TODO this should be replaced by load later]
     for apo_candidate_structure in apo_candidate_structs:
@@ -706,26 +713,80 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     
 
     # Define ligand search query
-    if position is not None: # assume that everything is specified (chains(taken care of), ligand, position)
-        search_term = 'hetatm near_to ' + lig_scan_radius + ' of resi ' + position #+ ' of resn ' + ligand_names_bundle
+    if position is not None: # (4 args) assumes that everything is specified (chains(taken care of), 1 ligand, position) ignore_autodetect_lig
+        
+    
+        if ligand_names == 'HOH': # mark selection & change lig scan radius
+            lig_scan_radius = '3'
+            search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
+            
+
+        elif ligand_names in nonstd_rsds: # find ligands
+            if nonstd_rsds_as_lig == 1: # mark selection
+                search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
+            elif nonstd_rsds_as_lig == 0: # treat as residue, find ligand
+                
+                search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+        
+        elif ligand_names in d_aminoacids:
+            if d_aa_as_lig == 1: # mark selection
+                search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
+            elif d_aa_as_lig == 0: # treat as residue, find ligands
+                if water_as_ligand == 1:
+                    search_term = 'hetatm near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+                else:
+                    search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+        
+        elif ligand_names in std_rsds: # find ligands
+            if water_as_ligand == 1:
+                search_term = 'hetatm near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+            else:
+                search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+        else: # find ligands
+            print('\nUnaccounted for query selection case\n')
+            search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+    
+    else: # position == None (<4 args)
+        if ligand_names is not None: # 3 query arguments
+            
+            if autodetect_lig == 1:
+                print('\n====== Ligands specified + auto-detecting ligands ======\n')
+                search_term = 'resn ' + ligand_names_bundle + ' or (hetatm and not solvent and not polymer)'
+                print('\n*Search term = ', search_term)
+            elif autodetect_lig == 0:
+                print('\n====== Ligands specified - no auto-detect ======\n')
+                search_term = 'resn ' + ligand_names_bundle
+                print('\n*Search term = ', search_term)
+        else: # no ligands specified (*/?)
+            if autodetect_lig == 1:
+                print('\n====== No ligands specified: auto-detecting all ligands ======\n')
+                search_term = 'hetatm and not solvent and not polymer'
+                print('\n*Search term = ', search_term)
+            if autodetect_lig == 0:
+                pass
+                
+                
+        
+        if autodetect_lig == 1 and ligand_names is not None: # 
+            print('\n====== Ligands specified + auto-detecting ligands ======\n')
+            search_term = 'resn ' + ligand_names_bundle + ' or (hetatm and not solvent and not polymer)'
+            print('\n*Search term = ', search_term)
+        elif autodetect_lig == 1 and ligand_names is None:
+            print('\n====== No ligands specified: auto-detecting all ligands ======\n')
+            search_term = 'hetatm and not solvent and not polymer'
+            print('\n*Search term = ', search_term)
+        else:
+            search_term = 'hetatm and resn ' + ligand_names_bundle
+            print('\n*Search term = ', search_term)
         
         #cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
+    
+    
     '''
-    if autodetect_lig == 1 and ligand_names is not None:
-        print('\n====== Ligands specified + auto-detecting ligands ======\n')
-        search_term = 'resn ' + ligand_names_bundle + ' or (hetatm and not solvent and not polymer)'
-        print('\n*Search term = ', search_term)
-    elif autodetect_lig == 1 and ligand_names is None:
-        print('\n====== No ligands specified: auto-detecting all ligands ======\n')
-        search_term = 'hetatm and not solvent and not polymer'
-        print('\n*Search term = ', search_term)
-
     elif beyond_hetatm == 1: # To be tested
         search_term = 'resn ' + ligand_names_bundle
         print('\n*Search term = ', search_term)
-    else:
-        search_term = 'hetatm and resn ' + ligand_names_bundle
-        print('\n*Search term = ', search_term)
+    
     '''
 
     ##################  Query ligand detection  ##################
@@ -883,7 +944,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Print verdict for chain & save it as ".cif.gz"
             if not reverse_mode:
 
-                print(f'*query ligands: {ligand_names}\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
+                print(f'*query ligand(s)/position: {ligand_names}/[{position}]\tdetected ligands: {holo_lig_names}\t detected apo ligands: {apo_lig_names}\tfound query ligands: {found_ligands}\tfound non-query ligands: {found_ligands_xtra}')
                 
                 # Apo
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
@@ -1091,7 +1152,7 @@ def try_process_query(query, workdir, args, data: PrecompiledData = None) -> Que
         print(ex)
         return QueryResult(result_dir=None, error=ex)
 
-
+'''
 def process_queries(query_lines: list[str], workdir, args, data: PrecompiledData = None) -> list[QueryResult]:
 
     queries = [parse_query(query_str) for query_str in query_lines]  # parse all here to check for possible invalid queries
@@ -1112,14 +1173,16 @@ def process_queries(query_lines: list[str], workdir, args, data: PrecompiledData
     print('--------------------\n')
 
     return res
-
+'''
 
 def parse_args(argv):
     parser = argparse.ArgumentParser()
 
     # Main user query
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
-    parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query')
+    
+    parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query')
     
 
     # Basic
