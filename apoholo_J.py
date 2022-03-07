@@ -161,7 +161,6 @@ class PrecompiledData:
     dict_rSIFTS: dict  # reverse SIFTS (SPnum) dictionary
 
 
-# TODO make stable format independent of autodetect_lig user param
 def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool = False) -> Query:
 
     # Parse single line input (line by line mode, 1 holo structure per line)
@@ -174,6 +173,14 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     chains = 'ALL'
     ligands = None
     position = None
+
+    # Define non-ligands (3-letter names of amino acids and h2o)
+    std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR ".split()
+    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA HOH".split()
+    d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
+    nolig_resn = list()
+    nolig_resn.extend(std_rsds + nonstd_rsds + d_aminoacids)
+
 
     if len(struct) != 4:
         raise ValueError(f"Invalid query '{query}': '{struct}' is not a valid PDB structure code")
@@ -188,11 +195,16 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     elif len(parts) == 3:
         chains = parts[1].upper()        # adjust case, chains = upper
         ligands = parts[2].upper()       # adjust case, ligands = upper
-    # That's for searching around particular position/residue of the protein (there has to be a single ligand/residue specified)
+    
+    # When position is specified, there has to be a single ligand/residue specified
     elif len(parts) == 4 and len(parts[2]) < 4 and len(parts[2].split(',')) == 1 and int(parts[3]):
         chains = parts[1].upper()
         ligands = parts[2].upper()
         position = parts[3]
+        if ligands in std_rsds:
+            autodetect_lig = 1
+            #print('\nLigand is standard residue')
+            #sys.exit(1)
     else:
         raise ValueError(f"Invalid query '{query}': wrong number of parts")
 
@@ -215,29 +227,18 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     elif '*' in ligands and len(ligands) > 1:
         autodetect_lig = 1
         ligands = ligands.replace("*", "")
-        
-    # Make sure that if ligand is HOH or std residue or non-std residue, 
-    # i) there is just one specified
-    # ii) there is always a fourth argument
-    
-    # Define non-ligands (3-letter names of amino acids and h2o)
-    std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR HOH "
-    #if water_as_ligand == 0:    nolig_resn.append('HOH')
-    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA "
-    #nolig_resn.extend(nonstd_rsds)
-    d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA"
-    #nolig_resn.extend(d_aminoacids)
-    nolig_resn = (std_rsds + nonstd_rsds + d_aminoacids).split()
-    #print(nolig_resn)
-    #sys.exit(0)
-    
+
+    # If ligand is HOH or std residue or non-std residue,  make sure that:
+    # i) there is just one specified (handled before)
+    # ii) there is a fourth argument (position)
     if ligands == 'HOH' and position is not None:
         water_as_ligand = 1
+        
     for i in nolig_resn:
         if ligands == i and position is None:
             raise ValueError(f"Invalid query '{query}': specify index position of HOH or residue") 
     
-                
+
 
     return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand=water_as_ligand)
 
@@ -753,14 +754,18 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 else:
                     search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
 
-        elif ligand_names in std_rsds: # find ligands
+        elif ligand_names in std_rsds: # find ligands # TODO this doesn't seem to catch query
             if water_as_ligand == 1:
                 search_term = 'hetatm near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+                print('\n*Search term = ', search_term)
             else:
                 search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+                print('\n*Search term = ', search_term)
         else: # find ligands
-            print('\nUnaccounted for query selection case\n')
+            print('\nUnaccounted-for query selection case, using default search\n') # TODO quit?
+            sys.exit(1)
             search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+            print('\n*Search term = ', search_term)
 
     else: # position == None (3 or less args)
         if ligand_names is not None: # ligands specified
@@ -774,14 +779,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 search_term = 'resn ' + ligand_names_bundle
                 print('\n*Search term = ', search_term)
         else: # ligands not specified (*/?) 
-            if autodetect_lig == 1:
-                print('\n====== No ligands specified: auto-detecting all ligands ======\n')
-                search_term = 'hetatm and not solvent and not polymer'
-                print('\n*Search term = ', search_term)
-            if autodetect_lig == 0:
-                print('\n No ligands specified and user has auto-detect OFF, quitting')
-                sys.exit(0)
-
+            print('\n====== No ligands specified: auto-detecting all ligands ======\n')
+            search_term = 'hetatm and not solvent and not polymer'
+            print('\n*Search term = ', search_term)
+            #print('\n No ligands were specified and user has auto-detect OFF, turning it ON to continue')
+            autodetect_lig = 1 # Force autodetect ON
 
         '''
         if autodetect_lig == 1 and ligand_names is not None: # 
@@ -798,7 +800,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         
         #cmd.select(apo_structchain + '_arnd_' + ligand_, 'model ' + apo_struct + '& hetatm & not solvent' + ' near_to ' + lig_scan_radius + ' of holo_' + ligand_)
         '''
-
     '''
     elif beyond_hetatm == 1: # To be tested
         search_term = 'resn ' + ligand_names_bundle
