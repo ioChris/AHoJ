@@ -111,7 +111,7 @@ class T02_Apoholo(unittest.TestCase):
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
         self.tst_main_fail("--query 'INVALID_QUERY X X X' ")
-        # self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in PDB    TODO fix failing test, this query should fail
+        self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in PDB    TODO fix failing test, this query should fail
         # TODO add more tests cases
 
 
