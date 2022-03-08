@@ -774,7 +774,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             lig_scan_radius = '3'
             search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
 
-        elif ligand_names in nonstd_rsds: # find ligands
+        elif ligand_names[0] in nonstd_rsds: # find ligands
             if nonstd_rsds_as_lig == 1: # mark selection
                 search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
             elif nonstd_rsds_as_lig == 0: # treat as residue, find ligand
