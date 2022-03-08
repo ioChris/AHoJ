@@ -94,14 +94,14 @@ class T02_Apoholo(unittest.TestCase):
     def test_successful_runs(self):
         self.tst_query("--query '1a73 A,B ZN' ",  expect_apo=0, expect_holo=32)
         self.tst_query("--query '1a73 ALL ZN' ",  expect_apo=0, expect_holo=32)
-        self.tst_query("--query '1a73 ZN' ",      expect_apo=0, expect_holo=32)
+        self.tst_query("--query '1a73 * ZN' ",    expect_apo=0, expect_holo=32)
         self.tst_query("--query '1a73' ",         expect_apo=0, expect_holo=32)
-        self.tst_query("--query '1a73 A' ",       expect_apo=0, expect_holo=0)   # TODO really 0?
+        self.tst_query("--query '1a73 A' ",       expect_apo=0, expect_holo=16)   # TODO really 0?
         self.tst_query("--query '1a73 A ZN,MG' ", expect_apo=0, expect_holo=16)
 
         self.tst_query("--query '3CQV A HEM' ",   expect_apo=6, expect_holo=5)
         self.tst_query("--query '3fav all zn' ",  expect_apo=2, expect_holo=0)
-        self.tst_query("--query '2hka all c3s' ", expect_apo=2, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
+        self.tst_query("--query '2hka all c3s' ", expect_apo=3, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
         self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
         # TODO add expected numbers
