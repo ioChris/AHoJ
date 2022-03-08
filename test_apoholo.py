@@ -85,10 +85,10 @@ class T02_Apoholo(unittest.TestCase):
 
 
     def test_parse_query(self):
-        assert parse_query('1a73',           autodetect_lig=True) == Query(struct='1a73', chains='ALL', ligands=None,    autodetect_lig=1)
-        assert parse_query('1a73 A,B ZN',    autodetect_lig=True) == Query(struct='1a73', chains='A,B', ligands='ZN',    autodetect_lig=1)
-        assert parse_query('1a73 ALL ZN,MG', autodetect_lig=True) == Query(struct='1a73', chains='ALL', ligands='ZN,MG', autodetect_lig=1)
-        assert parse_query('1a73 A',         autodetect_lig=True) == Query(struct='1a73', chains='A',   ligands=None,    autodetect_lig=1)
+        assert parse_query('1a73',           autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
+        assert parse_query('1a73 A,B ZN',    autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='A,B', ligands='ZN',   position=None, autodetect_lig=0, water_as_ligand=0)
+        assert parse_query('1a73 ALL ZN,MG', autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands='ZN,MG',position=None, autodetect_lig=0, water_as_ligand=0)
+        assert parse_query('1a73 A',         autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='A',   ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
 
 
     def test_successful_runs(self):
@@ -96,17 +96,17 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '1a73 ALL ZN' ",  expect_apo=0, expect_holo=32)
         self.tst_query("--query '1a73 * ZN' ",    expect_apo=0, expect_holo=32)
         self.tst_query("--query '1a73' ",         expect_apo=0, expect_holo=32)
-        self.tst_query("--query '1a73 A' ",       expect_apo=0, expect_holo=16)   # TODO really 0?
+        self.tst_query("--query '1a73 A' ",       expect_apo=0, expect_holo=16)
         self.tst_query("--query '1a73 A ZN,MG' ", expect_apo=0, expect_holo=16)
 
         self.tst_query("--query '3CQV A HEM' ",   expect_apo=6, expect_holo=5)
         self.tst_query("--query '3fav all zn' ",  expect_apo=2, expect_holo=0)
-        self.tst_query("--query '2hka all c3s' ", expect_apo=3, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
+        self.tst_query("--query '2hka all c3s' ", expect_apo=2, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
         self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
         # TODO add expected numbers
         self.tst_query("--reverse_search 1 --query '2v0v' ")   # test for reverse search (this is a fully apo structure)
-        self.tst_query("--reverse_search 1 --query '2v0v a,b' ")
+        self.tst_query("--reverse_search 1 --query '2v0v a,b' ", expect_apo=4, expect_holo=12)
 
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
