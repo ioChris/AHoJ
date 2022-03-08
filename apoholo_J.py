@@ -238,18 +238,19 @@ def parse_query(query: str, path_ligands, autodetect_lig: bool = False, water_as
         autodetect_lig = 1
 
     # Remove star from ligands str
-    if ',*,' in ligands:
-        autodetect_lig = 1
-        ligands = ligands.replace(",*,", ",")
-    elif ',*' in ligands:
-        autodetect_lig = 1
-        ligands = ligands.replace(",*", "")
-    elif '*,' in ligands:
-        autodetect_lig = 1
-        ligands = ligands.replace("*,", "")
-    elif '*' in ligands and len(ligands) > 1:
-        autodetect_lig = 1
-        ligands = ligands.replace("*", "")
+    if ligands is not None:
+        if ',*,' in ligands:
+            autodetect_lig = 1
+            ligands = ligands.replace(",*,", ",")
+        elif ',*' in ligands:
+            autodetect_lig = 1
+            ligands = ligands.replace(",*", "")
+        elif '*,' in ligands:
+            autodetect_lig = 1
+            ligands = ligands.replace("*,", "")
+        elif '*' in ligands and len(ligands) > 1:
+            autodetect_lig = 1
+            ligands = ligands.replace("*", "")
 
     # If ligand is HOH or std residue or non-std residue,  make sure that:
     # i) there is just one specified (handled before)
@@ -1236,8 +1237,9 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query')
     
-    parser.add_argument('--query', type=str,   default='1a73 a,b hoh 509', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query')
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query')
+    parser.add_argument('--query', type=str,   default='2v0v', help='main input query')
 
 
     # Basic
@@ -1246,7 +1248,7 @@ def parse_args(argv):
     parser.add_argument('--xray_only',         type=int,   default=0,    help='0/1: only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
     parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
-    parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
+    parser.add_argument('--reverse_search',    type=int,   default=1,    help='0/1: look for holo structures from apo')
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will not allow (erroneously) negative overlap')
