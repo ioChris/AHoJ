@@ -781,7 +781,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                 search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
 
-        elif ligand_names in d_aminoacids:
+        elif ligand_names[0] in d_aminoacids:
             if d_aa_as_lig == 1: # mark selection
                 search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
             elif d_aa_as_lig == 0: # treat as residue, find ligands
@@ -790,7 +790,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 else:
                     search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
 
-        elif ligand_names in std_rsds: # find ligands # TODO this doesn't seem to catch query
+        elif ligand_names[0] in std_rsds: # find ligands # TODO this doesn't seem to catch query
             if water_as_ligand == 1:
                 search_term = 'hetatm near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
                 print('\n*Search term = ', search_term)
@@ -1235,7 +1235,7 @@ def parse_args(argv):
     parser = argparse.ArgumentParser()
 
     # Main user query
-    #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
+    parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query')
     
@@ -1243,7 +1243,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query')
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query')
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query')
-    parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query')
+    #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query')
     
     
 
