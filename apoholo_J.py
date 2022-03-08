@@ -135,7 +135,6 @@ class Query:
     chains: str           # maybe even change to list
     ligands: str          # maybe even change to list
     position: str
-    path_ligands: str
     autodetect_lig: bool
     water_as_ligand: bool
 
@@ -162,12 +161,12 @@ class PrecompiledData:
     dict_rSIFTS: dict  # reverse SIFTS (SPnum) dictionary
 
 
-def verify_ligands(ligand_names, path_ligands):
+def verify_ligands(ligand_names):
     #if autodetect_lig == 0 or ligand_names is not None:
     print('Verifying ligands:\t', ligand_names)
     for lig_id in ligand_names:
         #try:
-        lig_path = download_mmCIF_lig(lig_id, path_ligands)
+        lig_path = download_mmCIF_lig(lig_id, pathLIGS)
         with open(lig_path, 'r') as in_lig:
             for line in in_lig:
                 if line.startswith('_chem_comp.name'):
@@ -180,7 +179,7 @@ def verify_ligands(ligand_names, path_ligands):
             #print('Error verifying ligand:\t', lig_id)
 
 
-def parse_query(query: str, path_ligands, autodetect_lig: bool = False, water_as_ligand: bool = False) -> Query:
+def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool = False) -> Query:
 
     # Parse single line input (line by line mode, 1 holo structure per line)
     # if no chains specified, consider all chains
@@ -265,12 +264,12 @@ def parse_query(query: str, path_ligands, autodetect_lig: bool = False, water_as
     # Verify ligands here
     if autodetect_lig == 0 or ligands is not None:
         try:
-            verify_ligands(ligands.split(','), path_ligands)
+            verify_ligands(ligands.split(','))
         except:
             raise ValueError(f"Invalid ligands '{query}': use PDB ligand names") 
 
 
-    return Query(struct=struct, chains=chains, ligands=ligands, position=position, path_ligands=path_ligands, autodetect_lig=autodetect_lig, water_as_ligand=water_as_ligand)
+    return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand=water_as_ligand)
 
 
 def load_precompiled_data_txt(workdir) -> PrecompiledData:
@@ -411,6 +410,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         nolig_resn.extend(d_aminoacids)
 
     # Set directories, create job_id
+    global pathLIGS
     path_root = workdir
     pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
@@ -476,7 +476,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     try:
-        q = parse_query(query, pathLIGS, autodetect_lig, water_as_ligand)
+        q = parse_query(query, autodetect_lig, water_as_ligand)
     except ValueError as e:
         print(e)
         wrong_input_error()
@@ -533,7 +533,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Loading structure:\t', struct_path, '\n')
     except:
         print('Error downloading structure:\t', struct, '\n')
-        # TODO fail
+        sys.exit(1)
+        # TODO move into parse_query to fail fast
     
     # Verify ligands (moved)
     '''
@@ -1235,11 +1236,16 @@ def parse_args(argv):
 
     # Main user query
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query')
     
     #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query')
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query')
-    parser.add_argument('--query', type=str,   default='2v0v', help='main input query')
+    #parser.add_argument('--query', type=str,   default='2v0v', help='main input query')
+    #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query')
+    parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query')
+    
+    
 
 
     # Basic
