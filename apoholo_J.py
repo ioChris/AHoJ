@@ -1254,7 +1254,7 @@ def parse_args(argv):
     parser.add_argument('--xray_only',         type=int,   default=0,    help='0/1: only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
     parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
-    parser.add_argument('--reverse_search',    type=int,   default=1,    help='0/1: look for holo structures from apo')
+    parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will not allow (erroneously) negative overlap')
