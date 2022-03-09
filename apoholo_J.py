@@ -47,8 +47,6 @@ ii) When looking for holo from apo:
 # TODO adjust search radius according to mol. weight of ligand
 
 
-pathLIGS = None  # nasty global variable
-
 ##########################################################################################################
 # Define functions
 ##########################################################################################################
@@ -163,8 +161,7 @@ class PrecompiledData:
     dict_rSIFTS: dict  # reverse SIFTS (SPnum) dictionary
 
 
-def verify_ligands(ligand_names):
-    global pathLIGS
+def verify_ligands(ligand_names, pathLIGS):
     #if autodetect_lig == 0 or ligand_names is not None:
     print('Verifying ligands:\t', ligand_names)
     for lig_id in ligand_names:
@@ -264,14 +261,6 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
         if ligands == i and position is None:
             raise ValueError(f"Invalid query '{query}': specify index position of HOH or residue") 
     
-    # Verify ligands here
-    if autodetect_lig == 0 or ligands is not None:
-        try:
-            verify_ligands(ligands.split(','))
-        except:
-            raise ValueError(f"Invalid ligands '{query}': use PDB ligand names") 
-
-
     return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand=water_as_ligand)
 
 
@@ -413,7 +402,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         nolig_resn.extend(d_aminoacids)
 
     # Set directories, create job_id
-    global pathLIGS
     path_root = workdir
     pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
@@ -440,7 +428,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         data = load_precompiled_data(workdir)
     dict_SIFTS = data.dict_SIFTS
     dict_rSIFTS = data.dict_rSIFTS
-
 
     # Get additional info
     # script_name = os.path.basename(__file__)    #log_file = script_name[:-3] + '_rejected_res_' + infile1[:-4] + '.log'
@@ -506,6 +493,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #    print("Input ligands were not defined!")
         #ligand_names = 'autodetect'
         # sys.exit(1) ?
+
+    # Verify ligands here
+    if autodetect_lig == 0 or ligand_names is not None:
+        try:
+            verify_ligands(ligand_names.split(','), pathLIGS)
+        except:
+            raise ValueError(f"Invalid ligands in query '{query}': use PDB ligand names")
 
     # Parse ligands
     if autodetect_lig == 1 and ligand_names is not None or autodetect_lig == 0:
