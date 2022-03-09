@@ -47,6 +47,8 @@ ii) When looking for holo from apo:
 # TODO adjust search radius according to mol. weight of ligand
 
 
+pathLIGS = None  # nasty global variable
+
 ##########################################################################################################
 # Define functions
 ##########################################################################################################
@@ -162,6 +164,7 @@ class PrecompiledData:
 
 
 def verify_ligands(ligand_names):
+    global pathLIGS
     #if autodetect_lig == 0 or ligand_names is not None:
     print('Verifying ligands:\t', ligand_names)
     for lig_id in ligand_names:
