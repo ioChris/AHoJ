@@ -174,7 +174,7 @@ def verify_ligands(ligand_names, pathLIGS):
                 if line.startswith('_chem_comp.pdbx_synonyms'):
                     lig_syn = line.split()[1:]
                     #print('>', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
-                    print('Verifying ligands:\t', ligand_names, ' > ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
+                    print('Verifying ligands:\t', ligand_names, '> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
                     break
         #except:
             #print('Error verifying ligand:\t', lig_id)
@@ -494,14 +494,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #    print("Input ligands were not defined!")
         #ligand_names = 'autodetect'
         # sys.exit(1) ?
-    
+
     # Verify input structure here  # TODO move verifications into parse_query to fail fast
     try:
         struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
-        print('Verifying structure:', struct, ' > ', struct_path)
+        print('Verifying structure:', struct, '\t> ', struct_path.split('/')[-1]) #'/'.join(struct_path.split('/')[-3:]))
     except:
-        raise ValueError(f"Invalid PDB ID '{query}': use a valid 4-letter PDB code") 
-        
+        raise ValueError(f"Invalid PDB ID '{query}': use a valid 4-letter PDB code")
+        sys.exit(1)
+
     # Verify ligands here
     if autodetect_lig == 0 or ligand_names is not None:
         try:
