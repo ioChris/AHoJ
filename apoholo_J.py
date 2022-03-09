@@ -495,10 +495,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         #ligand_names = 'autodetect'
         # sys.exit(1) ?
     
-    # Verify input structure here
+    # Verify input structure here  # TODO move verifications into parse_query to fail fast
     try:
-        print('Verifying structure:', struct)
-        download_mmCIF_gz2(struct, pathSTRUCTS)
+        struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
+        print('Verifying structure:', struct, ' > ', struct_path)
     except:
         raise ValueError(f"Invalid PDB ID '{query}': use a valid 4-letter PDB code") 
         
@@ -514,7 +514,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         ligand_names = ''.join(ligand_names)
         ligand_names = ligand_names.split(',')
         ligand_names_bundle = '+'.join(ligand_names)
-    
+
 
     # Print input info
     print('')
@@ -532,7 +532,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Input position:\t\t', position)
     print('Done\n')
 
-
+    '''
     # Download or get path to query structure & ligand
     try:
         struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
@@ -540,26 +540,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     except:
         print('Error downloading structure:\t', struct, '\n')
         sys.exit(1)
-        # TODO move into parse_query to fail fast
-    
-    # Verify ligands (moved)
     '''
-    if autodetect_lig == 0 or ligand_names is not None:
-        print('Verifying ligands:\t', ligand_names)
-        for lig_id in ligand_names:
-            try:
-                lig_path = download_mmCIF_lig(lig_id, pathLIGS)
-                with open(lig_path, 'r') as in_lig:
-                    for line in in_lig:
-                        if line.startswith('_chem_comp.name'):
-                            lig_name = line.split()[1:]
-                        if line.startswith('_chem_comp.pdbx_synonyms'):
-                            lig_syn = line.split()[1:]
-                            print(lig_id, ' '.join(lig_name), ' '.join(lig_syn))
-                            break
-            except:
-                print('Error verifying ligand:\t', lig_id)
-    '''
+
+
 
 
     ## Find Apo candidates (rSIFTS)
@@ -704,7 +687,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for apo_candidate_structure in apo_candidate_structs:
         try:
             download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
-        except Exception as ex1:
+        except: # Exception as ex1:
             #template = "Exception {0} occurred. \n\t\t\t\t\tArguments:{1!r}"
             #message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
             #add_log(message, log_file_dnld)
@@ -822,20 +805,23 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         if ligand_names is not None: # ligands specified
             
             if ligand_names[0] in nonstd_rsds:
-                print('\n====== Ligands specified + auto-detecting ligands ======\n')
                 search_term = 'resn ' + ligand_names_bundle + autodetect_lig_expression
+                print('\n*Search term = ', search_term)
+            
+            else: # assume ligand is a real ligand
+                search_term = 'hetatm and resn ' + ligand_names_bundle + autodetect_lig_expression
                 print('\n*Search term = ', search_term)
         
         elif ligand_names is None and autodetect_lig == 1: 
             
             search_term = 'hetatm and not solvent and not polymer' # water as ligand should be ignored here without a position
+            print('\n*Search term = ', search_term)
         
         #elif ligand_names is None and autodetect_lig == 0: # TODO Here is the chance to force reverse search
             # Here the user has not specified ligands, and they have not turned autodetect_lig ON
 
                 
-             
-        
+
         else: # ligands not specified (*/?) 
             print('\n====== No ligands specified: auto-detecting all ligands ======\n')
             search_term = 'hetatm and not solvent and not polymer'
