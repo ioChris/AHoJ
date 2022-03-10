@@ -1113,6 +1113,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cmd.center('query_ligands')
         except:
             cmd.center(holo_structchain)
+        
 
         # Save results as session (.pse.gz) or multisave (.cif)
         filename_body = path_results + '/' + 'aln_' + holo_struct     #filename_body = pathRSLTS + '/' + 'aln_' + holo_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + holo_struct))
@@ -1279,7 +1280,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # autodetect_lig=1 OK, apo 0, holo 16
-    
+    parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *
     
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # OK apo 0, holo 0
@@ -1295,7 +1296,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh 509', help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh', help='main input query') # expected parsing fail
-    parser.add_argument('--query', type=str,   default='3i34 x hoh 311', help='main input query') # apo 113, holo 94
+    #parser.add_argument('--query', type=str,   default='3i34 x hoh 311', help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut a tpo', help='main input query') # OK apo 0, holo 3
@@ -1331,7 +1332,7 @@ def parse_args(argv):
     # Saving
     parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
     parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
-    parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
+    parser.add_argument('--save_session',      type=int,   default=1,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
     '''
     # print help if there are no arguments
