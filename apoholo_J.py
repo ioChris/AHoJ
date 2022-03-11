@@ -27,6 +27,9 @@ from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import thread
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
 
+VERSION = '0.1.0'
+
+
 _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()    # multi-processing (must be moved to main)
 
@@ -1155,6 +1158,7 @@ def parse_args(argv):
 
 
 def main(argv):
+    print(f'APO-HOLO JUXTAPOSITION (v{VERSION})')
     args = parse_args(argv)
 
     workdir = get_workdir(args)
