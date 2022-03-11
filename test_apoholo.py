@@ -88,7 +88,7 @@ class T02_Apoholo(unittest.TestCase):
         assert parse_query('1a73 ALL ZN,MG', autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands='ZN,MG',position=None, autodetect_lig=0, water_as_ligand=0)
         assert parse_query('1a73 A',         autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='A',   ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
 
-    def test_successful_runs(self):
+    def test_simple_queries(self):
         self.tst_query("--query '1a73 A,B ZN' ",  expect_apo=0, expect_holo=32)
         self.tst_query("--query '1a73 ALL ZN' ",  expect_apo=0, expect_holo=32)
         self.tst_query("--query '1a73 * ZN' ",    expect_apo=0, expect_holo=32)
@@ -96,12 +96,13 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '1a73 A' ",       expect_apo=0, expect_holo=16)
         self.tst_query("--query '1a73 A ZN,MG' ", expect_apo=0, expect_holo=16)
 
+    def test_advanced_queries(self):
         self.tst_query("--query '3CQV A HEM' ",   expect_apo=6, expect_holo=5)
         self.tst_query("--query '3fav all zn' ",  expect_apo=2, expect_holo=0)
         self.tst_query("--query '2hka all c3s' ", expect_apo=2, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
         self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
-        # TODO add expected numbers
+    def test_reverse_search(self):
         self.tst_query("--reverse_search 1 --query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
         self.tst_query("--reverse_search 1 --query '2v0v a,b' ", expect_apo=4, expect_holo=12)
 
@@ -109,6 +110,7 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_main_fail("--invalid_param ")
         self.tst_main_fail("--query 'INVALID_QUERY X X X' ")
         self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in the PDB
+        self.tst_main_fail("--query '1a73 \n XXXX' ")  # should fail if at least one is not valid
         # TODO add more tests cases
 
 

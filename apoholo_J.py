@@ -1249,14 +1249,13 @@ def process_queries(query_lines: list, workdir, args, data: PrecompiledData = No
         return try_process_query(query, workdir, args, data)
 
     with PoolExecutor(max_workers=args.threads) as pool:
-        results = pool.map(process_q, query_lines)
+        results = list(pool.map(process_q, query_lines))
 
     # TODO better way to print summary results and report errors
     print('\n--------------------')
     print('Results:\n')
     print('\n'.join([str(r) for r in results]))
     print('--------------------\n')
-
 
     return results
 
@@ -1352,10 +1351,12 @@ def main(argv):
     # TODO read multi line queries from file
     query_lines = [q.strip() for q in query.splitlines() if is_not_blank(q)]
 
+
     if len(query_lines) > 1:
         results = process_queries(query_lines, workdir, args)
 
-        error_results = [qr for qr in results if qr.error is not None]
+        # Report errors
+        error_results = [r for r in results if r.error is not None]
         if error_results:
             print(f'ERRORS: {len(error_results)} of {len(results)} queries finished with errors:')
             for qr in error_results:
