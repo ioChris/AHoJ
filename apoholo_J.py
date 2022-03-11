@@ -30,6 +30,9 @@ import rich.traceback
 
 rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
+VERSION = '0.1.0'
+
+
 _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()     # multi-processing (must be moved to main)
 
@@ -1343,6 +1346,7 @@ def parse_args(argv):
 
 
 def main(argv):
+    print(f'APO-HOLO JUXTAPOSITION (v{VERSION})')
     args = parse_args(argv)
 
     workdir = get_workdir(args)
