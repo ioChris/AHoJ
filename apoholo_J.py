@@ -30,7 +30,7 @@ import rich.traceback
 
 rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.1.0'
+VERSION = '0.2.0'
 
 
 _global_lock = threading.Lock()                      # multi-threading
