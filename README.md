@@ -75,6 +75,7 @@ conda install -c conda-forge pip numpy pmw
 conda install -c anaconda pywget
 conda install -c speleo3 tmalign
 conda install -c speleo3 pymol-psico
+conda install -c conda-forge rich pytest-sugar
 ~~~     
 
 ##### 4.  Install Open-source PyMOL
