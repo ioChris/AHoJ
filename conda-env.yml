@@ -9,3 +9,5 @@ dependencies:
   - tmalign=20170708
   - python-wget
   - pytest
+  - pytest-sugar
+  - rich

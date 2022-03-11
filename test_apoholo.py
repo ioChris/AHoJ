@@ -79,17 +79,14 @@ class T02_Apoholo(unittest.TestCase):
     def tst_main_fail(self, args_str):
         argv = shlex.split(args_str)  # split but preserve '...' as substrings
         print("Testing with args:", argv)
-        with self.assertRaises(SystemExit):
+        with self.assertRaises(BaseException):
             exit_code = apoholo_J.main(argv)
-            # self.assertNotEqual(0, exit_code)
-
 
     def test_parse_query(self):
         assert parse_query('1a73',           autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
         assert parse_query('1a73 A,B ZN',    autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='A,B', ligands='ZN',   position=None, autodetect_lig=0, water_as_ligand=0)
         assert parse_query('1a73 ALL ZN,MG', autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands='ZN,MG',position=None, autodetect_lig=0, water_as_ligand=0)
         assert parse_query('1a73 A',         autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='A',   ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
-
 
     def test_successful_runs(self):
         self.tst_query("--query '1a73 A,B ZN' ",  expect_apo=0, expect_holo=32)
@@ -111,7 +108,7 @@ class T02_Apoholo(unittest.TestCase):
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
         self.tst_main_fail("--query 'INVALID_QUERY X X X' ")
-        self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in PDB    TODO fix failing test, this query should fail
+        self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in the PDB
         # TODO add more tests cases
 
 

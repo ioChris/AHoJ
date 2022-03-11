@@ -26,6 +26,9 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
+import rich.traceback
+
+rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
 _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()     # multi-processing (must be moved to main)
@@ -127,6 +130,9 @@ def join_ligands(ligands):
     return '-'.join(sorted(ligands))
 
 
+def is_not_blank(s):
+    return bool(s and not s.isspace())
+
 ##########################################################################################################
 
 @dataclass
@@ -192,7 +198,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     chains = 'ALL'
     ligands = None
     position = None
-
+    
     # Define non-ligands (3-letter names of amino acids and h2o)
     std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
     #nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA ".split() # don't use as no-lig rsds
@@ -500,8 +506,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         struct_path = download_mmCIF_gz2(struct, pathSTRUCTS)
         print('Verifying structure:', struct, '\t> ', struct_path.split('/')[-1]) #'/'.join(struct_path.split('/')[-3:]))
     except:
-        raise ValueError(f"Invalid PDB ID '{query}': use a valid 4-letter PDB code")
-        sys.exit(1)
+        raise ValueError(f"Invalid PDB ID in query '{query}': use a valid 4-letter PDB code")
 
     # Verify ligands here
     if autodetect_lig == 0 or ligand_names is not None:
@@ -1235,6 +1240,8 @@ def process_queries(query_lines: list, workdir, args, data: PrecompiledData = No
 
     queries = [parse_query(query_str) for query_str in query_lines]  # parse all here to check for possible invalid queries
 
+    # TODO validate all queries before processing
+
     if data is None:
         data = load_precompiled_data(workdir)
 
@@ -1242,15 +1249,16 @@ def process_queries(query_lines: list, workdir, args, data: PrecompiledData = No
         return try_process_query(query, workdir, args, data)
 
     with PoolExecutor(max_workers=args.threads) as pool:
-        res = pool.map(process_q, query_lines)
+        results = pool.map(process_q, query_lines)
 
     # TODO better way to print summary results and report errors
     print('\n--------------------')
     print('Results:\n')
-    print('\n'.join([str(r) for r in res]))
+    print('\n'.join([str(r) for r in results]))
     print('--------------------\n')
 
-    return res
+
+    return results
 
 
 def parse_args(argv):
@@ -1291,8 +1299,9 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
-    
 
+
+    parser.add_argument('--query',             type=str,   default='1a73 a zn', help='main input query') # OK apo 0, holo 16
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,  help='resolution cut-off for apo chains (angstrom), condition is <=')
@@ -1341,9 +1350,19 @@ def main(argv):
     query = args.query
 
     # TODO read multi line queries from file
-    query_lines = [q.strip() for q in query.splitlines()]  # TODO ignore blank lines
+    query_lines = [q.strip() for q in query.splitlines() if is_not_blank(q)]
+
     if len(query_lines) > 1:
-        process_queries(query_lines, workdir, args)
+        results = process_queries(query_lines, workdir, args)
+
+        error_results = [qr for qr in results if qr.error is not None]
+        if error_results:
+            print(f'ERRORS: {len(error_results)} of {len(results)} queries finished with errors:')
+            for qr in error_results:
+                print(f' >  {qr.error}')
+            print('Some queries finished with ERROR.')
+            sys.exit(1)
+
     else:
         process_query(query.strip(), workdir, args)
 
