@@ -229,11 +229,11 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     else:
         raise ValueError(f"Invalid query '{query}': wrong number of parts")
 
-    if chains == '*' or chains == '?':
+    if chains == '*':
         chains = 'ALL'
-    elif not all(chain.isalnum() for chain in chains.split(',')):
+    elif not all(chain.isalnum() for chain in chains.split(',')):  # check that chains are alphanumeric characters
         raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains")
-    if ligands == '*' or ligands == '?':
+    if ligands == '*':
         ligands = None
         autodetect_lig = 1
 
@@ -356,16 +356,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     lig_free_sites = args.lig_free_sites
     autodetect_lig = args.autodetect_lig
     reverse_search = args.reverse_search
-
+    water_as_ligand = args.water_as_ligand
+    
     # Advanced
     overlap_threshold = args.overlap_threshold
     lig_scan_radius = args.lig_scan_radius
     min_tmscore = args.min_tmscore
-
-    # Experimental
-    water_as_ligand = args.water_as_ligand
     nonstd_rsds_as_lig = args.nonstd_rsds_as_lig
     d_aa_as_lig = args.d_aa_as_lig
+
+    # Experimental
     beyond_hetatm = args.beyond_hetatm
     look_in_archive = args.look_in_archive
 
@@ -994,7 +994,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     # Assess apo ligands
                     for i in cndt_lig_names:
-                        if i in query_lig_names or i in ligand_names:    # check in both lists (detected holo ligs + query ligs)   # TODO query_lig_names may be undefined
+                        if i in query_lig_names or i in ligand_names:  # check in both lists (detected holo ligs + query ligs)  # TODO query_lig_names may be undefined
                             found_ligands.add(i)
                         elif i not in nolig_resn:
                             found_ligands_xtra.add(i)
@@ -1259,6 +1259,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 a,b zn', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # reverse_search=1, OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
@@ -1289,6 +1290,7 @@ def parse_args(argv):
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut a tpo', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
+    #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
     
 
 
@@ -1299,16 +1301,16 @@ def parse_args(argv):
     parser.add_argument('--lig_free_sites',    type=int,   default=1,    help='0/1: resulting apo sites will be free of any other known ligands in addition to specified ligands')
     parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
     parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: look for holo structures from apo')
+    parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,    help='% of overlap between apo and holo chain (w UniProt numbering), condition is ">=", "0" will not allow (erroneously) negative overlap')
     parser.add_argument('--lig_scan_radius',   type=float, default=4.5,  help='angstrom radius to look around holo ligand(s) superposition (needs to be converted to str)')
     parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
-
-    # Experimental
-    parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,    help='0/1: ignore/consider non-standard residues as ligands')
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
+
+    # Experimental
     parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO]
     parser.add_argument('--look_in_archive',   type=int,   default=0,    help='0/1: search if the same query has been processed in the past (can give very fast results)')
 
