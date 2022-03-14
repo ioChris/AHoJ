@@ -948,7 +948,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 pass
             else:
                 cmd.load(candidate_struct_path)
-            cmd.select(candidate_struct + candidate_chain, candidate_struct + '& chain ' + candidate_chain)
+            cmd.select(candidate_structchain, candidate_struct + '& chain ' + candidate_chain)
 
             # Align candidate to query
             print('')
@@ -983,18 +983,23 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
 
                     # Around selection: look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
-                    cndt_sele_expression = candidate_struct + ' and hetatm' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
-                    qr_lig_sele_expression = query_struct + ' and chain ' + query_chain + ' and resi ' + resi + ' and resn ' + resn
+                    cndt_sele_expression = '(' + candidate_struct + ' and hetatm)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
+                    qr_lig_sele_expression = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
+
+                    #full_sele =  cndt_sele_expression + ' near_to ' + lig_scan_radius + ' of ' + qr_lig_sele_expression
+                    #print('full sele:', full_sele)
                     cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + lig_scan_radius + ' of ' + qr_lig_sele_expression)
+                    # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be saved, we need to merge the two selections here
+                    cmd.select(candidate_structchain, candidate_structchain + '_arnd_' + ligand_, merge=1)
 
                     # Put selected atoms in a list, check their name identifiers to see if query ligand name is present
                     myspace_cndt = {'cndt_positions': []}
                     cmd.iterate(candidate_structchain + '_arnd_' + ligand_, 'cndt_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_cndt)
-                    
+
                     # Remove duplicate values from myspace_cndt
                     for key, value in myspace_cndt.items():
                         myspace_cndt[key] = list(myspace_cndt.fromkeys(value))   # preserves the order of values - better than set()
-                    
+
                     print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
 
                     # Transfer dict[key] values (just resn) into set for easier handling
@@ -1060,6 +1065,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
+                        #save_sele = (candidate_structchain + '_arnd_' + ligand_) for ligand in query_lig_positions[query_structchain])
                         cmd.save(path_results + '/h_' + candidate_structchain + '_aln_to_' + query_structchain + '.cif.gz', candidate_structchain) # save holo chain
 
 
@@ -1294,7 +1300,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # reverse_search=1, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query')
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query')
-    parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query')
+    #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query')
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1312,7 +1318,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
 
-    #parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,  help='resolution cut-off for apo chains (angstrom), condition is <=')
