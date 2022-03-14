@@ -905,7 +905,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Identify atom IDs of selected ligand atoms
             ligands_atoms = cmd.identify('query_ligands', mode=0)  # bulk atoms of all query ligands
-            
+
             # Get positions of specified ligands (iterate through atoms)
             myspace = {'positions': []}
             cmd.iterate('query_ligands', 'positions.append(resi +" "+ chain +" "+ resn)', space = myspace) # iterates automatically through atoms of selection (no need for for loop)
@@ -1303,7 +1303,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
 
-    parser.add_argument('--query',             type=str,   default='1a73 a zn', help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,  help='resolution cut-off for apo chains (angstrom), condition is <=')
