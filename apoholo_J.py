@@ -183,7 +183,7 @@ def verify_ligands(ligand_names, pathLIGS):
                 if line.startswith('_chem_comp.pdbx_synonyms'):
                     lig_syn = line.split()[1:]
                     #print('>', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
-                    print('Verifying ligands:\t', ligand_names, '> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
+                    print('Verifying ligand:\t', ligand_names, '> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
                     break
         #except:
             #print('Error verifying ligand:\t', lig_id)
@@ -916,7 +916,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     query_lig_positions.setdefault(query_structchain, []).append(i)
 
             # Remove duplicate values from query_lig_positions
-            for key,value in query_lig_positions.items():
+            for key, value in query_lig_positions.items():
                 query_lig_positions[key] = list(query_lig_positions.fromkeys(value))   # preserves the order of values
 
             print('Query ligand information')
@@ -990,11 +990,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Put selected atoms in a list, check their name identifiers to see if query ligand name is present
                     myspace_cndt = {'cndt_positions': []}
                     cmd.iterate(candidate_structchain + '_arnd_' + ligand_, 'cndt_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_cndt)
+                    
+                    # Remove duplicate values from myspace_cndt
+                    for key, value in myspace_cndt.items():
+                        myspace_cndt[key] = list(myspace_cndt.fromkeys(value))   # preserves the order of values - better than set()
+                    
                     print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
 
                     # Transfer dict[key] values (just resn) into set for easier handling
                     cndt_lig_names = set()
-                    for cndt_position in myspace_cndt['cndt_positions']:
+                    for cndt_position in myspace_cndt['cndt_positions']: # use set to remove redundant positions
                         cndt_atom_lig_name = cndt_position.split()[2]
                         cndt_lig_names.add(cndt_atom_lig_name)
                     #print('Found candidate ligands:', cndt_lig_names)
@@ -1015,9 +1020,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 cmd.select('holo_ligands_' + candidate_structchain, candidate_struct + '& chain ' + candidate_chain + '& hetatm & not (polymer or solvent)')
                 myspace_r = {'r_positions': []}
                 cmd.iterate('holo_ligands_' + candidate_structchain, 'r_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_r)
-                print(f'-candidate ligands found: {myspace_r["r_positions"]}')
+                # Remove duplicate values from myspace_r
+                for key, value in myspace_r.items():
+                    myspace_r[key] = list(myspace_r.fromkeys(value))   # preserves the order of values
+                print(f'-candidate ligands found: {myspace_r["r_positions"]}') # use set to remove redundant positions
                 # Transfer dict[key] values (just resn) into set for easier handling
-                for r_position in myspace_r['r_positions']:
+                for r_position in myspace_r['r_positions']: # use set to remove redundant positions
                     r_atom_lig_name = r_position.split()[2]
                     if r_atom_lig_name not in nolig_resn:  # exclude non ligands
                         found_ligands_r.add(r_atom_lig_name)
@@ -1286,6 +1294,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # reverse_search=1, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query')
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query')
+    parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query')
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1303,7 +1312,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
 
-    parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,  help='resolution cut-off for apo chains (angstrom), condition is <=')
