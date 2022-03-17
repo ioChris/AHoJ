@@ -23,8 +23,6 @@ import argparse
 import sys
 from dataclasses import dataclass
 
-import subprocess
-
 from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
@@ -533,7 +531,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if not user_chains == 'ALL':
         print('Input structchains:\t', user_structchains)
     if autodetect_lig == 1 and ligand_names is None:
-        print('Input ligands:\t\tauto-detect')
+        print('Input ligands:\t\t', 'auto-detect')
     elif autodetect_lig == 1 and ligand_names is not None:
         print('Input ligands:\t\t', ligand_names, '+ auto-detect')
     else:
@@ -551,7 +549,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Error downloading structure:\t', struct, '\n')
         sys.exit(1)
     '''
-
 
 
 
@@ -1302,7 +1299,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # autodetect_lig=1 OK, apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
     #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query') 
-    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query') 
+    #parser.add_argument('--query', type=str,   default='3fav all', help='main input query') 
+    parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query') 
     
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # OK apo 0, holo 0
@@ -1328,7 +1326,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
-    parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
     
 
     # Basic
