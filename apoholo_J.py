@@ -10,8 +10,8 @@ from common import get_workdir, load_dict_binary, tmalign2
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 # import pymol.cmd as cmd
-import psico.fitting
-import psico.fullinit
+#import psico.fitting
+#import psico.fullinit
 import pymol2
 
 import ast
