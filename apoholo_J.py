@@ -10,8 +10,8 @@ from common import get_workdir, load_dict_binary, tmalign2
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 # import pymol.cmd as cmd
-import psico.fitting
-import psico.fullinit
+#import psico.fitting
+#import psico.fullinit
 import pymol2
 
 import ast
@@ -26,9 +26,9 @@ from dataclasses import dataclass
 from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
-import rich.traceback
+#import rich.traceback
 
-rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
+#rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
 VERSION = '0.2.0'
 
@@ -37,13 +37,13 @@ _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()     # multi-processing (must be moved to main)
 
 '''
-Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
+Given an experimental protein structure (PDB code), with optionally specified chain(s), ligand(s) and position, find its equivalent apo and holo forms.
 The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
 
 The user can specify the following input arguments depending on the mode of search
 i) When looking for apo from holo:
 -Min arguments: PDB code
--Max arguments: PDB code, chain(s), ligand(s)
+-Max arguments: PDB code, chain(s), ligand(s), position
 ii) When looking for holo from apo:
 -Min arguments: PDB code
 -Max arguments: PDB code, chain(s)
@@ -1289,6 +1289,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
     #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 * *', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='5j72 a na 703', help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -1301,6 +1302,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
+    #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
+    #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1318,7 +1321,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
 
-    parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,  help='resolution cut-off for apo chains (angstrom), condition is <=')
