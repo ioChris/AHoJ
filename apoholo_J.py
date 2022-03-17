@@ -10,8 +10,8 @@ from common import get_workdir, load_dict_binary, tmalign2
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 # import pymol.cmd as cmd
-import psico.fitting
-import psico.fullinit
+#import psico.fitting
+#import psico.fullinit
 import pymol2
 
 import ast
@@ -23,12 +23,14 @@ import argparse
 import sys
 from dataclasses import dataclass
 
+import subprocess
+
 from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
-import rich.traceback
+#import rich.traceback
 
-rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
+#rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
 VERSION = '0.2.0'
 
@@ -37,13 +39,13 @@ _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()     # multi-processing (must be moved to main)
 
 '''
-Given an experimental protein structure (PDB code), with optionally specified chain(s) and ligand(s), find its equivalent apo and holo forms.
+Given an experimental protein structure (PDB code), with optionally specified chain(s), ligand(s) and position, find its equivalent apo and holo forms.
 The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
 
 The user can specify the following input arguments depending on the mode of search
 i) When looking for apo from holo:
 -Min arguments: PDB code
--Max arguments: PDB code, chain(s), ligand(s)
+-Max arguments: PDB code, chain(s), ligand(s), position
 ii) When looking for holo from apo:
 -Min arguments: PDB code
 -Max arguments: PDB code, chain(s)
@@ -116,8 +118,8 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
 
 def wrong_input_error():  # arg_job_id, arg_pathRSLTS):
     print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
-    print('Input format: <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
-    print('Input examples: "3fav A,B ZN" or "3fav ZN" or "3fav ALL ZN" or "3fav"')
+    print('Input format: <pdb_id> <chain> <ligand> <position> or <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
+    print('Input examples: "3fav A,B ZN" or "3fav * ZN" or "3fav ALL ZN" or "3fav"')
     #print('Exiting & deleting new results folder:', path_job_results)
     #if os.path.isdir(path_job_results):
     #    os.rmdir(path_job_results)
@@ -205,9 +207,9 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     # Define non-ligands (3-letter names of amino acids and h2o)
     std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
     #nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA ".split() # don't use as no-lig rsds
-    d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA HOH".split()
+    d_rsds_hoh = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA HOH".split()
     nolig_resn = list()
-    nolig_resn.extend(std_rsds + d_aminoacids)
+    nolig_resn.extend(std_rsds + d_rsds_hoh)
 
 
     if len(struct) != 4:
@@ -375,7 +377,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     d_aa_as_lig = args.d_aa_as_lig
 
     # Experimental
-    beyond_hetatm = args.beyond_hetatm
+    #beyond_hetatm = args.beyond_hetatm
     look_in_archive = args.look_in_archive
 
     # Internal
@@ -394,7 +396,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     reverse_mode = False
 
     # Pass settings to a string
-    settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_ligfree' + str(lig_free_sites) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_beyondhet' + str(beyond_hetatm) + '_nonstdrsds' + str(nonstd_rsds_as_lig) + '_drsds' + str(d_aa_as_lig)
+    settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_reverse' + str(reverse_search) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
 
 
     # Define non-ligands (3-letter names of amino acids and h2o)
@@ -416,7 +418,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
     pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
-
 
     # TODO make next job_id generation less clumsy
     global _global_lock
@@ -1139,7 +1140,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     print('')
 
+    # Print chains that were discarded
+    if len(discarded_chains) > 0:
+        print('Discarded candidate chains: ', len(discarded_chains))
+        #print(f"{' '.join(map(str, discarded_chains))}\n")
 
+    
     ## Save results in text output
 
     #if reverse_mode:    query_chain = 'apo_chain'
@@ -1171,7 +1177,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print apo dict
-        print('Apo results: ', num_apo_chains, 'chains')
+        print('\nApo chains: ', num_apo_chains)
         for key in apo_holo_dict:
             print(key, apo_holo_dict.get(key))
     else:
@@ -1203,7 +1209,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
         # Print holo dict
-        print('\nHolo results: ', num_holo_chains, 'chains')
+        print('\nHolo chains: ', num_holo_chains)
         for key in apo_holo_dict_H:
             print(key, apo_holo_dict_H.get(key))
     else:
@@ -1289,11 +1295,14 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
     #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 * *', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='5j72 a na 703', help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # autodetect_lig=1 OK, apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
+    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query') 
+    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query') 
     
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # OK apo 0, holo 0
@@ -1301,6 +1310,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
+    #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
+    #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1317,8 +1328,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
-
-    parser.add_argument('--query',             type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,  help='resolution cut-off for apo chains (angstrom), condition is <=')
@@ -1337,7 +1348,7 @@ def parse_args(argv):
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
 
     # Experimental
-    parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO]
+    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO remove?]
     parser.add_argument('--look_in_archive',   type=int,   default=0,    help='0/1: search if the same query has been processed in the past (can give very fast results)')
 
     # Internal
