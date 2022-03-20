@@ -1300,7 +1300,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
     #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query') 
     #parser.add_argument('--query', type=str,   default='3fav all', help='main input query') 
-    parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query') 
+    #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query') 
     
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # OK apo 0, holo 0
@@ -1314,6 +1314,11 @@ def parse_args(argv):
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query') # OK apo 4, holo 12
+    
+    # SARS CoV 2
+    #parser.add_argument('--query', type=str,   default='7aeh a R8H', help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
+    #parser.add_argument('--query', type=str,   default='2amq a his 164', help='main input query') # apo 41, holo 66, job 318 H, Crystal Structure Of SARS_CoV Mpro in Complex with an Inhibitor N3
+    #parser.add_argument('--query', type=str,   default='6lu7 a R8H', help='main input query')
 
     # Water
     #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query') # OK apo 9, holo 7
