@@ -591,10 +591,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     ## Look up query in history, if found, return job path and end script
     if autodetect_lig == 0:
-        user_input_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+        user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+    elif autodetect_lig == 1 and ligand_names is not None:
+        user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names) + '_autodtctligloc'
     else:
-        user_input_parameters = struct + '_' + ','.join(user_chains) + '_autodetect_lig'
-    query_full = user_input_parameters + '_' + settings_str + '-' + job_id
+        user_query_parameters = struct + '_' + ','.join(user_chains) + '_autodtctlig'
+    query_full = user_query_parameters + '_' + settings_str + '-' + job_id
     #print(query_full)
     if look_in_archive == 1:
         print('\nLooking for the same job in history')
@@ -1224,7 +1226,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Append the name of the query and the job_id in the queries.txt
     if job_id:
-        print('\nSaving query:', query_full)
+        print(f'\nSaving query search: {[user_query_parameters]} for query {[query]}') #query_full)  # Don't show full query string
         with open(pathQRS + '/' + 'queries.txt', 'a') as out_q:
             out_q.write(query_full + '\n')
 
@@ -1325,6 +1327,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * hoh 509', help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh', help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 x hoh 311', help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
+    
+    #parser.add_argument('--query', type=str,   default='1pkz a tyr 9', help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut a tpo', help='main input query') # OK apo 0, holo 3
