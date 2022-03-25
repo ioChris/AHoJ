@@ -207,6 +207,12 @@ If another ligand is detected on that site instead of ZN,
 the chain will be listed as APO or HOLO, depending on the value of `--lig_free_sites` parameter (if the user wants APO with no other ligands there, 
 it will be listed as HOLO, and if the user does not mind other ligands in this binding site, it will be listed as APO).
 
+Example of an alternative query that leads to the same result with the previous example:
+~~~sh
+# consider ligands near residue HIS134 in chain A of 1a73 (the detected ligand will be ZN 201 in chain A)
+python apoholo_J.py --query '1a73 A HIS 134'
+~~~
+
 ### More examples of user queries
 
 ~~~sh 
