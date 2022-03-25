@@ -11,7 +11,7 @@ This is done by providing the i)structure, ii)chain, iii)name of ligand or resid
 However, the minimum number of arguments is one - structure. In such case, AHoJ will try to automatically detect chains, ligands and their positions. It can work with ligands that are designated as heteroatoms in the PDB, which means small and medium-sized ligands but not protein subunits.
 
 Therefore, the main and default search is starting with a holo structure, where the user knows the ligand that will be used as a starting point. This user-specified ligand will then define the search and annotation of the results. Any other ligands in the query structure will not play a role in characterising results as apo or holo. In the case that the user does not know the ligand or the binding site, AHoJ can automatically detect available ligands in the query structures if told to do so.
-If the query structure however does not bind any ligands (apo), the user can still use the "reverse search" mode, where AHoJ will look for structures that belong to the same protein with the query, but it will not focus on a particular binding site. Instead it will 
+If the query structure however does not bind any ligands (apo), the user can still use the "reverse search" mode, where AHoJ will look for structures that belong to the same protein with the query, but it will not focus on a particular binding site. Instead it will list any ligand that it detects in the resulting chains.
 
 
 ##  Objective
@@ -183,12 +183,12 @@ and currently needs a single line input (= query) from the user to run.
 
 The maximum arguments within the single line input are of this form:
 ~~~
-<pdb_id> <chains> <ligands> <position>
+<pdb_id> <chains> <ligand> <position>
 ~~~  
 
 * `pdb_id`: This is the 4-character code of a PDB protein structure. This argument is obligatory and only 1 PDB ID can be input per line. (i.e. “1a73” or “3fav” or “3FAV”). If it is the only argument (because the user does not know the ligand that binds to the structure or is using "reverse search", it will trigger automatic detection of ligands in the structure.
 * `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” or “*” in the case of all chains (i.e. “A” or “A,C,D” or “ALL” or “*”). This argument is obligatory if the user intends to provide any argument after that (i.e. ligands or position).
-* `ligands`: A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”). This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo). Note: if planning to specify the `position` argument, you cannot use more than one ligand per query.
+* `ligand`: A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”) or “*” for the automatic detection of all ligands in the specified chain(s). Besides specifying the ligand directly by its name (and optionally, its position), the user can also specify a residue that binds the ligand and AHoJ will detect the ligand (as long as it is within 4.5 Angstroms of the residue). This approach can actually be more robust in cases where the ligand is assigned a chain outside of the protein chains, in which case the detection will fail (as AHoJ will discard non-UniProt chains as part of the chain validation). On the contrary, protein residues are assigned a polymer chain and is thus less likely to fail. This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo). Note: if planning to specify the `position` argument, you cannot use more than one ligand per query.
 * `position`: This argument is an integer (i.e. “260” or “1”). It refers to the PDB index of the previously specified ligand or binding residue. This argument can only be specified when there is one ligand or residue specified.
                        
 ## Usage examples
