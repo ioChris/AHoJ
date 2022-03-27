@@ -10,3 +10,5 @@ source "$CONDA_SH"
 
 conda activate ahoj
 PYTHON="$CONDA_PREFIX/bin/python"
+
+exec $PYTHON apoholo_J.py "$@"
