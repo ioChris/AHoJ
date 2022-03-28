@@ -6,7 +6,7 @@ import os
 import sys
 import shlex
 
-from apoholo_J import load_precompiled_data, Query, parse_query
+from apoholo_J import load_precompiled_data, Query, QueryResult, parse_query
 from common import get_default_workdir
 
 
@@ -54,7 +54,7 @@ class T02_Apoholo(unittest.TestCase):
         self.precompiled_data = load_precompiled_data(workdir)
 
     # Test successful query
-    def tst_query(self, args_str, expect_apo=0, expect_holo=0):
+    def tst_query(self, args_str, expect_apo=0, expect_holo=0) -> QueryResult:
         argv = shlex.split(args_str)  # split but preserve '...' as substrings
         print("Testing with args:", argv)
 
@@ -74,6 +74,8 @@ class T02_Apoholo(unittest.TestCase):
         # Test produced structure files
         if expect_apo + expect_holo > 0:
             assert count_files(res.result_dir, '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
+
+        return res
 
     # TODO instead of running main, test by running subprocess and capture stdout/stderr, test for presence of expected error messages
     def tst_main_fail(self, args_str):
@@ -113,6 +115,9 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_main_fail("--query '1a73 \n XXXX' ")  # should fail if at least one is not valid
         # TODO add more tests cases
 
+    def test_track_progress(self):
+        res = self.tst_query("--query '3CQV A HEM' --track_progress 1", expect_apo=6, expect_holo=5)
+        assert non_blank_lines(res.result_dir + '/.progress') == 1
 
 if __name__ == '__main__':
     sys.exit(unittest.main())

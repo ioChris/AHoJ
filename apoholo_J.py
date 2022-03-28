@@ -5,7 +5,7 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
-from common import get_workdir, load_dict_binary, tmalign2
+from common import get_workdir, load_dict_binary, tmalign2, write_file
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
@@ -313,7 +313,7 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     return res
 
 
-def write_results_apo_csv(apo_holo_dict, path_results):
+def write_results_apo_csv(apo_holo_dict, path_results, reverse_mode):
     '''
     # Write dictionary to file
     filename_aln = pathRSLTS + '/apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
@@ -337,7 +337,7 @@ def write_results_apo_csv(apo_holo_dict, path_results):
                 csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
 
-def write_results_holo_csv(apo_holo_dict_H, path_results):
+def write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode):
     '''
     # Write dictionary to file
     filename_aln = pathRSLTS + '/holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
@@ -916,9 +916,26 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     query_lig_positions = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
+
+    progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
+    progress_processed_candidates = 0
+
+
+    def track_progress(write_results: bool = False):
+        if args.track_progress:
+            write_file(path_results + '/.progress', f"{progress_processed_candidates}/{progress_total_candidates}")
+            if write_results:
+                write_results_apo_csv(apo_holo_dict, path_results, reverse_mode)
+                write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode)
+
+
     for query_structchain, candidates_structchains in dictApoCandidates_1.items():
         print('')
         print(f'=== Processing query chain {query_structchain} ===')
+
+        track_progress(write_results=True)
+        progress_processed_candidates += 1
+
         query_struct = query_structchain[:4]
         query_chain = query_structchain[4:]
         query_struct_path = download_mmCIF_gz2(query_struct, pathSTRUCTS)
@@ -1182,6 +1199,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if multisave == 1:
                 cmd.multisave(filename_multi, append=1)
 
+    track_progress()
     # end for
 
     print('')
@@ -1198,11 +1216,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #else:   query_chain = query_chain
 
 
-
-
-
     # Apo results
-    write_results_apo_csv(apo_holo_dict, path_results)
+    write_results_apo_csv(apo_holo_dict, path_results, reverse_mode)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         # Print apo dict
@@ -1214,7 +1229,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Holo results
-    write_results_holo_csv(apo_holo_dict_H, path_results)
+    write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode)
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
         # Print holo dict

@@ -48,6 +48,10 @@ def save_dict_binary(dict, path):
     return pickle.dump(dict, open(path, "wb"))
 
 
+def write_file(path, text):
+    with open(path, 'w') as outfile:
+        outfile.write(text)
+
 
 # Updated version of psico.fitting.tmalign() that works with independent pymol sessions
 # copied from: https://github.com/speleo3/pymol-psico/blob/master/psico/fitting.py
