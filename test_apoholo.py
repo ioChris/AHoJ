@@ -7,8 +7,7 @@ import sys
 import shlex
 
 from apoholo import load_precompiled_data, Query, QueryResult, parse_query
-from common import get_default_workdir
-
+from common import get_default_workdir, read_file
 
 # TODO always run tests with clean temporary workdir e.g. 'tmp_test/workdir'
 workdir = get_default_workdir()
@@ -118,6 +117,7 @@ class T02_Apoholo(unittest.TestCase):
     def test_track_progress(self):
         res = self.tst_query("--query '3CQV A HEM' --track_progress 1", expect_apo=6, expect_holo=5)
         assert non_blank_lines(res.result_dir + '/.progress') == 1
+        assert read_file(res.result_dir + '/.progress') == "11/11"
 
 if __name__ == '__main__':
     sys.exit(unittest.main())

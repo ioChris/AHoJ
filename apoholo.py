@@ -933,9 +933,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('')
         print(f'=== Processing query chain {query_structchain} ===')
 
-        track_progress(write_results=True)
-        progress_processed_candidates += 1
-
         query_struct = query_structchain[:4]
         query_chain = query_structchain[4:]
         query_struct_path = download_mmCIF_gz2(query_struct, pathSTRUCTS)
@@ -1004,6 +1001,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         # Start candidate chain loop
         # Align candidate chain to query chain and mark atom selections around superimposed query ligand binding sites
         for candidate_structchain in candidates_structchains:
+            progress_processed_candidates += 1
+            track_progress(write_results=True)
+
             candidate_struct = candidate_structchain[:4]
             candidate_chain = candidate_structchain[4:]
             candidate_struct_path = download_mmCIF_gz2(candidate_struct, pathSTRUCTS)

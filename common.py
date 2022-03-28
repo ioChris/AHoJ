@@ -1,4 +1,5 @@
 import os
+import pathlib
 import sys
 import pickle
 
@@ -52,6 +53,14 @@ def write_file(path, text):
     with open(path, 'w') as outfile:
         outfile.write(text)
 
+
+def read_file(path: str) -> str:
+    """Safe read file, returns '' if file doesn't exist"""
+    f = pathlib.Path(path)
+    if f.exists():
+        return f.read_text()
+    else:
+        return ""
 
 # Updated version of psico.fitting.tmalign() that works with independent pymol sessions
 # copied from: https://github.com/speleo3/pymol-psico/blob/master/psico/fitting.py
