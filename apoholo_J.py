@@ -313,6 +313,53 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     return res
 
 
+def write_results_apo_csv(apo_holo_dict, path_results):
+    '''
+    # Write dictionary to file
+    filename_aln = pathRSLTS + '/apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
+    if reverse_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
+    else:        header = "#HEADER: {query_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
+    with open (filename_aln + '.txt', 'wt') as out1:
+        out1.write(header)
+        out1.write(str(apo_holo_dict))
+    '''
+    # Write CSV file
+    filename_csv = path_results + '/results_apo.csv'
+    if reverse_mode:
+        header = "#query_apo_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
+    else:
+        header = "#query_holo_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
+    #header = "#query_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
+    with open(filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        for key, values in apo_holo_dict.items():
+            for value in values:
+                csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
+
+
+def write_results_holo_csv(apo_holo_dict_H, path_results):
+    '''
+    # Write dictionary to file
+    filename_aln = pathRSLTS + '/holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
+    if reverse_mode:    header = "#HEADER: {apo_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
+    else:   header = "#HEADER: {query_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
+    with open (filename_aln + '.txt', 'wt') as out1:
+        out1.write(header)
+        out1.write(str(apo_holo_dict_H))
+    '''
+    # Write CSV file
+    filename_csv = path_results + '/results_holo.csv'
+    if reverse_mode:
+        header = "#query_apo_chain, query_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"    # I'm confused here, shouldn't 2. column be a result "holo_chain"?
+    else:
+        header = "#query_holo_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
+    with open(filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        for key, values in apo_holo_dict_H.items():
+            for value in values:
+                csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
+
+
 def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryResult:
     """
     Process single line query
@@ -1150,31 +1197,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #if reverse_mode:    query_chain = 'apo_chain'
     #else:   query_chain = query_chain
 
+
+
+
+
     # Apo results
+    write_results_apo_csv(apo_holo_dict, path_results)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
-        '''
-        # Write dictionary to file
-        filename_aln = pathRSLTS + '/apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
-        if reverse_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
-        else:        header = "#HEADER: {query_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
-        with open (filename_aln + '.txt', 'wt') as out1:
-            out1.write(header)
-            out1.write(str(apo_holo_dict))
-        '''
-        # Write CSV file
-        filename_csv = path_results + '/results_apo.csv'
-        if reverse_mode:
-            header = "#apo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
-        else:
-            header = "#holo_chain,apo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
-        #header = "#query_chain,apo_chain,%UniProt_overlap,RMSD,TM_score\n"
-        with open(filename_csv, 'w') as csv_out:
-            csv_out.write(header)
-            for key, values in apo_holo_dict.items():
-                for value in values:
-                    csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
-
         # Print apo dict
         print('\nApo chains: ', num_apo_chains)
         for key in apo_holo_dict:
@@ -1184,29 +1214,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Holo results
+    write_results_holo_csv(apo_holo_dict_H, path_results)
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
-        '''
-        # Write dictionary to file
-        filename_aln = pathRSLTS + '/holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
-        if reverse_mode:    header = "#HEADER: {apo_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
-        else:   header = "#HEADER: {query_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
-        with open (filename_aln + '.txt', 'wt') as out1:
-            out1.write(header)
-            out1.write(str(apo_holo_dict_H))
-        '''
-        # Write CSV file
-        filename_csv = path_results + '/results_holo.csv'
-        if reverse_mode:
-            header = "#apo_chain,query_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
-        else:
-            header = "#holo_chain,holo_chain,%UniProt_overlap,RMSD,TM_score,ligands\n"
-        with open(filename_csv, 'w') as csv_out:
-            csv_out.write(header)
-            for key, values in apo_holo_dict_H.items():
-                for value in values:
-                    csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
-
         # Print holo dict
         print('\nHolo chains: ', num_holo_chains)
         for key in apo_holo_dict_H:
@@ -1339,35 +1349,36 @@ def parse_args(argv):
     
 
     # Basic
-    parser.add_argument('--res_threshold',     type=float, default=3.8,  help='highest allowed resolution for result chains (angstrom), condition is <=')
-    parser.add_argument('--NMR',               type=int,   default=1,    help='0/1: discard/include NMR structures')
-    parser.add_argument('--xray_only',         type=int,   default=0,    help='0/1: only consider X-ray structures')
-    parser.add_argument('--lig_free_sites',    type=int,   default=1,    help='0/1: when on resulting apo sites will be free of any other known ligands in addition to specified ligands')
-    parser.add_argument('--autodetect_lig',    type=int,   default=0,    help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
-    parser.add_argument('--reverse_search',    type=int,   default=0,    help='0/1: start the search with an apo structure that does not bind any ligands')
-    parser.add_argument('--water_as_ligand',   type=int,   default=0,    help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+    parser.add_argument('--res_threshold',     type=float, default=3.8,   help='highest allowed resolution for result chains (angstrom), condition is <=')
+    parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: discard/include NMR structures')
+    parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: only consider X-ray structures')
+    parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: when on resulting apo sites will be free of any other known ligands in addition to specified ligands')
+    parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
+    parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: start the search with an apo structure that does not bind any ligands')
+    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
 
     # Advanced
-    parser.add_argument('--overlap_threshold', type=float, default=0,    help='minimum % of overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
-    parser.add_argument('--lig_scan_radius',   type=float, default=4.5,  help='angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
-    parser.add_argument('--min_tmscore',       type=float, default=0.5,  help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
-    parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,    help='0/1: ignore/consider non-standard residues as ligands')
-    parser.add_argument('--d_aa_as_lig',       type=int,   default=0,    help='0/1: ignore/consider D-amino acids as ligands')
+    parser.add_argument('--overlap_threshold', type=float, default=0,     help='minimum % of overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
+    parser.add_argument('--lig_scan_radius',   type=float, default=4.5,   help='angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
+    parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+    parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: ignore/consider non-standard residues as ligands')
+    parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: ignore/consider D-amino acids as ligands')
 
     # Experimental
-    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,    help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO remove?]
-    parser.add_argument('--look_in_archive',   type=int,   default=0,    help='0/1: search if the same query has been processed in the past (can give very fast results)')
+    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO remove?]
+    parser.add_argument('--look_in_archive',   type=int,   default=0,     help='0/1: search if the same query has been processed in the past (can give very fast results)')
 
     # Internal
-    parser.add_argument('--apo_chain_limit',   type=int,   default=999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
-    parser.add_argument('--work_dir',          type=str,   default=None, help='global root working directory for pre-computed and intermediary data')
-    parser.add_argument('--out_dir',           type=str,   default=None, help='explicitly specified output directory')
-    parser.add_argument('--threads',           type=int,   default=4,    help='number of concurrent threads for processing multiple queries')
+    parser.add_argument('--apo_chain_limit',   type=int,   default=999,   help='limit number of apo chains to consider when aligning (for fast test runs)')
+    parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
+    parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
+    parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
+    parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     # Saving
-    parser.add_argument('--save_oppst',        type=int,   default=1,    help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=1,    help='0/1: save each chain object in a separate file (default save)')
-    parser.add_argument('--save_session',      type=int,   default=0,    help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
-    parser.add_argument('--multisave',         type=int,   default=0,    help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
+    parser.add_argument('--save_oppst',        type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_separate',     type=int,   default=1,     help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_session',      type=int,   default=0,     help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
+    parser.add_argument('--multisave',         type=int,   default=0,     help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
     '''
     # print help if there are no arguments
     if len(argv)==1:
