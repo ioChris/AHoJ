@@ -1052,7 +1052,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
-                        cmd.save(path_results + '/a_' + candidate_structchain + '_aln_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
+                        cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
 
                 # Holo
                 else:
@@ -1066,7 +1066,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                         #save_sele = (candidate_structchain + '_arnd_' + ligand_) for ligand in query_lig_positions[query_structchain])
-                        cmd.save(path_results + '/h_' + candidate_structchain + '_aln_to_' + query_structchain + '.cif.gz', candidate_structchain) # save holo chain
+                        cmd.save(path_results + '/holo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save holo chain
 
 
             else:  # reverse mode
@@ -1081,7 +1081,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
-                        cmd.save(path_results + '/h_' + candidate_structchain + '_aln_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
+                        cmd.save(path_results + '/holo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
                 # Apo
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
@@ -1093,7 +1093,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct)  # save query structure
-                        cmd.save(path_results + '/a_' + candidate_structchain + '_aln_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
+                        cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
 
 
 

@@ -146,6 +146,7 @@ bash Miniconda3-py39_4.11.0-Linux-x86_64.sh -b && bash
 git clone git@github.com:ioChris/AHoJ.git && cd AHoJ
 
 # init conda env
+# to remove env: conda deactivate && conda env remove -n ahoj
 conda env create -f conda-env.yml 
 conda activate ahoj
 
