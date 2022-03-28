@@ -1,7 +1,7 @@
 # Apo-Holo Juxtaposition
 
-AHoJ is an application for finding structures that belong to the same protein with a user-specified query structure, and annotating them as apo or holo. It can be used for making a single search and visualizing/downloading the results, or serialized by entering multiple queries to generate a dataset of structures. 
-The user starts the search by providing their ligand of interest - or its binding site) and setting the preferred parameters.
+AHoJ is an application for finding structures that belong to the same protein with a user-specified query structure, and annotating them as apo or holo (unbound or bound). It can be used for making a single search and visualizing/downloading the results, or serialized by entering multiple queries to generate a dataset of structures. 
+The user starts the search by providing their ligand of interest - or its binding site, and setting the preferred parameters. The specified ligand defines the search for apo and holo structures.
 
 ### Quick description
 It features multiple modes of search, but its main functionality is ligand-centric, meaning that the user specifies a particular binding site (by entering a binding residue) - or a ligand directly - and AHoJ will find the same binding site in the other structures (by superimposing the two at a time) and interogate it for ligands. 
