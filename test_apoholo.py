@@ -1,12 +1,12 @@
 import unittest
 
 import prepare
-import apoholo_J
+import apoholo
 import os
 import sys
 import shlex
 
-from apoholo_J import load_precompiled_data, Query, QueryResult, parse_query
+from apoholo import load_precompiled_data, Query, QueryResult, parse_query
 from common import get_default_workdir
 
 
@@ -58,8 +58,8 @@ class T02_Apoholo(unittest.TestCase):
         argv = shlex.split(args_str)  # split but preserve '...' as substrings
         print("Testing with args:", argv)
 
-        args = apoholo_J.parse_args(argv)
-        res = apoholo_J.process_query(args.query, workdir, args, self.precompiled_data)
+        args = apoholo.parse_args(argv)
+        res = apoholo.process_query(args.query, workdir, args, self.precompiled_data)
 
         print("Query result:", res)
 
@@ -82,7 +82,7 @@ class T02_Apoholo(unittest.TestCase):
         argv = shlex.split(args_str)  # split but preserve '...' as substrings
         print("Testing with args:", argv)
         with self.assertRaises(BaseException):
-            exit_code = apoholo_J.main(argv)
+            exit_code = apoholo.main(argv)
 
     def test_parse_query(self):
         assert parse_query('1a73',           autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
