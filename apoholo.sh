@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Executes apoholo_J.py inside required conde env
+# Executes apoholo.py inside required conde env
 
 CONDA_SH="/usr/share/miniconda/etc/profile.d/conda.sh"
 if [ -f "$HOME/miniconda3/etc/profile.d/conda.sh" ]; then
@@ -11,4 +11,4 @@ source "$CONDA_SH"
 conda activate ahoj
 PYTHON="$CONDA_PREFIX/bin/python"
 
-exec $PYTHON apoholo_J.py "$@"
+exec $PYTHON apoholo.py "$@"
