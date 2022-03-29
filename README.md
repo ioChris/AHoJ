@@ -282,7 +282,7 @@ Floating point number that represents a percentage (%) and is applied as a cutof
 
 Note: "100" guarantees a complete overlap, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff with the "min_tmscore" parameter.
 
-**`--lig_scan_radius`** : ligand scanning radius [default = `5`]
+**`--lig_scan_radius`** : ligand scanning radius [default = `4.5`]
 
 Floating point number that represents angstroms and is applied as a scanning radius for ligands, from the point of the superimposition of the query ligand(s) in the respective superimposed binding sites on the candidate chains. If the candidate has ligands bound outside this sphere, they will be tolerated, and the candidate will be characterised as apo-protein.
 
