@@ -636,7 +636,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
 
-    ## Look up query in history, if found, return job path and end script
+    # Form the full query expression - to use for indexing the query and searching past jobs
     if autodetect_lig == 0:
         user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
     elif autodetect_lig == 1 and ligand_names is not None:
@@ -645,8 +645,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         user_query_parameters = struct + '_' + ','.join(user_chains) + '_autodtctlig'
     query_full = user_query_parameters + '_' + settings_str + '-' + job_id
     #print(query_full)
+
+
+    ## Look up query in history, if found, return job path and end script
     if look_in_archive == 1:
-        print('\nLooking for the same job in history')
+        print('\nLooking for the same job in job history')
         old_same_job = search_query_history(pathQRS, query_full.split('-')[0], 'queries.txt')
         # print('Result of lookup:', old_same_job)
         if old_same_job == 0:
@@ -676,14 +679,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('\nLooking for longest UniProt mapping for query chain', user_structchain)
         query_uniprot_lengths = list()
         query_uniprot_lengths_dict = dict()
-        
+
         # Iterate through UniProt IDs and their structchains
         for key, values in dict_rSIFTS.items():  # key = UniProt accession, values = structchains + SP_BEG + SP_END
             # Iterate through each structchain
             for i in values:  # i = structchain SP_BEG SP_END
                 # Find the match(es) for the query structchain
                 if i.split()[0] == user_structchain:
-                    
+
                     uniprot_id = key  # UniProt ID where query belongs
                     structchain_s = i.split()[0] # pass structchain to variable
                     x1s = i.split()[1]      # query SP BEG
@@ -692,7 +695,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     query_uniprot_lengths_dict[xlength] = uniprot_id + ' ' + structchain_s + ' ' + x1s + ' ' + x2s
                     query_uniprot_lengths.append(int(xlength))
-        
+
         # Find longest mapping
         top_xlength = max(query_uniprot_lengths)
         top_mapping = query_uniprot_lengths_dict[str(top_xlength)]
@@ -700,11 +703,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         user_structchain = top_mapping.split()[1]
         x1 = top_mapping.split()[2]
         x2 = top_mapping.split()[3]
-        
+
         print(query_uniprot_lengths_dict)
         print('->', query_uniprot_lengths_dict[str(top_xlength)], top_xlength)
 
-        # Find candidates overlap for longest stretch
+        # Find candidates overlap for longest mapping
         print('Calculating apo/holo candidate overlap for mapping:', uniprot_id, user_structchain, x1, x2, top_xlength)
         #for values in dict_rSIFTS[uniprot_id]:
         own_chains = list() # the structchains that belong to the same UniProt ID and same structure with query
@@ -722,10 +725,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Build dict with calculated overlap
                 #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
                 uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent))
-                
+
                 # Only consider positive overlap (negative overlap may occur cause of wrong numbering)
                 if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
-                    dict_key = user_structchain+' '+x1+' '+x2
+                    dict_key = user_structchain + ' ' + x1 + ' ' + x2
                     dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
             else:
                 own_chains.append(candidate)
@@ -770,7 +773,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #add_log(message, log_file_dnld)
             print(f'*apo file {apo_candidate_structure} not found, removing from candindates list')
 
-            # Instead of fail, remove structure from queue
+            # Don't fail, instead remove candidate structure from queue
             discarded_chains.append(apo_candidate_structure + '\t' + 'PDB structure not found\n')
             apo_candidate_structs.remove(apo_candidate_structure)
 
@@ -809,7 +812,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('Done\n')
 
 
-    # Compile set of structures to be discarded (non verbose)
+    # Compile set of structures to be discarded (discard comments)
     discard_structs = set()
     for i in discarded_chains:
         if len(i.split()[0]) == 4:
@@ -827,7 +830,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #pass
             else:
                 dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
-    
+
     eligible_chains = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
     print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains}')
     print(dictApoCandidates_1) # helper print, delete later
@@ -969,7 +972,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Get positions of specified ligands (iterate through atoms)
             myspace = {'positions': []}
-            cmd.iterate('query_ligands', 'positions.append(resi +" "+ chain +" "+ resn)', space = myspace) # iterates automatically through atoms of selection (no need for for loop)
+            cmd.iterate('query_ligands', 'positions.append(resi +" "+ chain +" "+ resn)', space = myspace) # iterates through atoms of selection
 
             # Transfer temporary list with positions to dict
             for key, values in myspace.items():
@@ -1023,13 +1026,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             except:
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('Alignment RMSD/TM score: ERROR')
-                print('*poor alignment, discarding chain ', candidate_structchain)
+                print('*poor alignment (error), discarding chain ', candidate_structchain)
                 continue
 
-            # Discard bad alignments
+            # Discard poor alignments
             if aln_tm < min_tmscore:
                 discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
-                print('*poor alignment, discarding chain ', candidate_structchain)
+                print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
                 continue
 
 
@@ -1209,7 +1212,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Discarded candidate chains: ', len(discarded_chains))
         #print(f"{' '.join(map(str, discarded_chains))}\n")
 
-    
+
     ## Save results in text output
 
     #if reverse_mode:    query_chain = 'apo_chain'
@@ -1364,24 +1367,24 @@ def parse_args(argv):
     
 
     # Basic
-    parser.add_argument('--res_threshold',     type=float, default=3.8,   help='highest allowed resolution for result chains (angstrom), condition is <=')
-    parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: discard/include NMR structures')
-    parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: only consider X-ray structures')
-    parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: when on resulting apo sites will be free of any other known ligands in addition to specified ligands')
-    parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: if the user does not know the ligand, auto detection will consider non-protein heteroatoms as ligands')
-    parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: start the search with an apo structure that does not bind any ligands')
-    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: consider HOH atoms as ligands (can be used in combination with lig_free_sites)(strict)')
+    parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
+    parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: Discard/include NMR structures')
+    parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: Only consider X-ray structures')
+    parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands')
+    parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
+    parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: Start the search with an apo structure that does not bind any ligands')
+    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: Consider HOH atoms as ligands when examining the superimposed candidate binding sites (can be used in combination with lig_free_sites - strict condition)')
 
     # Advanced
-    parser.add_argument('--overlap_threshold', type=float, default=0,     help='minimum % of overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
-    parser.add_argument('--lig_scan_radius',   type=float, default=4.5,   help='angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
-    parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
-    parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: ignore/consider non-standard residues as ligands')
-    parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: ignore/consider D-amino acids as ligands')
+    parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
+    parser.add_argument('--lig_scan_radius',   type=float, default=4.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
+    parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='Minimum acceptable TM score for apo-holo alignments (condition is "<" than)')
+    parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
+    parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
 
     # Experimental
     #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO remove?]
-    parser.add_argument('--look_in_archive',   type=int,   default=0,     help='0/1: search if the same query has been processed in the past (can give very fast results)')
+    parser.add_argument('--look_in_archive',   type=int,   default=0,     help='0/1: Search if the same query has been processed in the past (can give very fast results)')
 
     # Internal
     parser.add_argument('--apo_chain_limit',   type=int,   default=999,   help='limit number of apo chains to consider when aligning (for fast test runs)')
