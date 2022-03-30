@@ -104,8 +104,10 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
     def test_reverse_search(self):
-        self.tst_query("--reverse_search 1 --query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
-        self.tst_query("--reverse_search 1 --query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+        #self.tst_query("--reverse_search 1 --query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
+        #self.tst_query("--reverse_search 1 --query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+        self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
+        self.tst_query("--query '2v0v a,b' ", expect_apo=4, expect_holo=12)
 
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
