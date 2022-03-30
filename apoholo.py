@@ -673,7 +673,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Get apo candidates from rSIFTS dict, calculate sequence overlap
     # Look for longest UniProt mapping of query chains
     dictApoCandidates = dict()
-    uniprot_overlap = dict()
+    uniprot_overlap_all = dict() # mostly for reference/monitoring
+    uniprot_overlap = dict() # overlap of successful hits
 
     for user_structchain in user_structchains:
         print('\nLooking for longest UniProt mapping for query chain', user_structchain)
@@ -724,12 +725,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                 # Build dict with calculated overlap
                 #uniprot_overlap.setdefault(i.split()[0], []).append(candidate.split()[0]+' '+str(percent))
-                uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent))
+                uniprot_overlap_all.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent)) # this keeps all calculated overlaps (from candidate to all query chains)
+                #uniprot_overlap[candidate.split()[0]] = user_structchain + ' ' + str(percent)
 
                 # Only consider positive overlap (negative overlap may occur cause of wrong numbering)
                 if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
                     dict_key = user_structchain + ' ' + x1 + ' ' + x2
                     dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
+                    uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent)) # this keeps only successful overlaps
             else:
                 own_chains.append(candidate)
 
@@ -1211,7 +1214,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if len(discarded_chains) > 0:
         print('Discarded candidate chains: ', len(discarded_chains))
         #print(f"{' '.join(map(str, discarded_chains))}\n")
-
+    
+    # Print calculated UniProt overlap
+    print('Uniprot overlap table')
+    print(uniprot_overlap)
 
     ## Save results in text output
 
@@ -1340,6 +1346,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
+    parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1363,7 +1370,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
-    parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
     
 
     # Basic
