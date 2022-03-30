@@ -313,11 +313,11 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     return res
 
 
-def write_results_apo_csv(apo_holo_dict, path_results, reverse_mode):
+def write_results_apo_csv(apo_holo_dict, path_results, broad_search_mode):
     '''
     # Write dictionary to file
     filename_aln = pathRSLTS + '/apo_aln_' + '_'.join(list(apo_holo_dict.keys()))
-    if reverse_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
+    if broad_search_mode:    header = "#HEADER: {apo_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
     else:        header = "#HEADER: {query_chain: [apo_chain %UniProt_overlap RMSD TM_score]\n"
     with open (filename_aln + '.txt', 'wt') as out1:
         out1.write(header)
@@ -325,7 +325,7 @@ def write_results_apo_csv(apo_holo_dict, path_results, reverse_mode):
     '''
     # Write CSV file
     filename_csv = path_results + '/results_apo.csv'
-    if reverse_mode:
+    if broad_search_mode:
         header = "#query_apo_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
     else:
         header = "#query_holo_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
@@ -337,11 +337,11 @@ def write_results_apo_csv(apo_holo_dict, path_results, reverse_mode):
                 csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
 
 
-def write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode):
+def write_results_holo_csv(apo_holo_dict_H, path_results, broad_search_mode):
     '''
     # Write dictionary to file
     filename_aln = pathRSLTS + '/holo_aln_' + '_'.join(list(apo_holo_dict_H.keys()))
-    if reverse_mode:    header = "#HEADER: {apo_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
+    if broad_search_mode:    header = "#HEADER: {apo_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
     else:   header = "#HEADER: {query_chain: [query_chain %UniProt_overlap RMSD TM_score ligands]\n"
     with open (filename_aln + '.txt', 'wt') as out1:
         out1.write(header)
@@ -349,7 +349,7 @@ def write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode):
     '''
     # Write CSV file
     filename_csv = path_results + '/results_holo.csv'
-    if reverse_mode:
+    if broad_search_mode:
         header = "#query_apo_chain, query_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"    # I'm confused here, shouldn't 2. column be a result "holo_chain"?
     else:
         header = "#query_holo_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
@@ -410,8 +410,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     NMR = args.NMR
     xray_only = args.xray_only
     lig_free_sites = args.lig_free_sites
-    autodetect_lig = args.autodetect_lig
-    reverse_search = args.reverse_search
+    #autodetect_lig = args.autodetect_lig
+    #reverse_search = args.reverse_search # should be renamed to "start with apo" or "broad search"
     water_as_ligand = args.water_as_ligand
     
     # Advanced
@@ -435,13 +435,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     multisave = args.multisave
 
     # Adjust input, resolve conflicts
-    if reverse_search == 1:
-        autodetect_lig = 1
+    autodetect_lig = 0 # default OFF
+    #if reverse_search == 1:
+     #   autodetect_lig = 1
     lig_scan_radius = str(lig_scan_radius)  # needs to be str
-    reverse_mode = False
+    broad_search_mode = False
 
     # Pass settings to a string
-    settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_reverse' + str(reverse_search) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
+    #settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_reverse' + str(reverse_search) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
+    settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
 
 
     # Define non-ligands (3-letter names of amino acids and h2o)
@@ -557,7 +559,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     except:
         raise ValueError(f"Invalid PDB ID in query '{query}': use a valid 4-letter PDB code")
 
-    # Verify ligands here
+    # Verify ligand/residue names here
     if autodetect_lig == 0 or ligand_names is not None:
         try:
             verify_ligands(ligand_names.split(','), pathLIGS)
@@ -579,7 +581,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Input structchains:\t', user_structchains)
     if autodetect_lig == 1 and ligand_names is None:
         print('Input ligands:\t\t', 'auto-detect')
-    elif autodetect_lig == 1 and ligand_names is not None:
+    elif autodetect_lig == 1 and ligand_names is not None: # this scenario should not occur anymore and thus be removed
         print('Input ligands:\t\t', ligand_names, '+ auto-detect')
     else:
         print('Input ligands:\t\t', ligand_names) #, '\t', ligand_names_bundle)
@@ -931,8 +933,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         if args.track_progress:
             write_file(path_results + '/.progress', f"{progress_processed_candidates}/{progress_total_candidates}")
             if write_results:
-                write_results_apo_csv(apo_holo_dict, path_results, reverse_mode)
-                write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode)
+                write_results_apo_csv(apo_holo_dict, path_results, broad_search_mode)
+                write_results_holo_csv(apo_holo_dict_H, path_results, broad_search_mode)
 
 
     for query_structchain, candidates_structchains in dictApoCandidates_1.items():
@@ -959,16 +961,18 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
             ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and segi ' + query_chain)
-            if ligands_selection == 0 and reverse_search == 0:
+            #if ligands_selection == 0 and reverse_search == 0:
+            if ligands_selection == 0 and autodetect_lig == 0:
                 print('No ligands found in PDB chain, skipping: ', query_structchain)
                 continue
-            elif ligands_selection == 0 and reverse_search == 1:
+            #elif ligands_selection == 0 and reverse_search == 1:
+            elif ligands_selection == 0 and autodetect_lig == 1:
                 print('No ligands found in PDB chain\n====== Reverse mode active, considering input as apo ======\n')
-                reverse_mode = True
+                broad_search_mode = True
                 cmd.delete('query_ligands')
 
 
-        if not reverse_mode:  # When query is not fully APO
+        if not broad_search_mode:  # When query is not fully APO
 
             # Identify atom IDs of selected ligand atoms
             ligands_atoms = cmd.identify('query_ligands', mode=0)  # bulk atoms of all query ligands
@@ -1040,7 +1044,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
             # Look for ligands in candidate chain
-            if not reverse_mode:
+            if not broad_search_mode:
                 found_ligands = set()
                 found_ligands_xtra = set()
                 #print('All query ligands:', query_lig_positions[query_structchain])
@@ -1107,7 +1111,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
             # Print verdict for chain & save it as ".cif.gz"
-            if not reverse_mode:
+            if not broad_search_mode:
 
                 print(f'*query ligand(s)/position: {ligand_names}/[{position}]\t detected ligands: {query_lig_names}\t detected candidate ligands: {cndt_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
 
@@ -1220,12 +1224,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     ## Save results in text output
 
-    #if reverse_mode:    query_chain = 'apo_chain'
+    #if broad_search_mode:    query_chain = 'apo_chain'
     #else:   query_chain = query_chain
 
 
     # Apo results
-    write_results_apo_csv(apo_holo_dict, path_results, reverse_mode)
+    write_results_apo_csv(apo_holo_dict, path_results, broad_search_mode)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
         # Print apo dict
@@ -1237,7 +1241,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Holo results
-    write_results_holo_csv(apo_holo_dict_H, path_results, reverse_mode)
+    write_results_holo_csv(apo_holo_dict_H, path_results, broad_search_mode)
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     if len(apo_holo_dict_H) > 0:
         # Print holo dict
@@ -1345,7 +1349,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
-    #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
+    parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1369,7 +1373,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
-    parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
     
 
     # Basic
@@ -1377,8 +1381,8 @@ def parse_args(argv):
     parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: Discard/include NMR structures')
     parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: Only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands')
-    parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
-    parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: Start the search with an apo structure that does not bind any ligands')
+    #parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
+    #parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: Start the search with an apo structure that does not bind any ligands')
     parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: Consider HOH atoms as ligands when examining the superimposed candidate binding sites (can be used in combination with lig_free_sites - strict condition)')
 
     # Advanced
