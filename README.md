@@ -246,7 +246,7 @@ python apoholo.py --query '3fav ZN'
 
 Floating point number that represents angstroms and is applied as a cutoff point when assessing the apo-holo candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. Condition is <=
 
-**`--NMR`** [default = `1`]
+**`--NMR`** : include NMR structures [default = `1`]
 
 0 or 1. When set to 1 (ON), NMR structures are considered as candidates. In the case of multiple states for a certain structure, the first one is considered.
 
@@ -258,13 +258,16 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s).
 
-**`--autodetect_lig`** : auto-detect ligands [default = `0`]
+[//]: # (**`--autodetect_lig`** : auto-detect ligands [default = `0`])
 
-0 or 1. When set to 1 (ON), the algorithm will auto-detect any possible ligands (and their respective binding sites) in the query protein. It will then conduct the apo-protein search according to these ligands and binding sites.
+[//]: # ()
+[//]: # (0 or 1. When set to 1 &#40;ON&#41;, the algorithm will auto-detect any possible ligands &#40;and their respective binding sites&#41; in the query protein. It will then conduct the apo-protein search according to these ligands and binding sites.)
 
-**`--reverse_search`** [default = `0`]
+[//]: # ()
+[//]: # (**`--reverse_search`** [default = `0`])
 
-0 or 1. When set to 1 (ON), the algorithm will consider that the input is an apo structure without any ligands, essentially reversing the search. It will try to find structures (chains) of the same protein with and without ligands. It will list those as holo and apo respectively. This reverse search is broader in scope because there is no starting ligand (and thus binding site) as a reference point. Any structures that belong to the same protein and bind at least one ligand, will be characterised as holo.
+[//]: # ()
+[//]: # (0 or 1. When set to 1 &#40;ON&#41;, the algorithm will consider that the input is an apo structure without any ligands, essentially reversing the search. It will try to find structures &#40;chains&#41; of the same protein with and without ligands. It will list those as holo and apo respectively. This reverse search is broader in scope because there is no starting ligand &#40;and thus binding site&#41; as a reference point. Any structures that belong to the same protein and bind at least one ligand, will be characterised as holo.)
 
 ### Advanced
 
