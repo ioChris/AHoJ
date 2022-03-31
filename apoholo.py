@@ -413,7 +413,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Basic
     res_threshold = args.res_threshold
-    NMR = args.NMR
+    include_nmr = args.include_nmr
     xray_only = args.xray_only
     lig_free_sites = args.lig_free_sites
     #autodetect_lig = args.autodetect_lig
@@ -449,7 +449,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Pass settings to a string
     #settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_reverse' + str(reverse_search) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
-    settings_str = 'res' + str(res_threshold) + '_NMR' + str(NMR) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
+    settings_str = 'res' + str(res_threshold) + '_NMR' + str(include_nmr) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
 
 
     # Define non-ligands (3-letter names of amino acids and h2o)
@@ -811,7 +811,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     #print('Problem parsing structure: ', apo_candidate_struct)
                     pass  # ignore and hide exceptions from stdout
             try:
-                if NMR == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
+                if include_nmr == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
                 else:
                     discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
@@ -1411,7 +1411,7 @@ def parse_args(argv):
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
-    parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: Discard/include NMR structures')
+    parser.add_argument('--include_nmr',       type=int,   default=1,     help='0/1: Discard/include NMR structures')
     parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: Only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands')
     #parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
