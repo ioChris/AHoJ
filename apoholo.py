@@ -1374,6 +1374,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # OK apo 0, holo 0
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # reverse_search=1, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v a,b', help='main input query') # reverse_search=1, apo 8, holo 24
+
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
@@ -1404,7 +1406,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
-    parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
     
 
     # Basic
