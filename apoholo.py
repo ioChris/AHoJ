@@ -996,11 +996,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 '''
         
         # Find all interface ligands (including non-protein chains)
+        
         # Apply condition to only run this when input query has ligands
         #if x not in nolig_resn
         print('Searching query structure for interface ligands')
         intrfc_lig_radius = '3.5'
         all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
+        interface_ligands = dict()
+        interface_ligands_list = list()
         if all_ligands_selection != 0:
             myspace_intrfc = {'all_ligs': []}
             cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
@@ -1028,8 +1031,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #print(all_qr_ligands_chains)
             
             # Find interface ligands in query chains
-            interface_ligands = dict()
-            interface_ligands_list = list()
+            
             for intrfc_position, chains in all_qr_ligands_chains.items():
                 if len(chains) > 1:
                     for chain in chains:
@@ -1469,7 +1471,8 @@ def parse_args(argv):
     
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     
-    parser.add_argument('--query', type=str,   default='2hka all c3s')
+    #parser.add_argument('--query', type=str,   default='2hka all c3s') # first chain is apo, it was ignored before now works
+    parser.add_argument('--query', type=str,   default='2v0v')
     
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
