@@ -51,7 +51,7 @@ The python version and packages used to run the application appear below:
 
 Note: Newer versions of these packages should be functional as long as they are inter-compatible, including the open-source version of PyMOL.
 
-Aside of the package dependencies, the application is using two precompiled files that are based on the SIFTS UniProt – PDB chain mapping.
+Aside of the package dependencies, the application is using two precompiled files that are based on the SIFTS residue-level mapping between the UniProt sequence and the PDB structure.
 
 * `pdb_chain_uniprot_REVERSE_SPnum.txt`
 * `pdb_chain_uniprot_dict.txt`
