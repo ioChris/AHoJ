@@ -1289,7 +1289,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         #     print('Job folder not empty, job ID: ', job_id, error)
 
     # Print states of query chains (apo or holo)
-    print('\nQuery chain states:\n', query_chain_states)
+    print(f'\nQuery chain states:\n{query_chain_states}')
     
     # Append the name of the query and the job_id in the queries.txt
     if job_id:
