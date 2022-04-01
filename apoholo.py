@@ -1381,7 +1381,13 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
+    
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
+    
+    # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
+    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
+    #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1410,13 +1416,13 @@ def parse_args(argv):
     
 
     # Basic
-    parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
-    parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: Discard/include NMR structures')
+    parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is "<="')
+    parser.add_argument('--NMR',               type=int,   default=1,     help='0/1: Include NMR structures')
     parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: Only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands')
     #parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
     #parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: Start the search with an apo structure that does not bind any ligands')
-    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: Consider HOH atoms as ligands when examining the superimposed candidate binding sites (can be used in combination with lig_free_sites - strict condition)')
+    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: When examining the superimposed binding sites of candidate structures, consider HOH molecules as ligands and show them in the results')
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
