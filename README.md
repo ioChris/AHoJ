@@ -246,7 +246,7 @@ python apoholo.py --query '3fav ZN'
 
 Floating point number that represents angstroms and is applied as a cutoff point when assessing the apo-holo candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. Condition is <=
 
-**`--NMR`** : include NMR structures [default = `1`]
+**`--include_nmr`** : include NMR structures [default = `1`]
 
 0 or 1. When set to 1 (ON), NMR structures are considered as candidates. In the case of multiple states for a certain structure, the first one is considered.
 
