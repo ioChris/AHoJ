@@ -30,7 +30,7 @@ from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import thread
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.2.0'
+VERSION = '0.3.0'
 
 
 _global_lock = threading.Lock()                      # multi-threading
