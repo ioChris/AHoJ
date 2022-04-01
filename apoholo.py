@@ -996,6 +996,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 '''
         
         # Find all interface ligands (including non-protein chains)
+        # Apply condition to only run this when input query has ligands
+        #if x not in nolig_resn
         print('Searching query structure for interface ligands')
         intrfc_lig_radius = '3.5'
         all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
@@ -1043,7 +1045,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                                 interface_lig_selection = query_struct + ' and resn ' + lig_resn + ' and chain ' + lig_chain + ' and resi ' + lig_resi
                                 cmd.select('query_ligands', interface_lig_selection, merge=1)
                                 #print(f'Interface ligand detected [{intrfc_position.replace("_", " ")}] added to query selection')
-            if len(interface_ligands_list) != 0:
+            if len(interface_ligands) != 0:
                 print('Interface ligand(s) detected:', interface_ligands_list)
                 print(interface_ligands)
             
@@ -1058,10 +1060,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             
             # Verdict on query apo or holo
             #elif ligands_selection == 0 and reverse_search == 1:
-        if ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 1:
-                print('No ligands found in PDB chain\n====== Query chain is apo, broad search mode active ======\n')
+        if ligands_selection == 0 and len(interface_ligands) == 0:# and autodetect_lig == 1:
+                print('No ligands found\n====== Query chain is apo, broad search mode active ======\n')
                 #broad_search_mode = True
                 query_chain_states[query_structchain] = 'apo'
+                
         elif ligands_selection > 0 or len(interface_ligands) != 0:
             query_chain_states[query_structchain] = 'holo'
 
@@ -1466,8 +1469,10 @@ def parse_args(argv):
     
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     
+    parser.add_argument('--query', type=str,   default='2hka all c3s')
+    
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
-    parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
+    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
