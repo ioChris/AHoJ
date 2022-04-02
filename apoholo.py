@@ -201,7 +201,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     chains = 'ALL'
     ligands = None
     position = None
-    
+
     # Define non-ligands (3-letter names of amino acids and h2o)
     std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
     #nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA ".split() # don't use as no-lig rsds
@@ -223,7 +223,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     elif len(parts) == 3:
         chains = parts[1].upper()        # adjust case, chains = upper
         ligands = parts[2].upper()       # adjust case, ligands = upper
-    
+
     # When position is specified, there has to be a single ligand/residue specified
     elif len(parts) == 4 and len(parts[2]) < 4 and len(parts[2].split(',')) == 1:# and int(parts[3]):
         try:
@@ -274,7 +274,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     for i in nolig_resn:
         if ligands == i and position is None:
             raise ValueError(f"Invalid query '{query}': specify index position of HOH or residue") 
-    
+
     return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand=water_as_ligand)
 
 
@@ -375,7 +375,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     :param data: if not provided will be loaded on the fly
     :return:
     """
-    
+
     ''' Test input (overrides argparse) '''
     #multiline_input = '3fav all zn\n1a73 a zn,MG,HEM\n5ok3 all tpo'
     #query = '1a0u' #hem, big search
@@ -433,6 +433,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Internal
     apo_chain_limit = args.apo_chain_limit
+    intrfc_lig_radius = args.intrfc_lig_radius
 
     # Saving
     save_oppst = args.save_oppst
@@ -444,7 +445,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     autodetect_lig = 0 # default OFF
     #if reverse_search == 1:
      #   autodetect_lig = 1
-    lig_scan_radius = str(lig_scan_radius)  # needs to be str
+    lig_scan_radius = str(lig_scan_radius)      # needs to be str
+    intrfc_lig_radius = str(intrfc_lig_radius)  # needs to be str
     #broad_search_mode = False # previously called "reverse_mode"
 
     # Pass settings to a string
@@ -615,6 +617,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     discarded_chains = list()   # Discarded chains (format: structchain + '\t' + discard_msg)
     usr_structchains_unverified = list()
     
+    # Traceback ALL chains from SIFTS file
     if user_chains == 'ALL':
         user_chains = list()
         user_structchains = list()
@@ -630,12 +633,43 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try:
                 print(user_structchain, dict_SIFTS[user_structchain])
             except:
-                #print('User specified chain does not exist in UniProt, removing it from input:\t', user_structchain)
-                #user_chains.remove(user_structchain[4:])
-                user_structchains.remove(user_structchain)
-                discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
-                usr_structchains_unverified.append(user_structchain)
                 
+                print(f'Ligand is assigned a non-UniProt chain [{user_structchain}], trying to map it to a protein chain')
+                non_protein_lig_chains = dict()
+                if position is not None:
+                    non_protein_lig_expression = struct + ' and chain ' + user_structchain[4:] + ' and resn ' + ligand_names_bundle + ' and resi ' + str(position)
+                else:
+                    non_protein_lig_expression = struct + ' and chain ' + user_structchain[4:] + ' and resn ' + ligand_names_bundle
+
+                cmd.reinitialize('everything')
+                cmd.load(struct_path)
+
+                s1 = cmd.select('non-protein_lig_' + ligand_names_bundle, non_protein_lig_expression)
+                non_protein_lig_atoms = cmd.identify('non-protein_lig_' + ligand_names_bundle)
+                non_protein_lig_atoms = '+'.join(str(i) for i in non_protein_lig_atoms)
+                s2 = 'ID ' + non_protein_lig_atoms
+                s3 = cmd.select('around_non-protein_lig' + user_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2)
+                if s1 != 0 and s3 != 0:
+                    non_protein_lig_chains[user_structchain] = cmd.get_chains('around_non-protein_lig' + user_structchain)
+                    print('found binding chains:', non_protein_lig_chains[user_structchain])
+                    print('Replacing non-protein chain with protein chain')
+                    for found_chain in non_protein_lig_chains[user_structchain]:
+                        new_structchain = struct + found_chain  # Convert detected chains into structchains
+                    
+                    user_structchains.append(new_structchain)
+                    user_structchains.remove(user_structchain)
+                    discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
+                    usr_structchains_unverified.append(user_structchain)
+                else:
+                    #print('User specified chain does not exist in UniProt, removing it from input:\t', user_structchain)
+                    #user_chains.remove(user_structchain[4:])
+                    user_structchains.remove(user_structchain)
+                    discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
+                    usr_structchains_unverified.append(user_structchain)
+                
+                #cmd.reinitialize('everything')
+                cmd.delete('not ' + struct)
+    
     #user_chains_bundle = '+'.join(user_chains)
     print('Input chains verified:\t\t', user_structchains)#, user_chains)
     print('Input chains unverified:\t', usr_structchains_unverified)
@@ -975,7 +1009,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print('No ligands found in author chain, trying PDB chain')
             ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and segi ' + query_chain)
             #if ligands_selection == 0 and reverse_search == 0:
-            if ligands_selection == 0 and autodetect_lig == 0: # This should not occur anymore (unless the ligand belongs to non-protein chain)
+            if ligands_selection == 0:# and autodetect_lig == 0: # This should not occur anymore (unless the ligand belongs to non-protein chain)
                 #print('No ligands found in PDB chain, looking at interface chains')
                 #print('No ligands found in interface chains, skipping: ', query_structchain)
                 #print('No ligands found in PDB chain, skipping: ', query_structchain)
@@ -995,12 +1029,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         sys.exit(1)
                 '''
         
-        # Find all interface ligands (including non-protein chains)
+        # Find interface ligands (including nucleic acid chains)
+        # when user specifies a ligand in a chain that is different than the actual PDB chain, but the ligand actually binds the specified chain
         
-        # Apply condition to only run this when input query has ligands
+        # Apply condition to only run this when input query has ligands (or is water)
+        # Maybe make this conditional with a parameter (would like to avoid that)
         #if x not in nolig_resn
+        
         print('Searching query structure for interface ligands')
-        intrfc_lig_radius = '3.5'
+
         all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
         interface_ligands = dict()
         interface_ligands_list = list()
@@ -1020,18 +1057,20 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             all_qr_ligands_chains = dict()
             for intrfc_position, atom_ids in all_qr_ligands.items():
                 
-                # put ligand atoms in bulk
+                # Join ligand atoms
                 atom_ids = '+'.join(atom_ids)
                 
                 # Select atoms around ligand atoms
                 s1 = 'ID ' + atom_ids
-                cmd.select('around_' + intrfc_position, 'polymer near_to ' + intrfc_lig_radius + ' of ' + s1)
-                all_qr_ligands_chains[intrfc_position] = cmd.get_chains('around_' + intrfc_position)
+                around_all_ligands_sele = cmd.select('around_' + intrfc_position, 'polymer near_to ' + intrfc_lig_radius + ' of ' + s1)
+                if around_all_ligands_sele == 0:
+                    continue
+                else:
+                    all_qr_ligands_chains[intrfc_position] = cmd.get_chains('around_' + intrfc_position)
                 #print(intrfc_position, cmd.get_chains('around_' + intrfc_position))
             #print(all_qr_ligands_chains)
             
             # Find interface ligands in query chains
-            
             for intrfc_position, chains in all_qr_ligands_chains.items():
                 if len(chains) > 1:
                     for chain in chains:
@@ -1047,7 +1086,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                                 interface_lig_selection = query_struct + ' and resn ' + lig_resn + ' and chain ' + lig_chain + ' and resi ' + lig_resi
                                 cmd.select('query_ligands', interface_lig_selection, merge=1)
                                 #print(f'Interface ligand detected [{intrfc_position.replace("_", " ")}] added to query selection')
-            if len(interface_ligands) != 0:
+            if len(interface_ligands) == 0:
+                print('No interface ligands found')
+            else:
                 print('Interface ligand(s) detected:', interface_ligands_list)
                 print(interface_ligands)
             
@@ -1060,8 +1101,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             
             
             
-            # Verdict on query apo or holo
-            #elif ligands_selection == 0 and reverse_search == 1:
+        # Verdict on query apo or holo
+        #elif ligands_selection == 0 and reverse_search == 1:
         if ligands_selection == 0 and len(interface_ligands) == 0:# and autodetect_lig == 1:
                 print('No ligands found\n====== Query chain is apo, broad search mode active ======\n')
                 #broad_search_mode = True
@@ -1472,7 +1513,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     
     #parser.add_argument('--query', type=str,   default='2hka all c3s') # first chain is apo, it was ignored before now works
-    parser.add_argument('--query', type=str,   default='2v0v')
+    #parser.add_argument('--query', type=str,   default='2v0v')
     
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
@@ -1480,6 +1521,9 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
+    # Issue part B: ligand specified to a correct but non-protein chain
+    parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
+
     
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
@@ -1533,6 +1577,8 @@ def parse_args(argv):
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
+    parser.add_argument('--intrfc_lig_radius', type=float, default=3.5, help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
+
     # Saving
     parser.add_argument('--save_oppst',        type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
     parser.add_argument('--save_separate',     type=int,   default=1,     help='0/1: save each chain object in a separate file (default save)')
