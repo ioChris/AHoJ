@@ -966,6 +966,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     query_chain_states = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
+    ligand_dict = dict()
 
     progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
     progress_processed_candidates = 0
@@ -1106,16 +1107,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #cmd.select('query_ligands', )
                 #sys.exit(1)
 
-        # close interface ligand search loop
-        #else:
-            #print('lig name unsuitable for interface search')
-            #sys.exit(1)
+        # end interface ligand search loop
+        # Check how many of the query ligands were detected, or check interface chains for ligands anyway
+
 
 
         # Verdict on query apo or holo
         #elif ligands_selection == 0 and reverse_search == 1:
         if ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 1:
-                print('No ligands found under broad search - continuing search\n')
+                print('No ligands found in broad search - continuing search\n')
                 #broad_search_mode = True
                 query_chain_states[query_structchain] = 'apo'
         elif ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 0:
@@ -1124,7 +1124,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         elif ligands_selection > 0 or len(interface_ligands) > 0:
             query_chain_states[query_structchain] = 'holo'
 
-        # Check how many of the query ligands were detected, or check interface chains for ligands anyway
         
 
         #if not broad_search_mode:  # When query is not fully APO
@@ -1540,7 +1539,6 @@ def parse_args(argv):
     # Issue part B: ligand specified to a correct but non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
 
-    
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query') # OK apo 4, holo 12
