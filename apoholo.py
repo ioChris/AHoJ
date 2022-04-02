@@ -616,12 +616,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print(f'\nFinding & verifying query chains {user_chains} by UniProt ID')
     discarded_chains = list()   # Discarded chains (format: structchain + '\t' + discard_msg)
     usr_structchains_unverified = list()
-    
+
     # Traceback ALL chains from SIFTS file
     if user_chains == 'ALL':
         user_chains = list()
         user_structchains = list()
-        
+
         #print('Considering all chains in query structure, finding chains..')
         for key in dict_SIFTS:
             if key[:4] == struct:
@@ -633,48 +633,64 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try:
                 print(user_structchain, dict_SIFTS[user_structchain])
             except:
-                
-                print(f'Ligand is assigned a non-UniProt chain [{user_structchain}], trying to map it to a protein chain')
-                non_protein_lig_chains = dict()
-                if position is not None:
-                    non_protein_lig_expression = struct + ' and chain ' + user_structchain[4:] + ' and resn ' + ligand_names_bundle + ' and resi ' + str(position)
-                else:
-                    non_protein_lig_expression = struct + ' and chain ' + user_structchain[4:] + ' and resn ' + ligand_names_bundle
+                #user_structchains.remove(user_structchain)
+                #discarded_chains.append(user_structchain + '\t' + 'Query chain not assigned UniProt ID\n')
+                usr_structchains_unverified.append(user_structchain)
 
-                cmd.reinitialize('everything')
-                cmd.load(struct_path)
 
-                s1 = cmd.select('non-protein_lig_' + ligand_names_bundle, non_protein_lig_expression)
-                non_protein_lig_atoms = cmd.identify('non-protein_lig_' + ligand_names_bundle)
-                non_protein_lig_atoms = '+'.join(str(i) for i in non_protein_lig_atoms)
-                s2 = 'ID ' + non_protein_lig_atoms
-                s3 = cmd.select('around_non-protein_lig' + user_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2)
-                if s1 != 0 and s3 != 0:
-                    non_protein_lig_chains[user_structchain] = cmd.get_chains('around_non-protein_lig' + user_structchain)
-                    print('found binding chains:', non_protein_lig_chains[user_structchain])
-                    print('Replacing non-protein chain with protein chain')
-                    for found_chain in non_protein_lig_chains[user_structchain]:
-                        new_structchain = struct + found_chain  # Convert detected chains into structchains
+    # Map ligands with non-protein chains to protein chains
+    non_protein_lig_chains = dict()
+    if len(usr_structchains_unverified) > 0:
+        print(f'-ligand assigned non-protein chain(s): {usr_structchains_unverified}, attempting to map to protein chains')
+        
+
+        for unverified_structchain in usr_structchains_unverified:
+
+            if position is not None:
+                non_protein_lig_expression = struct + ' and chain ' + unverified_structchain[4:] + ' and resn ' + ligand_names_bundle + ' and resi ' + str(position)
+            else:
+                non_protein_lig_expression = struct + ' and chain ' + unverified_structchain[4:] + ' and resn ' + ligand_names_bundle
+
+            cmd.reinitialize('everything')
+            cmd.load(struct_path)
+            s1n = cmd.select('non-protein_lig_' + ligand_names_bundle, non_protein_lig_expression)
+            non_protein_lig_atoms = cmd.identify('non-protein_lig_' + ligand_names_bundle)
+            non_protein_lig_atoms = '+'.join(str(i) for i in non_protein_lig_atoms)
+            s2n = 'ID ' + non_protein_lig_atoms
+            s3n = cmd.select('around_non-protein_lig' + unverified_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2n)
+            
+            if s1n != 0 and s3n != 0:
+                non_protein_lig_chains[unverified_structchain] = cmd.get_chains('around_non-protein_lig' + unverified_structchain)
+                print('found protein binding chains:', non_protein_lig_chains[unverified_structchain])
+                print(f'Replacing non-protein chain [{unverified_structchain}] with chain {non_protein_lig_chains[unverified_structchain]}')
+                for found_chain in non_protein_lig_chains[unverified_structchain]:
+                    new_structchain = struct + found_chain  # Convert detected chains into structchains
                     
-                    user_structchains.append(new_structchain)
-                    user_structchains.remove(user_structchain)
-                    discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
-                    usr_structchains_unverified.append(user_structchain)
-                else:
-                    #print('User specified chain does not exist in UniProt, removing it from input:\t', user_structchain)
-                    #user_chains.remove(user_structchain[4:])
-                    user_structchains.remove(user_structchain)
-                    discarded_chains.append(user_structchain + '\t' + 'No assigned UniProt ID\n')
-                    usr_structchains_unverified.append(user_structchain)
+                    # Verify new structchain in SIFTS (before registering it)
+                    try:
+                        print(new_structchain, dict_SIFTS[new_structchain])
+                        user_structchains.append(new_structchain)
+                    except Exception:
+                        print('-remapped chain not found in SIFTS', found_chain)
                 
-                #cmd.reinitialize('everything')
-                cmd.delete('not ' + struct)
+                user_structchains.remove(unverified_structchain)
+
+            #else:
+                #print('User specified chain does not exist in UniProt, removing it from input:\t', unverified_structchain)
+                #user_chains.remove(unverified_structchain[4:])
+                '''
+                user_structchains.remove(unverified_structchain)
+                discarded_chains.append(unverified_structchain + '\t' + 'No assigned UniProt ID\n')
+                usr_structchains_unverified.append(unverified_structchain)
+                '''
+            
+            cmd.delete('not ' + struct)
     
-    #user_chains_bundle = '+'.join(user_chains)
-    print('Input chains verified:\t\t', user_structchains)#, user_chains)
+    # Print report of chain verification
+    print('\nInput chains verified:\t\t', user_structchains)#, user_chains)
     print('Input chains unverified:\t', usr_structchains_unverified)
-    if len(discarded_chains) > 0:
-        print('Input chains rejected:\t', discarded_chains)
+    if len(non_protein_lig_chains) > 0:
+        print('*Remapped chains:\t\t\t', non_protein_lig_chains)
 
 
 
@@ -1028,87 +1044,103 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         print('non zero ligands!')
                         sys.exit(1)
                 '''
-        
-        # Find interface ligands (including nucleic acid chains)
-        # when user specifies a ligand in a chain that is different than the actual PDB chain, but the ligand actually binds the specified chain
-        
-        # Apply condition to only run this when input query has ligands (or is water)
-        # Maybe make this conditional with a parameter (would like to avoid that)
-        #if x not in nolig_resn
-        
-        print('Searching query structure for interface ligands')
 
-        all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
+        ########################################################
+        # Find interface ligands (including nucleic acid chains)
+        # when the user-specified chain of a ligand is different than the actual PDB chain, but the ligand actually binds the specified chain
+        
+        # Only run this when input query has ligands (or is water) [correction]: allow when ligand is not residue or water and ALSO in broad search
+        # Maybe make this conditional with a parameter (would like to avoid that)
+        # Note: interface ligands in broad search, are still missed if assigned non-protein chain
+        
+        # TODO finalize section
+        search_interface = False
+        
+        if ligand_names is not None: # and if interface search allowed by parameter?
+            for x in ligand_names:
+                if x not in nolig_resn and x != 'HOH':
+                    search_interface = True
+        elif ligand_names is None: # and if interface search allowed by parameter?
+            search_interface = True
+
         interface_ligands = dict()
         interface_ligands_list = list()
-        if all_ligands_selection != 0:
-            myspace_intrfc = {'all_ligs': []}
-            cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
+        if search_interface:
+            print('Searching query structure for interface ligands')
 
-            # Transfer list of ligand positions to dict
-            all_qr_ligands = dict()
-            for i in myspace_intrfc['all_ligs']:
-
-                qr_lig_position = i[0]
-                qr_lig_atomid = i[1]
-                all_qr_ligands.setdefault(qr_lig_position, []).append(str(qr_lig_atomid))
-            #print(all_qr_ligands_dict)
+            all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
             
-            all_qr_ligands_chains = dict()
-            for intrfc_position, atom_ids in all_qr_ligands.items():
-                
-                # Join ligand atoms
-                atom_ids = '+'.join(atom_ids)
-                
-                # Select atoms around ligand atoms
-                s1 = 'ID ' + atom_ids
-                around_all_ligands_sele = cmd.select('around_' + intrfc_position, 'polymer near_to ' + intrfc_lig_radius + ' of ' + s1)
-                if around_all_ligands_sele == 0:
-                    continue
+            if all_ligands_selection != 0:
+                myspace_intrfc = {'all_ligs': []}
+                cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
+
+                # Transfer list of ligand positions to dict
+                all_qr_ligands = dict()
+                for i in myspace_intrfc['all_ligs']:
+
+                    qr_lig_position = i[0]
+                    qr_lig_atomid = i[1]
+                    all_qr_ligands.setdefault(qr_lig_position, []).append(str(qr_lig_atomid))
+                #print(all_qr_ligands_dict)
+
+                all_qr_ligands_chains = dict()
+                for intrfc_position, atom_ids in all_qr_ligands.items():
+
+                    # Join ligand atoms
+                    atom_ids = '+'.join(atom_ids)
+
+                    # Select atoms around ligand atoms
+                    s1 = 'ID ' + atom_ids
+                    around_all_ligands_sele = cmd.select('around_' + intrfc_position, 'polymer near_to ' + intrfc_lig_radius + ' of ' + s1)
+                    if around_all_ligands_sele == 0:
+                        continue
+                    else:
+                        all_qr_ligands_chains[intrfc_position] = cmd.get_chains('around_' + intrfc_position)
+                    #print(intrfc_position, cmd.get_chains('around_' + intrfc_position))
+                #print(all_qr_ligands_chains)
+
+                # Find interface ligands in query chains            
+                for intrfc_position, chains in all_qr_ligands_chains.items():
+                    if len(chains) > 1:
+                        for chain in chains:
+                            #if chain in user_chains: # this can find all interface ligands at once, faster but has to be moved upstream
+                            if query_chain in chain:
+                                
+                                lig_resn = intrfc_position.split('_')[0]
+                                lig_chain = intrfc_position.split('_')[1]
+                                lig_resi = intrfc_position.split('_')[2]
+                                if lig_chain not in query_chain: # this would be detected anyway
+                                    interface_ligands[intrfc_position] = chains
+                                    interface_ligands_list.append(intrfc_position.replace("_", " "))
+                                    interface_lig_selection = query_struct + ' and resn ' + lig_resn + ' and chain ' + lig_chain + ' and resi ' + lig_resi
+                                    cmd.select('query_ligands', interface_lig_selection, merge=1)
+                                    #print(f'Interface ligand detected [{intrfc_position.replace("_", " ")}] added to query selection')
+                if len(interface_ligands) == 0:
+                    print('No interface ligands found')
                 else:
-                    all_qr_ligands_chains[intrfc_position] = cmd.get_chains('around_' + intrfc_position)
-                #print(intrfc_position, cmd.get_chains('around_' + intrfc_position))
-            #print(all_qr_ligands_chains)
-            
-            # Find interface ligands in query chains
-            for intrfc_position, chains in all_qr_ligands_chains.items():
-                if len(chains) > 1:
-                    for chain in chains:
-                        #if chain in user_chains: # this can find all interface ligands at once, faster but has to be moved upstream
-                        if query_chain in chain:
-                            
-                            lig_resn = intrfc_position.split('_')[0]
-                            lig_chain = intrfc_position.split('_')[1]
-                            lig_resi = intrfc_position.split('_')[2]
-                            if lig_chain not in query_chain: # this would be detected anyway
-                                interface_ligands[intrfc_position] = chains
-                                interface_ligands_list.append(intrfc_position.replace("_", " "))
-                                interface_lig_selection = query_struct + ' and resn ' + lig_resn + ' and chain ' + lig_chain + ' and resi ' + lig_resi
-                                cmd.select('query_ligands', interface_lig_selection, merge=1)
-                                #print(f'Interface ligand detected [{intrfc_position.replace("_", " ")}] added to query selection')
-            if len(interface_ligands) == 0:
-                print('No interface ligands found')
-            else:
-                print('Interface ligand(s) detected:', interface_ligands_list)
-                print(interface_ligands)
-            
-            # Add interface ligands to query ligand selection
-            #cmd.select('query_ligands', )
-            #sys.exit(1)
-            
+                    print('Interface ligand(s) detected:', interface_ligands_list)
+                    print(interface_ligands)
 
-            
-            
-            
-            
+                # Add interface ligands to query ligand selection
+                #cmd.select('query_ligands', )
+                #sys.exit(1)
+
+        # close interface ligand search loop
+        #else:
+            #print('lig name unsuitable for interface search')
+            #sys.exit(1)
+
+
         # Verdict on query apo or holo
         #elif ligands_selection == 0 and reverse_search == 1:
-        if ligands_selection == 0 and len(interface_ligands) == 0:# and autodetect_lig == 1:
-                print('No ligands found\n====== Query chain is apo, broad search mode active ======\n')
+        if ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 1:
+                print('No ligands found under broad search - continuing search\n')
                 #broad_search_mode = True
                 query_chain_states[query_structchain] = 'apo'
-                
-        elif ligands_selection > 0 or len(interface_ligands) != 0:
+        elif ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 0:
+            print('No ligands found under focused search mode - skipping chain\n')
+            continue
+        elif ligands_selection > 0 or len(interface_ligands) > 0:
             query_chain_states[query_structchain] = 'holo'
 
         # Check how many of the query ligands were detected, or check interface chains for ligands anyway
@@ -1267,7 +1299,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #if not broad_search_mode:
             if query_chain_states[query_structchain] == 'holo':
 
-                print(f'*query ligand(s)/position: {ligand_names}/[{position}]\t detected ligands: {query_lig_names}\t detected candidate ligands: {cndt_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
+                print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t confirmed query ligands: {query_lig_names}\t detected candidate ligands: {cndt_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
 
                 # Apo
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
@@ -1514,6 +1546,7 @@ def parse_args(argv):
     
     #parser.add_argument('--query', type=str,   default='2hka all c3s') # first chain is apo, it was ignored before now works
     #parser.add_argument('--query', type=str,   default='2v0v')
+    parser.add_argument('--query', type=str,   default='1a73')
     
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
@@ -1521,8 +1554,10 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
+    #parser.add_argument('--query', type=str,   default='1a73 a mg')
+    
     # Issue part B: ligand specified to a correct but non-protein chain
-    parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
+    #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
 
     
     # Residue
