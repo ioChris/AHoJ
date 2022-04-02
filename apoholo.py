@@ -30,7 +30,7 @@ from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import thread
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.3.0'
+VERSION = '0.4.0'
 
 
 _global_lock = threading.Lock()                      # multi-threading
@@ -612,7 +612,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     ## Find Apo candidates (rSIFTS)
 
     # Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we cannot process them)
-    # TODO: allow non-UniProt chains, because ligands can be assigned to non-polymer chains
+    # allow non-UniProt chains, because ligands can be assigned to non-protein chains
     print(f'\nFinding & verifying query chains {user_chains} by UniProt ID')
     discarded_chains = list()   # Discarded chains (format: structchain + '\t' + discard_msg)
     usr_structchains_unverified = list()
@@ -638,11 +638,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 usr_structchains_unverified.append(user_structchain)
 
 
-    # Map ligands with non-protein chains to protein chains
+    # Map ligands with non-protein chains to protein chains [cannot be allowed in broad search]
     non_protein_lig_chains = dict()
-    if len(usr_structchains_unverified) > 0:
+    if len(usr_structchains_unverified) > 0 and ligand_names is not None:
         print(f'-ligand assigned non-protein chain(s): {usr_structchains_unverified}, attempting to map to protein chains')
-        
 
         for unverified_structchain in usr_structchains_unverified:
 
@@ -658,34 +657,31 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             non_protein_lig_atoms = '+'.join(str(i) for i in non_protein_lig_atoms)
             s2n = 'ID ' + non_protein_lig_atoms
             s3n = cmd.select('around_non-protein_lig' + unverified_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2n)
-            
+
             if s1n != 0 and s3n != 0:
                 non_protein_lig_chains[unverified_structchain] = cmd.get_chains('around_non-protein_lig' + unverified_structchain)
                 print('found protein binding chains:', non_protein_lig_chains[unverified_structchain])
                 print(f'Replacing non-protein chain [{unverified_structchain}] with chain {non_protein_lig_chains[unverified_structchain]}')
                 for found_chain in non_protein_lig_chains[unverified_structchain]:
                     new_structchain = struct + found_chain  # Convert detected chains into structchains
-                    
-                    # Verify new structchain in SIFTS (before registering it)
+
+                    # Verify new structchain with SIFTS before saving it
                     try:
                         print(new_structchain, dict_SIFTS[new_structchain])
                         user_structchains.append(new_structchain)
                     except Exception:
                         print('-remapped chain not found in SIFTS', found_chain)
-                
+
                 user_structchains.remove(unverified_structchain)
 
             #else:
                 #print('User specified chain does not exist in UniProt, removing it from input:\t', unverified_structchain)
                 #user_chains.remove(unverified_structchain[4:])
-                '''
-                user_structchains.remove(unverified_structchain)
-                discarded_chains.append(unverified_structchain + '\t' + 'No assigned UniProt ID\n')
-                usr_structchains_unverified.append(unverified_structchain)
-                '''
-            
+                #user_structchains.remove(unverified_structchain)
+                #discarded_chains.append(unverified_structchain + '\t' + 'No assigned UniProt ID\n')
+                #usr_structchains_unverified.append(unverified_structchain)
             cmd.delete('not ' + struct)
-    
+
     # Print report of chain verification
     print('\nInput chains verified:\t\t', user_structchains)#, user_chains)
     print('Input chains unverified:\t', usr_structchains_unverified)
@@ -693,11 +689,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('*Remapped chains:\t\t\t', non_protein_lig_chains)
 
 
-
     # Form the full query expression - to use for indexing the query and searching past jobs
     if autodetect_lig == 0:
         user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
-    elif autodetect_lig == 1 and ligand_names is not None:
+    elif autodetect_lig == 1 and ligand_names is not None:  # this probably does not occur anymore
         user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names) + '_autodtctligloc'
     else:
         user_query_parameters = struct + '_' + ','.join(user_chains) + '_autodtctlig'
@@ -804,11 +799,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print('No other UniProt chains found')
             #sys.exit(2) # TODO don't exit script, continue for other UniProt chains within same struct or multi-query
 
-    # Handle unverified chains [first find all valid UniProt chains of the structure, and then their candidates]
-    #if len(usr_structchains_unverified) > 0:
-    #for unverified_structchain in usr_structchains_unverified:
-        #TODO
-
     total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
     print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
@@ -828,16 +818,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for apo_candidate_structure in apo_candidate_structs:
         try:
             download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
-        except: # Exception as ex1:
-            #template = "Exception {0} occurred. \n\t\t\t\t\tArguments:{1!r}"
-            #message = template.format(type(ex1).__name__, ex1.args) + apo_candidate_structure
-            #add_log(message, log_file_dnld)
-            print(f'*apo file {apo_candidate_structure} not found, removing from candindates list')
-
+        except Exception:
             # Don't fail, instead remove candidate structure from queue
             discarded_chains.append(apo_candidate_structure + '\t' + 'PDB structure not found\n')
             apo_candidate_structs.remove(apo_candidate_structure)
-
+            print(f'*apo file {apo_candidate_structure} not found, removing from candindates list')
 
     # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
     print('Checking resolution and experimental method of Apo candidate structures')
@@ -857,7 +842,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
                         resolution = round(float(line.split()[1]), 3)  # EM resolution
                         break
-                except:  # Exception as ex: # getting weird but harmless exceptions
+                except Exception:# as ex: # getting weird but harmless exceptions
                     #print('Problem parsing structure: ', apo_candidate_struct)
                     pass  # ignore and hide exceptions from stdout
             try:
@@ -888,13 +873,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         for i in values[:apo_chain_limit]:
             if i.split()[0][:4] in discard_structs:
                 print('removing apo', i.split()[0], 'from holo', key.split()[0])
-                #pass
             else:
                 dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
 
     eligible_chains = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
     print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains}')
-    print(dictApoCandidates_1) # helper print, delete later
+    print(dictApoCandidates_1) # helper print
 
 
     # Configure autodetect lig search expression according to variable
@@ -903,8 +887,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     else:
         autodetect_lig_expression = ''
 
-
+    ############################
     # Define ligand search query
+
     if position is not None: # (4 args) assumes that everything is specified (chains(taken care of), 1 ligand, position) ignore_autodetect_lig
         
         if ligand_names[0] == 'HOH': # mark selection & change lig scan radius (unless user has set it to lower than 3)
@@ -954,25 +939,21 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 search_term = '(resn ' + ligand_names_bundle + autodetect_lig_expression + ')'
                 print('\n*Search term = ', search_term)
 
-            else: # assume ligand is a real ligand
+            else: # assumes ligand is a real ligand
                 search_term = '(hetatm and resn ' + ligand_names_bundle + autodetect_lig_expression + ')'
                 print('\n*Search term = ', search_term)
 
-        elif ligand_names is None and autodetect_lig == 1: 
+        elif ligand_names is None:# and autodetect_lig == 1: 
             search_term = 'hetatm and not solvent and not polymer' # water as ligand should be ignored here without a position
             print('\n*Search term = ', search_term)
-
-        #elif ligand_names is None and autodetect_lig == 0: # TODO Here is the chance to force reverse search
-            # Here the user has not specified ligands, and they have not turned autodetect_lig ON
-            #reverse_search = 1 # TEST doesn't work because autodetect has been forced ON already
-
+        '''
         else: # ligands not specified (*/?) 
             print('\n====== No ligands specified: auto-detecting all ligands ======\n')
             search_term = 'hetatm and not solvent and not polymer'
             print('\n*Search term = ', search_term)
             #print('\n No ligands were specified and user has auto-detect OFF, turning it ON to continue')
             autodetect_lig = 1 # Force autodetect ON
-
+        '''
     if autodetect_lig == 1:
         print('\nSearch mode: Broad')
     else:
@@ -1546,10 +1527,10 @@ def parse_args(argv):
     
     #parser.add_argument('--query', type=str,   default='2hka all c3s') # first chain is apo, it was ignored before now works
     #parser.add_argument('--query', type=str,   default='2v0v')
-    parser.add_argument('--query', type=str,   default='1a73')
+    #parser.add_argument('--query', type=str,   default='1a73')
     
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
-    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
+    parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
