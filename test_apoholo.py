@@ -103,11 +103,14 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '2hka all c3s' ", expect_apo=2, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
         self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
-    def test_reverse_search(self):
-        #self.tst_query("--reverse_search 1 --query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
-        #self.tst_query("--reverse_search 1 --query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+    def test_broad_search(self):
         self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
         self.tst_query("--query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+        
+    def test_interface_ligands_search(self):
+        self.tst_query("--query '1a73 e mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
+        self.tst_query("--query '1a73 a mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
+        
 
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
