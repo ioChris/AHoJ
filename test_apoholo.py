@@ -110,6 +110,7 @@ class T02_Apoholo(unittest.TestCase):
     def test_interface_ligands_search(self):
         self.tst_query("--query '1a73 e mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
         self.tst_query("--query '1a73 a mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
+        self.tst_query("--query '6XBY A adp,mg' ", expect_apo=4, expect_holo=2)  # ADP is an interface ligand on non-query chain
         
 
     def test_expected_failures(self):
