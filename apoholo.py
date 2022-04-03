@@ -180,10 +180,15 @@ class CandidateChainResult:
     query_chain: str
     candidate_struct: str
     candidate_chain: str
+    query_lig_positions: dict
     passed: bool = False
     discard_reason: str = None
     tm_score: float = None
     rmsd: float = None
+
+    apo_holo_dict_instance: dict = None
+    apo_holo_dict_H_instance: dict = None
+    cndt_lig_positions_instance: dict = None
 
 
 @dataclass
@@ -836,8 +841,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     apo_candidate_structs = set()
     for key, values in dictApoCandidates.items():
         for i in values:    # iterate over the values in each key, i = struct/chain combo & SP_BEG SP_END etc
-            struct = i.split()[0][:4] # split value strings to get structure only
-            apo_candidate_structs.add(struct)
+            candidate_struct = i.split()[0][:4] # split value strings to get structure only
+            apo_candidate_structs.add(candidate_struct)
     print('Total structures to be parsed: ', len(apo_candidate_structs), '\n')
 
     # Download/load the Apo candidate structures to specified directory [TODO this should be replaced by load later]
@@ -848,10 +853,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Don't fail, instead remove candidate structure from queue
             discarded_chains.append(apo_candidate_structure + '\t' + 'PDB structure not found\n')
             apo_candidate_structs.remove(apo_candidate_structure)
-            print(f'*apo file {apo_candidate_structure} not found, removing from candindates list')
+            print(f'*file {apo_candidate_structure} not found, removing from candindates list')
 
     # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
-    print('Checking resolution and experimental method of Apo candidate structures')
+    print('Checking resolution and experimental method of candidate structures')
     for apo_candidate_struct in apo_candidate_structs:
         apo_candidate_structPath = download_mmCIF_gz2(apo_candidate_struct, pathSTRUCTS)
         resolution = '?\t'
@@ -906,6 +911,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains}')
     print(dictApoCandidates_1) # helper print
 
+    # Make dict with query struct:chains
+    dictQueryChains = dict()
+    for key in dictApoCandidates_1.keys():
+        qr_struct = key[:4]
+        qr_chain = key[4:]
+        dictQueryChains.setdefault(qr_struct, []).append(qr_chain)
 
     # Configure autodetect lig search expression according to variable
     if autodetect_lig == 1:
@@ -989,14 +1000,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     ##################  Query ligand detection  ##################
 
     query_lig_positions = dict()
+    cndt_lig_positions = dict()
     query_chain_states = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
-    ligand_dict = dict()
 
     progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
     progress_processed_candidates = 0
-
 
     def track_progress(write_results: bool = False):
         if args.track_progress:
@@ -1006,6 +1016,95 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 write_results_holo_csv(apo_holo_dict_H, path_results)
 
 
+    ########################################################
+    # Find interface ligands for query structure (including nucleic acid chains)
+    # when the user-specified chain of a ligand is different than the actual PDB chain, but the ligand actually binds the specified chain
+
+    # Only run this when input query has ligands (or is water) [correction]: allow when ligand is not residue or water and ALSO in broad search
+    # Maybe make this conditional with a parameter (would like to avoid that)
+    # Note: interface ligands in broad search, are still missed if assigned non-protein chain
+
+    #print(dictApoCandidates_1)
+    #print(dictQueryChains)    
+
+    search_interface = False
+
+    if ligand_names is not None: # and if interface search allowed by parameter?
+        for x in ligand_names:
+            if x not in nolig_resn and x != 'HOH':
+                search_interface = True
+    elif ligand_names is None: # and if interface search allowed by parameter?
+        search_interface = True
+
+    interface_ligands = dict()
+    interface_ligands_list = list()
+    if search_interface:
+        print(f'\n=== Searching query structure [{struct}] for interface ligands in chains {dictQueryChains[struct]} ===')
+
+        query_struct = struct
+        query_struct_path = download_mmCIF_gz2(query_struct, pathSTRUCTS)
+
+        # Initialize PyMOL but don't reload Holo if present
+        if query_struct in cmd.get_object_list('all'):  # object names
+            cmd.delete('not ' + query_struct)
+        else:
+            cmd.reinitialize('everything')
+            cmd.load(query_struct_path)
+
+        #print(struct, dictQueryChains[struct])
+        all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
+
+        if all_ligands_selection != 0:
+            myspace_intrfc = {'all_ligs': []}
+            cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
+
+            # Transfer list of ligand positions to dict
+            all_qr_ligands = dict()
+            for i in myspace_intrfc['all_ligs']:
+
+                qr_lig_position = i[0]
+                qr_lig_atomid = i[1]
+                all_qr_ligands.setdefault(qr_lig_position, []).append(str(qr_lig_atomid))
+            #print(all_qr_ligands_dict)
+
+            all_qr_ligands_chains = dict()
+            for intrfc_position, atom_ids in all_qr_ligands.items():
+
+                # Join ligand atoms
+                atom_ids = '+'.join(atom_ids)
+
+                # Select atoms around ligand atoms
+                s1 = 'ID ' + atom_ids
+                around_all_ligands_sele = cmd.select('around_' + intrfc_position, 'polymer near_to ' + intrfc_lig_radius + ' of ' + s1)
+                if around_all_ligands_sele == 0:
+                    continue
+                else:
+                    all_qr_ligands_chains[intrfc_position] = cmd.get_chains('around_' + intrfc_position)
+                #print(intrfc_position, cmd.get_chains('around_' + intrfc_position))
+            #print('all_qr_ligands_chains DICT', all_qr_ligands_chains)
+
+            # Find interface ligands in query chains
+            for intrfc_position, chains in all_qr_ligands_chains.items():
+                if len(chains) > 1:
+                    for chain in chains:
+                        if chain in user_chains: # this can find all interface ligands (that have a common chain with user_chains) at once, faster but has to be moved upstream
+                        #if query_chain in chain:
+
+                            # Keep only relevant interface ligands
+                            #if lig_chain not in query_chain: # this would be detected anyway, we want interface ligands with non-user chains
+                            interface_ligands[intrfc_position] = chains
+                            interface_ligands_list.append(intrfc_position.replace("_", " "))
+                            #print(f'Interface ligand detected [{intrfc_position.replace("_", " ")}] added to query selection')
+                            
+            if len(interface_ligands) == 0:
+                print('No interface ligands found')
+            else:
+                print('Interface ligand(s) detected around query chains:', interface_ligands_list)
+                print('On chains:', interface_ligands)
+
+    # end interface ligand search loop
+
+    # Start query chain loop
     for query_structchain, candidates_structchains in dictApoCandidates_1.items():
         print('')
         print(f'=== Processing query chain {query_structchain} ===')
@@ -1015,9 +1114,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         query_chain = query_structchain[4:]
         query_struct_path = download_mmCIF_gz2(query_struct, pathSTRUCTS)
 
-        # Initialize PyMOL but don't reload Holo if present
+        # Initialize PyMOL but don't reload Query if present
         if query_struct in cmd.get_object_list('all'):  # object names
-            #if query_struct in cmd.get_names('all'): # object and selection names
             cmd.delete('not ' + query_struct)
         else:
             cmd.reinitialize('everything')
@@ -1027,133 +1125,49 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         cmd.select(query_structchain, query_struct + '& chain ' + query_chain)
 
         # Find & name selection for user-specified (or autodetect) ligands in query structure
-        #: # Focused search mode
         ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and chain ' + query_chain)
         if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
+            
             ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and segi ' + query_chain)
-            #if ligands_selection == 0 and reverse_search == 0:
             if ligands_selection == 0:# and autodetect_lig == 0: # This should not occur anymore (unless the ligand belongs to non-protein chain)
-                #print('No ligands found in PDB chain, looking at interface chains')
-                #print('No ligands found in interface chains, skipping: ', query_structchain)
-                #print('No ligands found in PDB chain, skipping: ', query_structchain)
                 print('No ligands found in PDB chain')
-                cmd.delete('query_ligands')
-                #continue
-                '''
-                # Search for interface ligands
-                if ligand_names not in nolig_resn: # try to check that input is actually a ligand
-                    ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term)
-                    if ligands_selection != 0:
+
+
+        # Search & select interface ligands (if any)
+        interface_ligands_selection = 0
+        if len(interface_ligands) > 0:
+            print('Looking for interface ligands on chain', query_structchain)
+            #interface_ligands_list.append(intrfc_position.replace("_", " "))
+            #for chains in interface_ligands[query_struct]:
+            for intrfc_lig_position, chains in interface_ligands.items():
+                for chain in chains:
+                    if query_chain in chain: # TODO decide whether to remove ligand after using
+                        print('Adding interface ligand to selection: ', intrfc_lig_position)
                         
-                        # Now need to check if they bind the query chain
-                        interface_ligands = set()
-                        
-                        print('non zero ligands!')
-                        sys.exit(1)
-                '''
-
-        ########################################################
-        # Find interface ligands (including nucleic acid chains)
-        # when the user-specified chain of a ligand is different than the actual PDB chain, but the ligand actually binds the specified chain
-
-        # Only run this when input query has ligands (or is water) [correction]: allow when ligand is not residue or water and ALSO in broad search
-        # Maybe make this conditional with a parameter (would like to avoid that)
-        # Note: interface ligands in broad search, are still missed if assigned non-protein chain
-
-        # TODO finalize section
-        search_interface = False
-
-        if ligand_names is not None: # and if interface search allowed by parameter?
-            for x in ligand_names:
-                if x not in nolig_resn and x != 'HOH':
-                    search_interface = True
-        elif ligand_names is None: # and if interface search allowed by parameter?
-            search_interface = True
-
-        interface_ligands = dict()
-        interface_ligands_list = list()
-        if search_interface:
-            print('Searching query structure for interface ligands')
-
-            all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
-
-            if all_ligands_selection != 0:
-                myspace_intrfc = {'all_ligs': []}
-                cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
-
-                # Transfer list of ligand positions to dict
-                all_qr_ligands = dict()
-                for i in myspace_intrfc['all_ligs']:
-
-                    qr_lig_position = i[0]
-                    qr_lig_atomid = i[1]
-                    all_qr_ligands.setdefault(qr_lig_position, []).append(str(qr_lig_atomid))
-                #print(all_qr_ligands_dict)
-
-                all_qr_ligands_chains = dict()
-                for intrfc_position, atom_ids in all_qr_ligands.items():
-
-                    # Join ligand atoms
-                    atom_ids = '+'.join(atom_ids)
-
-                    # Select atoms around ligand atoms
-                    s1 = 'ID ' + atom_ids
-                    around_all_ligands_sele = cmd.select('around_' + intrfc_position, 'polymer near_to ' + intrfc_lig_radius + ' of ' + s1)
-                    if around_all_ligands_sele == 0:
-                        continue
-                    else:
-                        all_qr_ligands_chains[intrfc_position] = cmd.get_chains('around_' + intrfc_position)
-                    #print(intrfc_position, cmd.get_chains('around_' + intrfc_position))
-                #print(all_qr_ligands_chains)
-
-                # Find interface ligands in query chains
-                for intrfc_position, chains in all_qr_ligands_chains.items():
-                    if len(chains) > 1:
-                        for chain in chains:
-                            #if chain in user_chains: # this can find all interface ligands at once, faster but has to be moved upstream
-                            if query_chain in chain:
-
-                                lig_resn = intrfc_position.split('_')[0]
-                                lig_chain = intrfc_position.split('_')[1]
-                                lig_resi = intrfc_position.split('_')[2]
-                                if lig_chain not in query_chain: # this would be detected anyway
-                                    interface_ligands[intrfc_position] = chains
-                                    interface_ligands_list.append(intrfc_position.replace("_", " "))
-                                    interface_lig_selection = query_struct + ' and resn ' + lig_resn + ' and chain ' + lig_chain + ' and resi ' + lig_resi
-                                    cmd.select('query_ligands', interface_lig_selection, merge=1)
-                                    #print(f'Interface ligand detected [{intrfc_position.replace("_", " ")}] added to query selection')
-                if len(interface_ligands) == 0:
-                    print('No interface ligands found')
-                else:
-                    print('Interface ligand(s) detected:', interface_ligands_list)
-                    print(interface_ligands)
-
-                # Add interface ligands to query ligand selection
-                #cmd.select('query_ligands', )
-                #sys.exit(1)
-
-        # end interface ligand search loop
-        # Check how many of the query ligands were detected, or check interface chains for ligands anyway
+                        # PyMOL selection (to be done within loop)
+                        lig_resn = intrfc_lig_position.split('_')[0]
+                        lig_chain = intrfc_lig_position.split('_')[1]
+                        lig_resi = intrfc_lig_position.split('_')[2]
+                        interface_lig_selection = query_struct + ' and resn ' + lig_resn + ' and chain ' + lig_chain + ' and resi ' + lig_resi
+                        interface_ligands_selection = cmd.select('query_ligands', interface_lig_selection, merge=1)
+        #sys.exit(1)
 
 
-
-        # Verdict on query apo or holo
-        #elif ligands_selection == 0 and reverse_search == 1:
-        if ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 1:
-                print('No ligands found in broad search - continuing search\n')
-                #broad_search_mode = True
+        # Annotate query chain as apo or holo or skip it
+        if ligands_selection == 0 and interface_ligands_selection == 0 and autodetect_lig == 1:
+                print('No ligands found in broad search - continuing search')
                 query_chain_states[query_structchain] = 'apo'
-        elif ligands_selection == 0 and len(interface_ligands) == 0 and autodetect_lig == 0:
-            print('No ligands found under focused search mode - skipping chain\n')
+        elif ligands_selection == 0 and interface_ligands_selection == 0 and autodetect_lig == 0:
+            print('No ligands found under focused search mode - skipping chain')
             continue
-        elif ligands_selection > 0 or len(interface_ligands) > 0:
+        elif ligands_selection > 0 or interface_ligands_selection != 0:
             query_chain_states[query_structchain] = 'holo'
 
+        #sys.exit(1)
 
-
-        #if not broad_search_mode:  # When query is not fully APO
-        #if autodetect_lig == 0: # Continue focused search mode
+        # If query is holo, identify the ligands
+        ligands_atoms = list()
         if query_chain_states[query_structchain] == 'holo':
 
             # Identify atom IDs of selected ligand atoms
@@ -1164,20 +1178,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cmd.iterate('query_ligands', 'positions.append(resi +" "+ chain +" "+ resn)', space = myspace) # iterates through atoms of selection
 
             # Transfer temporary list with positions to dict
-            #for key, values in myspace.items():
             for i in myspace['positions']:
-                #for i in values:
                     query_lig_positions.setdefault(query_structchain, []).append(i)
 
             # Remove duplicate values from query_lig_positions
             for key, value in query_lig_positions.items():
                 query_lig_positions[key] = list(query_lig_positions.fromkeys(value))   # preserves the order of values
 
-            print('\nQuery ligand information')
-            print('State:', query_chain_states[query_structchain])
-            print('Total atoms: ', len(ligands_atoms))
-            print('Atom IDs: ', ligands_atoms)
-            print('Position/chain/name: ', query_lig_positions.get(query_structchain))  #, '/', len(query_lig_positions.get(query_structchain)))
+
+            # Print ligand report # Moved
 
             # Name query ligands as seperate selections per "residue"/position. Put real (detected) ligand names into set
             query_lig_names = set()
@@ -1191,15 +1200,37 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
 
+        '''
         elif query_chain_states[query_structchain] == 'apo':
             print('Query ligand information')
             print('State:', query_chain_states[query_structchain])
-            print(f"'{ligands_selection}' ligands found")
+            print(f"'{ligands_selection + interface_ligands_selection}' ligands found")
+        '''
 
+        # Print ligand report
+        print('\nQuery ligand information')
+        print('Total atoms: ', len(ligands_atoms))
+        print('Atom IDs: ', ligands_atoms)
+        print('Position/chain/name: ', query_lig_positions.get(query_structchain))
+        print('State:', query_chain_states[query_structchain])  #, '/', len(query_lig_positions.get(query_structchain)))
+
+        #print(query_lig_positions)
+        #sys.exit(1)
+        
 
         def try_candidate_chain(cmd, query_chain: str, candidate_structchain: str) -> CandidateChainResult:
             # TODO(chris): collect/move all function side effects to returned CandidateChainResult
             # TODO(rdk): make independent of nonlocal/global variables
+            
+            # Global variables that are used or updated in this function
+            #apo_holo_dict: dict() # updated
+            #apo_holo_dict_H: dict() # updated
+            #query_lig_positions: dict() # used
+            #cndt_lig_positions: dict() # updated
+            
+            apo_holo_dict_instance = dict()
+            apo_holo_dict_H_instance = dict()
+            cndt_lig_positions_instance = dict()
 
             nonlocal progress_processed_candidates
             progress_processed_candidates += 1
@@ -1209,7 +1240,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             candidate_chain = candidate_structchain[4:]
 
             res = CandidateChainResult(query_chain=query_chain, candidate_struct=candidate_struct,
-                                       candidate_chain=candidate_chain)
+                                       candidate_chain=candidate_chain, query_lig_positions=query_lig_positions)
 
             candidate_struct_path = download_mmCIF_gz2(candidate_struct, pathSTRUCTS)
             if candidate_struct in cmd.get_object_list('all'):
@@ -1245,7 +1276,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
             # Look for ligands in candidate chain
-            #if not broad_search_mode:
+            
+            # Holo query
             if query_chain_states[query_structchain] == 'holo':
                 found_ligands = set()
                 found_ligands_xtra = set()
@@ -1261,10 +1293,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Around selection: look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
                     cndt_sele_expression = '(' + candidate_struct + ' and hetatm)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
                     qr_lig_sele_expression = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
-
-                    #full_sele =  cndt_sele_expression + ' near_to ' + lig_scan_radius + ' of ' + qr_lig_sele_expression
-                    #print('full sele:', full_sele)
                     cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + lig_scan_radius + ' of ' + qr_lig_sele_expression)
+
                     # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be saved, we need to merge the two selections here
                     cmd.select(candidate_structchain, candidate_structchain + '_arnd_' + ligand_, merge=1)
 
@@ -1278,52 +1308,75 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
 
-                    # Transfer dict[key] values (just resn) into set for easier handling
-                    cndt_lig_names = set()
-                    for cndt_position in myspace_cndt['cndt_positions']: # use set to remove redundant positions
-                        cndt_atom_lig_name = cndt_position.split()[2]
-                        cndt_lig_names.add(cndt_atom_lig_name)
+                    # Transfer dict[key] values (just resn) into set for easier handling [not needed - remove]
+                    #cndt_lig_names = set()
+                    #for cndt_position in myspace_cndt['cndt_positions']:
+                        #cndt_atom_lig_name = cndt_position.split()[2]
+                        #cndt_lig_names.add(cndt_atom_lig_name)
                     #print('Found candidate ligands:', cndt_lig_names)
 
+                    # Find which ligands are present in query by matching their names (without set)
+                    for cndt_position in myspace_cndt['cndt_positions']:
+                        #cndt_lig_resi = cndt_position.split()[0]
+                        #cndt_lig_chain = cndt_position.split()[1]
+                        cndt_lig_resn = cndt_position.split()[2]
+                        
+                        if cndt_lig_resn in query_lig_names or cndt_lig_resn in ligand_names:
+                            found_ligands.add(cndt_lig_resn)
+                            cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(cndt_position)
+                        elif cndt_lig_resn not in nolig_resn:
+                            found_ligands_xtra.add(cndt_lig_resn)
+                            if lig_free_sites == 1:
+                                cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(cndt_position)
 
-                    # Assess apo ligands
-                    for i in cndt_lig_names:
-                        if i in query_lig_names or i in ligand_names:  # check in both lists (detected holo ligs + query ligs)  # TODO query_lig_names may be undefined
-                            found_ligands.add(i)
-                        elif i not in nolig_resn:
-                            found_ligands_xtra.add(i)
+                    # Assess ligands (check their name identifiers to see if query ligand name is present)
+                    #for i in cndt_lig_names:
+                    #    if i in query_lig_names or i in ligand_names:  # check in both lists (detected holo ligs + query ligs)  # TODO query_lig_names may be undefined
+                    #        found_ligands.add(i)
+                    #    elif i not in nolig_resn:
+                    #        found_ligands_xtra.add(i)
 
-            # Start reverse mode, if query = fully APO (no ligands). Find identical structures with/wo ligands
-            # Broad search
-            #else:
+            # Apo query
             elif query_chain_states[query_structchain] == 'apo':
                 found_ligands_r = set()
                 found_ligands_xtra = set()
+
                 # Find ligands in candidate with broad search
                 cmd.select('cndt_ligands_' + candidate_structchain, candidate_struct + '& chain ' + candidate_chain + '& hetatm & not (polymer or solvent)')
+                
+                # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be found # TODO
+
+                # Put selected atoms in a list
                 myspace_r = {'r_positions': []}
                 cmd.iterate('cndt_ligands_' + candidate_structchain, 'r_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_r)
+
                 # Remove duplicate values from myspace_r
                 for key, value in myspace_r.items():
                     myspace_r[key] = list(myspace_r.fromkeys(value))   # preserves the order of values
                 print(f'-candidate ligands found: {myspace_r["r_positions"]}') # use set to remove redundant positions
+
                 # Transfer dict[key] values (just resn) into set for easier handling
                 for r_position in myspace_r['r_positions']: # use set to remove redundant positions
                     r_atom_lig_name = r_position.split()[2]
+                    
                     if r_atom_lig_name not in nolig_resn:  # exclude non ligands
                         found_ligands_r.add(r_atom_lig_name)
+                        cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(r_position)
+                        
 
 
             # Print verdict for chain & save it as ".cif.gz"
-            #if not broad_search_mode:
+            
+            # Holo query
             if query_chain_states[query_structchain] == 'holo':
 
-                print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t confirmed query ligands: {query_lig_names}\t detected candidate ligands: {cndt_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
+                #print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t confirmed query ligands: {query_lig_names}\t detected candidate ligands: {cndt_lig_names}\t eligible query ligands: {found_ligands}\t eligible non-query ligands: {found_ligands_xtra}')
+                print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t confirmed query ligands: {query_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
 
-                # Apo
+                # Apo result
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                    apo_holo_dict.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
@@ -1333,10 +1386,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                         cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
 
-                # Holo
+                # Holo result
                 else:
                     ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                    apo_holo_dict_H.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     if len(found_ligands) > 0:
                         print('HOLO')
                     else:
@@ -1347,25 +1400,25 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         #save_sele = (candidate_structchain + '_arnd_' + ligand_) for ligand in query_lig_positions[query_structchain])
                         cmd.save(path_results + '/holo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save holo chain
 
-
-            #else:  # reverse mode
+            # Apo query
             elif query_chain_states[query_structchain] == 'apo':
 
                 print('Found ligands: ', found_ligands_r)  # TODO found_ligands_r may be undefined
 
-                # Holo
+                # Holo result
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
-                    apo_holo_dict_H.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     print('HOLO')
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                         cmd.save(path_results + '/holo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
-                # Apo
+
+                # Apo result
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
-                    apo_holo_dict.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
@@ -1375,11 +1428,20 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct)  # save query structure
                         cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
 
+
+            res.apo_holo_dict_instance = apo_holo_dict_instance
+            return res
+            res.apo_holo_dict_H_instance = apo_holo_dict_H_instance
+            return res
+            res.cndt_lig_positions_instance = cndt_lig_positions_instance
+            return res
+        
             res.passed = True
             return res
 
 
-        def try_candidate_chains(candidates_structchains: list[str]) -> list[CandidateChainResult]:
+        #def try_candidate_chains(candidates_structchains: list[str]) -> list[CandidateChainResult]:
+        def try_candidate_chains(candidates_structchains: list) -> CandidateChainResult:
             query_parallelism = args.query_parallelism
 
             if query_parallelism == 1:
@@ -1403,6 +1465,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
         candidate_results = try_candidate_chains(candidates_structchains)
         #TODO integrate results to global state here, write to disk
+        
+        # Merge/update dictionaries
+        #apo_holo_dict_instance = try_candidate_chain(cmd, query_chain, candidate_structchain)
+        #apo_holo_dict.update(apo_holo_dict_instance())
+        #apo_holo_dict_H.update(apo_holo_dict_H_instance)
+        #cndt_lig_positions.update(cndt_lig_positions_instance)
         
 
         # Clean objects/selections in PyMOL session
@@ -1497,7 +1565,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Print states of query chains (apo or holo)
     print(f'\nQuery chain states:\n{query_chain_states}')
-    
+
+    # Test print query & candidate ligand positions
+    print(f'\nQuery ligands\n{query_lig_positions}')
+    print(f'\nCandidate ligands\n{cndt_lig_positions}')
+
     # Append the name of the query and the job_id in the queries.txt
     if job_id:
         print(f'\nSaving query search: {[user_query_parameters]} for query {[query]}') #query_full)  # Don't show full query string
@@ -1596,12 +1668,13 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73')
     
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
-    parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
+    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
+    #parser.add_argument('--query', type=str,   default='6XBY * adp,mg', help='main input query') # ATPase, big query
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
-    #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
+    parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
-    #parser.add_argument('--query', type=str,   default='1a73 a mg')
+    #parser.add_argument('--query', type=str,   default='1a73 * mg')
     
     # Issue part B: ligand specified to a correct but non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
@@ -1659,7 +1732,7 @@ def parse_args(argv):
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
     parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
-    parser.add_argument('--intrfc_lig_radius', type=float, default=3.5, help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
+    parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
     # Saving
     parser.add_argument('--save_oppst',        type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
