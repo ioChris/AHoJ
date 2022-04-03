@@ -5,6 +5,8 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
+import pathlib
+
 from common import get_workdir, load_dict_binary, tmalign2, write_file
 
 import __main__
@@ -30,7 +32,7 @@ from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import thread
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.4.0'
+VERSION = '0.4.1'
 
 
 _global_lock = threading.Lock()                      # multi-threading
@@ -57,17 +59,28 @@ ii) When looking for holo from apo:
 # Define functions
 ##########################################################################################################
 
-def download_mmCIF_gz2(pdb_id, destination_path):   # Version 2 of download mmCIF gz (without exception handling)
+def download_mmCIF_gz2(pdb_id, pdb_dir):   # Version 2 of download mmCIF gz (without exception handling)
+    # in pdb_dir mimic directory structure of FTP/rsynced whole PDB
+    # e.g.: 4ZZW is in {pdb_dir}/zz/4zzw.cif.gz
+
     urlA = 'https://files.rcsb.org/download/'
-    urlB = '.cif.gz'
-    url = urlA + pdb_id.upper() + urlB
-    file_path = destination_path + '/' + pdb_id + urlB
+    ext = '.cif.gz'
+    url = urlA + pdb_id.upper() + ext
+
+    pdb_id = pdb_id.lower()
+
+    middle_bit = pdb_id[1:3]
+    subdir = f'{pdb_dir}/{middle_bit}'
+    file_path = f'{subdir}/{pdb_id}{ext}'
+
     if not os.path.isfile(file_path):
-        wget.download(url, destination_path)
-        print('Downloading: ', pdb_id + urlB)
+        pathlib.Path(subdir).mkdir(exist_ok=True)
+        print(f'Downloading: {pdb_id + ext}')
+        wget.download(url, subdir)
         return file_path
     else:
         return file_path
+    # TODO(rdk): solve problem where structure is downloaded at the same time by multiple processes and saved as '3hku.cif (1).gz'
 
 
 def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands (without exception handling)
