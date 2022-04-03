@@ -174,6 +174,19 @@ class QueryResult:
 
 
 @dataclass
+class CandidateChainResult:
+    """ Result of candidate chain evaluation """
+    # TODO remodel, include/remove attributes
+    query_chain: str
+    candidate_struct: str
+    candidate_chain: str
+    passed: bool = False
+    discard_reason: str = None
+    tm_score: float = None
+    rmsd: float = None
+
+
+@dataclass
 class PrecompiledData:
     """
     Pre-compiled data needed for computation
@@ -1184,15 +1197,21 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f"'{ligands_selection}' ligands found")
 
 
-        def try_candidate_chain(candidate_structchain):
+        def try_candidate_chain(cmd, query_chain: str, candidate_structchain: str) -> CandidateChainResult:
+            # TODO(chris): collect/move all function side effects to returned CandidateChainResult
+            # TODO(rdk): make independent of nonlocal/global variables
+
             nonlocal progress_processed_candidates
             progress_processed_candidates += 1
             track_progress(write_results=True)
 
             candidate_struct = candidate_structchain[:4]
             candidate_chain = candidate_structchain[4:]
-            candidate_struct_path = download_mmCIF_gz2(candidate_struct, pathSTRUCTS)
 
+            res = CandidateChainResult(query_chain=query_chain, candidate_struct=candidate_struct,
+                                       candidate_chain=candidate_chain)
+
+            candidate_struct_path = download_mmCIF_gz2(candidate_struct, pathSTRUCTS)
             if candidate_struct in cmd.get_object_list('all'):
                 pass
             else:
@@ -1205,17 +1224,24 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
                 print('Alignment RMSD/TM score:', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm)
+
+                res.rmsd = aln_rms
+                res.tm_score = aln_tm
             except:
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('Alignment RMSD/TM score: ERROR')
                 print('*poor alignment (error), discarding chain ', candidate_structchain)
-                return
+
+                res.discard_reason = "alignment error"
+                return res
 
             # Discard poor alignments
             if aln_tm < min_tmscore:
                 discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
                 print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
-                return
+
+                res.discard_reason = "poor alignment (below threshold)"
+                return res
 
 
             # Look for ligands in candidate chain
@@ -1349,22 +1375,34 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct)  # save query structure
                         cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
 
+            res.passed = True
+            return res
 
-        def try_candidate_chains(candidates_structchains):
+
+        def try_candidate_chains(candidates_structchains: list[str]) -> list[CandidateChainResult]:
             query_parallelism = args.query_parallelism
 
             if query_parallelism == 1:
                 # Start candidate chain loop
                 # Align candidate chain to query chain and mark atom selections around superimposed query ligand binding sites
+
+                results = []
                 for candidate_structchain in candidates_structchains:
-                    try_candidate_chain(candidate_structchain)
+                    # TODO(rdk): make cmd independent for each run
+                    results.append(try_candidate_chain(cmd, query_chain, candidate_structchain))
             else:
+                def _try_chain(candidate_strchain):
+                    # TODO(rdk): make cmd independent for each run
+                    return try_candidate_chain(cmd, query_chain, candidate_strchain)
+
                 with ThreadPoolExecutor(max_workers=query_parallelism) as pool:
-                    results = list(pool.map(try_candidate_chain, candidates_structchains))
+                    results = list(pool.map(_try_chain, candidates_structchains))
+            return results
 
 
-        try_candidate_chains(candidates_structchains)
 
+        candidate_results = try_candidate_chains(candidates_structchains)
+        #TODO integrate results to global state here, write to disk
         
 
         # Clean objects/selections in PyMOL session
