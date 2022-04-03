@@ -25,7 +25,7 @@ import argparse
 import sys
 from dataclasses import dataclass
 
-from concurrent.futures import ThreadPoolExecutor as PoolExecutor; import threading           # multi-threading
+from concurrent.futures import ThreadPoolExecutor; import threading           # multi-threading
 # from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
 #import rich.traceback
@@ -1014,9 +1014,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         cmd.select(query_structchain, query_struct + '& chain ' + query_chain)
 
         # Find & name selection for user-specified (or autodetect) ligands in query structure
-        #: # Focused search mode 
+        #: # Focused search mode
         ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and chain ' + query_chain)
-        if ligands_selection == 0: 
+        if ligands_selection == 0:
             print('No ligands found in author chain, trying PDB chain')
             ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and segi ' + query_chain)
             #if ligands_selection == 0 and reverse_search == 0:
@@ -1043,14 +1043,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         ########################################################
         # Find interface ligands (including nucleic acid chains)
         # when the user-specified chain of a ligand is different than the actual PDB chain, but the ligand actually binds the specified chain
-        
+
         # Only run this when input query has ligands (or is water) [correction]: allow when ligand is not residue or water and ALSO in broad search
         # Maybe make this conditional with a parameter (would like to avoid that)
         # Note: interface ligands in broad search, are still missed if assigned non-protein chain
-        
+
         # TODO finalize section
         search_interface = False
-        
+
         if ligand_names is not None: # and if interface search allowed by parameter?
             for x in ligand_names:
                 if x not in nolig_resn and x != 'HOH':
@@ -1064,7 +1064,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print('Searching query structure for interface ligands')
 
             all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
-            
+
             if all_ligands_selection != 0:
                 myspace_intrfc = {'all_ligs': []}
                 cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
@@ -1094,13 +1094,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     #print(intrfc_position, cmd.get_chains('around_' + intrfc_position))
                 #print(all_qr_ligands_chains)
 
-                # Find interface ligands in query chains            
+                # Find interface ligands in query chains
                 for intrfc_position, chains in all_qr_ligands_chains.items():
                     if len(chains) > 1:
                         for chain in chains:
                             #if chain in user_chains: # this can find all interface ligands at once, faster but has to be moved upstream
                             if query_chain in chain:
-                                
+
                                 lig_resn = intrfc_position.split('_')[0]
                                 lig_chain = intrfc_position.split('_')[1]
                                 lig_resi = intrfc_position.split('_')[2]
@@ -1137,7 +1137,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         elif ligands_selection > 0 or len(interface_ligands) > 0:
             query_chain_states[query_structchain] = 'holo'
 
-        
+
 
         #if not broad_search_mode:  # When query is not fully APO
         #if autodetect_lig == 0: # Continue focused search mode
@@ -1177,15 +1177,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 cmd.select('holo_' + ligand_, query_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
-        
+
         elif query_chain_states[query_structchain] == 'apo':
             print('Query ligand information')
             print('State:', query_chain_states[query_structchain])
             print(f"'{ligands_selection}' ligands found")
 
-        # Start candidate chain loop
-        # Align candidate chain to query chain and mark atom selections around superimposed query ligand binding sites
-        for candidate_structchain in candidates_structchains:
+
+        def try_candidate_chain(candidate_structchain):
+            nonlocal progress_processed_candidates
             progress_processed_candidates += 1
             track_progress(write_results=True)
 
@@ -1209,13 +1209,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('Alignment RMSD/TM score: ERROR')
                 print('*poor alignment (error), discarding chain ', candidate_structchain)
-                continue
+                return
 
             # Discard poor alignments
             if aln_tm < min_tmscore:
                 discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
                 print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
-                continue
+                return
 
 
             # Look for ligands in candidate chain
@@ -1350,6 +1350,22 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
 
 
+        def try_candidate_chains(candidates_structchains):
+            query_parallelism = args.query_parallelism
+
+            if query_parallelism == 1:
+                # Start candidate chain loop
+                # Align candidate chain to query chain and mark atom selections around superimposed query ligand binding sites
+                for candidate_structchain in candidates_structchains:
+                    try_candidate_chain(candidate_structchain)
+            else:
+                with ThreadPoolExecutor(max_workers=query_parallelism) as pool:
+                    results = list(pool.map(try_candidate_chain, candidates_structchains))
+
+
+        try_candidate_chains(candidates_structchains)
+
+        
 
         # Clean objects/selections in PyMOL session
         apo_win_structs = set()
@@ -1490,7 +1506,7 @@ def process_queries(query_lines: list, workdir, args, data: PrecompiledData = No
     def process_q(query):
         return try_process_query(query, workdir, args, data)
 
-    with PoolExecutor(max_workers=args.threads) as pool:
+    with ThreadPoolExecutor(max_workers=args.threads) as pool:
         results = list(pool.map(process_q, query_lines))
 
     # TODO better way to print summary results and report errors
@@ -1603,6 +1619,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
+    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5, help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
