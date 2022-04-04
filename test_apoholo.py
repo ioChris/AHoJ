@@ -63,11 +63,11 @@ class T02_Apoholo(unittest.TestCase):
         print("Query result:", res)
 
         if expect_apo > 0:
-            assert res.num_apo_chains >= expect_apo, "Found less APO chains"  # may be > due to future data
+            assert res.num_apo_chains >= expect_apo, f"Found less APO chains ({res.num_apo_chains} vs {expect_apo})"  # may find more due to future data
             assert non_blank_lines(res.result_dir + '/results_apo.csv') == 1 + expect_apo, "Bad results_apo.csv"
 
         if expect_holo > 0:
-            assert res.num_holo_chains >= expect_holo, "Found less HOLO chains"  # may be > due to future data
+            assert res.num_holo_chains >= expect_holo, f"Found less HOLO chains ({res.num_holo_chains} vs {expect_holo})"  # may find more due to future data
             assert non_blank_lines(res.result_dir + '/results_holo.csv') == 1 + expect_holo, "Bad results_holo.csv"
 
         # Test produced structure files

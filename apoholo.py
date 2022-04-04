@@ -5,6 +5,7 @@ Created on Mon Dec 20 16:24:57 2021
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
+import copy
 import pathlib
 
 from common import get_workdir, load_dict_binary, tmalign2, write_file
@@ -26,7 +27,7 @@ import sys
 from dataclasses import dataclass
 
 from concurrent.futures import ThreadPoolExecutor; import threading           # multi-threading
-# from concurrent.futures import ProcessPoolExecutor as PoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
+from concurrent.futures import ProcessPoolExecutor; import multiprocessing  # multi-processing (doesn't work atm)
 
 #import rich.traceback
 
@@ -180,7 +181,7 @@ class CandidateChainResult:
     query_chain: str
     candidate_struct: str
     candidate_chain: str
-    query_lig_positions: dict
+    #query_lig_positions: dict
     passed: bool = False
     discard_reason: str = None
     tm_score: float = None
@@ -1221,7 +1222,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         def try_candidate_chain(cmd, query_chain: str, candidate_structchain: str) -> CandidateChainResult:
             # TODO(chris): collect/move all function side effects to returned CandidateChainResult
             # TODO(rdk): make independent of nonlocal/global variables
-            
+
             # Global variables that are used or updated in this function
             #apo_holo_dict: dict() # updated
             #apo_holo_dict_H: dict() # updated
@@ -1239,8 +1240,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             candidate_struct = candidate_structchain[:4]
             candidate_chain = candidate_structchain[4:]
 
-            res = CandidateChainResult(query_chain=query_chain, candidate_struct=candidate_struct,
-                                       candidate_chain=candidate_chain, query_lig_positions=query_lig_positions)
+            candidate_result = CandidateChainResult(query_chain=query_chain, candidate_struct=candidate_struct,
+                                                candidate_chain=candidate_chain)  # ,query_lig_positions=query_lig_positions
 
             candidate_struct_path = download_mmCIF_gz2(candidate_struct, pathSTRUCTS)
             if candidate_struct in cmd.get_object_list('all'):
@@ -1256,23 +1257,25 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
                 print('Alignment RMSD/TM score:', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm)
 
-                res.rmsd = aln_rms
-                res.tm_score = aln_tm
+                # TODO(rdk): which alignment is visualized? And what numbers are reported?
+
+                candidate_result.rmsd = aln_rms
+                candidate_result.tm_score = aln_tm
             except:
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('Alignment RMSD/TM score: ERROR')
                 print('*poor alignment (error), discarding chain ', candidate_structchain)
 
-                res.discard_reason = "alignment error"
-                return res
+                candidate_result.discard_reason = "alignment error"
+                return candidate_result
 
             # Discard poor alignments
             if aln_tm < min_tmscore:
                 discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
                 print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
 
-                res.discard_reason = "poor alignment (below threshold)"
-                return res
+                candidate_result.discard_reason = "poor alignment (below threshold)"
+                return candidate_result
 
 
             # Look for ligands in candidate chain
@@ -1429,48 +1432,57 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
 
 
-            res.apo_holo_dict_instance = apo_holo_dict_instance
-            return res
-            res.apo_holo_dict_H_instance = apo_holo_dict_H_instance
-            return res
-            res.cndt_lig_positions_instance = cndt_lig_positions_instance
-            return res
-        
-            res.passed = True
-            return res
+            candidate_result.apo_holo_dict_instance = apo_holo_dict_instance
+            candidate_result.apo_holo_dict_H_instance = apo_holo_dict_H_instance
+            candidate_result.cndt_lig_positions_instance = cndt_lig_positions_instance
+
+            candidate_result.passed = True
+            return candidate_result
 
 
-        #def try_candidate_chains(candidates_structchains: list[str]) -> list[CandidateChainResult]:
-        def try_candidate_chains(candidates_structchains: list) -> CandidateChainResult:
+        def try_candidate_chains(cmd, query_chain, candidates_structchains: list) -> list: # list[CandidateChainResult]:
             query_parallelism = args.query_parallelism
 
+            results = []
             if query_parallelism == 1:
                 # Start candidate chain loop
                 # Align candidate chain to query chain and mark atom selections around superimposed query ligand binding sites
-
-                results = []
-                for candidate_structchain in candidates_structchains:
+                for cand in candidates_structchains:
                     # TODO(rdk): make cmd independent for each run
-                    results.append(try_candidate_chain(cmd, query_chain, candidate_structchain))
+                    results.append(try_candidate_chain(cmd, query_chain, cand))
             else:
-                def _try_chain(candidate_strchain):
+                def _try_chain(cand_strchain):
                     # TODO(rdk): make cmd independent for each run
-                    return try_candidate_chain(cmd, query_chain, candidate_strchain)
+
+                    local_pm = pymol2.PyMOL()
+                    local_pm.start()
+                    local_cmd = local_pm.cmd
+                    
+                    local_cmd.load(query_struct_path)
+
+                    return try_candidate_chain(local_cmd, query_chain, cand_strchain)
 
                 with ThreadPoolExecutor(max_workers=query_parallelism) as pool:
+                # with ProcessPoolExecutor(max_workers=query_parallelism) as pool:
                     results = list(pool.map(_try_chain, candidates_structchains))
+
             return results
 
 
+        def update_dict_of_lists(modified_dict: dict, to_add: dict):
+            for key, value in to_add.items():
+                modified_dict.setdefault(key, []).extend(value)
 
-        candidate_results = try_candidate_chains(candidates_structchains)
+
+        candidate_results = try_candidate_chains(cmd, query_chain, candidates_structchains)
         #TODO integrate results to global state here, write to disk
+        passed_results = [cr for cr in candidate_results if cr.passed]
         
         # Merge/update dictionaries
-        #apo_holo_dict_instance = try_candidate_chain(cmd, query_chain, candidate_structchain)
-        #apo_holo_dict.update(apo_holo_dict_instance())
-        #apo_holo_dict_H.update(apo_holo_dict_H_instance)
-        #cndt_lig_positions.update(cndt_lig_positions_instance)
+        for res in passed_results:
+            update_dict_of_lists(apo_holo_dict, res.apo_holo_dict_instance)            # key = query_structchain
+            update_dict_of_lists(apo_holo_dict_H, res.apo_holo_dict_H_instance)        # key = query_structchain
+            update_dict_of_lists(cndt_lig_positions, res.cndt_lig_positions_instance)  # key = candidate_structchain
         
 
         # Clean objects/selections in PyMOL session
