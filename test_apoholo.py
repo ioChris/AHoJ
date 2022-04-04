@@ -120,10 +120,21 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_main_fail("--query '1a73 \n XXXX' ")  # should fail if at least one is not valid
         # TODO add more tests cases
 
+
+    def assert_progress(self, res, expected_content=None):
+        progress_file = res.result_dir + '/.progress'
+        assert os.path.exists(progress_file), ".progress file was not created"
+        assert non_blank_lines(progress_file) == 1, ".progress doesn't have exactly one line"
+        content = read_file(progress_file)
+        assert content == expected_content, f".progress file has invalid value. actual: '{content}' expected: '{expected_content}'"
+
+
     def test_track_progress(self):
         res = self.tst_query("--query '3CQV A HEM' --track_progress 1", expect_apo=6, expect_holo=5)
-        assert non_blank_lines(res.result_dir + '/.progress') == 1
-        assert read_file(res.result_dir + '/.progress') == "11/11"
+        self.assert_progress(res, expected_content="11/11")
+        res = self.tst_query("--query '3fav all zn' --track_progress 1",  expect_apo=2, expect_holo=0)
+        self.assert_progress(res, expected_content="4/4")
+
 
 if __name__ == '__main__':
     sys.exit(unittest.main())

@@ -351,9 +351,15 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     return res
 
 
-def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results): # Write dict(s) to csv
+def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results):  # Write dict(s) to csv
+    # we don't want to edit original dicts while computation is still running
+    # doing deepcopy because they are discs of lists
+    cndt_lig_positions = copy.deepcopy(cndt_lig_positions)
+    query_lig_positions = copy.deepcopy(query_lig_positions)
+
     filename_csv = path_results + '/ligands.csv'
     header = "#chain, ligand_positions\n"
+
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         # Write query ligands
@@ -1299,7 +1305,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #print('All query ligands:', query_lig_positions[query_structchain])
                 #print(f'Assessing detected ligands in {query_lig_names} and {ligand_names}')
                 for ligand in query_lig_positions[query_structchain]:
-                    #print('scanning ligand:', ligand)
+                    print('scanning ligand:', ligand)
                     resi = ligand.split()[0]
                     chain = ligand.split()[1]
                     resn = ligand.split()[2]
