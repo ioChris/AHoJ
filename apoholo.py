@@ -1654,27 +1654,25 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # reverse_search=1, OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
-    parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * *', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='5j72 a na 703', help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
-    #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # autodetect_lig=1 OK, apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query') 
-    #parser.add_argument('--query', type=str,   default='3fav all', help='main input query') 
-    #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query') 
+    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query')
+    #parser.add_argument('--query', type=str,   default='3fav all', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query')
     
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
-    #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # OK apo 0, holo 0
-    #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # reverse_search=1, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v a,b', help='main input query') # reverse_search=1, apo 8, holo 24
 
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
-    #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
+    parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     
@@ -1719,6 +1717,11 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
 
     #parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    
+    # Long queries
+    #parser.add_argument('--query', type=str,   default='1cim A', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1h1p A', help='main input query')
+    #parser.add_argument('--query', type=str,   default='1k1j A', help='main input query')
     
 
     # Basic
