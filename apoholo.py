@@ -353,7 +353,7 @@ def load_precompiled_data(workdir) -> PrecompiledData:
 
 def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results): # Write dict(s) to csv
     filename_csv = path_results + '/ligands.csv'
-    header = "#candidate_chain, ligand_positions\n"
+    header = "#chain, ligand_positions\n"
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         # Write query ligands
