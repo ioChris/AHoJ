@@ -178,6 +178,7 @@ class QueryResult:
 class CandidateChainResult:
     """ Result of candidate chain evaluation """
     # TODO remodel, include/remove attributes
+    #query_structchain: str
     query_chain: str
     candidate_struct: str
     candidate_chain: str
@@ -1219,7 +1220,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         #sys.exit(1)
         
 
-        def try_candidate_chain(cmd, query_chain: str, candidate_structchain: str) -> CandidateChainResult:
+        def try_candidate_chain(cmd, query_structchain: str, candidate_structchain: str) -> CandidateChainResult:
             # TODO(chris): collect/move all function side effects to returned CandidateChainResult
             # TODO(rdk): make independent of nonlocal/global variables
 
@@ -1229,6 +1230,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #query_lig_positions: dict() # used
             #cndt_lig_positions: dict() # updated
             
+            
             apo_holo_dict_instance = dict()
             apo_holo_dict_H_instance = dict()
             cndt_lig_positions_instance = dict()
@@ -1237,11 +1239,24 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             progress_processed_candidates += 1
             track_progress(write_results=True)
 
+            query_struct = query_structchain[:4]
+            query_chain = query_structchain[4:]
+            
             candidate_struct = candidate_structchain[:4]
             candidate_chain = candidate_structchain[4:]
 
             candidate_result = CandidateChainResult(query_chain=query_chain, candidate_struct=candidate_struct,
                                                 candidate_chain=candidate_chain)  # ,query_lig_positions=query_lig_positions
+            
+            print(query_structchain, query_struct, query_chain)#, query_struct_path)
+            query_struct_path = download_mmCIF_gz2(query_struct, pathSTRUCTS)
+            
+            #sys.exit(1)
+            if query_struct in cmd.get_object_list('all'):
+                pass
+            else:
+                cmd.load(query_struct_path)
+            cmd.select(query_structchain, query_struct + '& chain ' + query_chain)
 
             candidate_struct_path = download_mmCIF_gz2(candidate_struct, pathSTRUCTS)
             if candidate_struct in cmd.get_object_list('all'):
@@ -1440,7 +1455,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             return candidate_result
 
 
-        def try_candidate_chains(cmd, query_chain, candidates_structchains: list) -> list: # list[CandidateChainResult]:
+        def try_candidate_chains(cmd, query_structchain, candidates_structchains: list) -> list: # list[CandidateChainResult]:
             query_parallelism = args.query_parallelism
 
             results = []
@@ -1449,7 +1464,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Align candidate chain to query chain and mark atom selections around superimposed query ligand binding sites
                 for cand in candidates_structchains:
                     # TODO(rdk): make cmd independent for each run
-                    results.append(try_candidate_chain(cmd, query_chain, cand))
+                    results.append(try_candidate_chain(cmd, query_structchain, cand))
             else:
                 def _try_chain(cand_strchain):
                     # TODO(rdk): make cmd independent for each run
@@ -1460,7 +1475,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     
                     local_cmd.load(query_struct_path)
 
-                    return try_candidate_chain(local_cmd, query_chain, cand_strchain)
+                    return try_candidate_chain(local_cmd, query_structchain, cand_strchain)
 
                 with ThreadPoolExecutor(max_workers=query_parallelism) as pool:
                 # with ProcessPoolExecutor(max_workers=query_parallelism) as pool:
@@ -1474,7 +1489,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 modified_dict.setdefault(key, []).extend(value)
 
 
-        candidate_results = try_candidate_chains(cmd, query_chain, candidates_structchains)
+        candidate_results = try_candidate_chains(cmd, query_structchain, candidates_structchains)
         #TODO integrate results to global state here, write to disk
         passed_results = [cr for cr in candidate_results if cr.passed]
         
