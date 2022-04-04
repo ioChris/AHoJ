@@ -179,6 +179,7 @@ class CandidateChainResult:
     """ Result of candidate chain evaluation """
     # TODO remodel, include/remove attributes
     #query_structchain: str
+    query_struct: str
     query_chain: str
     candidate_struct: str
     candidate_chain: str
@@ -348,6 +349,35 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     res = load_precompiled_data_bin(workdir)
     print('Done loading pre-compiled data\n')
     return res
+
+
+def write_cndt_ligands_csv(cndt_lig_positions, path_results):
+    # Write CSV file
+    filename_csv = path_results + '/ligands_results.csv'
+    header = "#candidate_chain, ligand_positions\n"
+    with open(filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        for key, values in cndt_lig_positions.items():
+            for idx, item in enumerate(values):
+                values[idx] = item.replace(" ", "_")
+                #value.replace(" ", "_")
+            csv_out.write("%s,%s\n" % (key, '-'.join(values)))
+
+def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results): # Write dict(s) to csv
+    filename_csv = path_results + '/ligands.csv'
+    header = "#candidate_chain, ligand_positions\n"
+    with open(filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+        # Write query ligands
+        for key, values in query_lig_positions.items():
+            for idx, item in enumerate(values):  # replace " " with "_"
+                values[idx] = item.replace(" ", "_")
+            csv_out.write("%s,%s\n" % (key, '-'.join(values)))
+        # Write (holo) candidate ligands
+        for key, values in cndt_lig_positions.items():
+            for idx, item in enumerate(values):  # replace " " with "_"
+                values[idx] = item.replace(" ", "_")
+            csv_out.write("%s,%s\n" % (key, '-'.join(values)))
 
 
 def write_results_apo_csv(apo_holo_dict, path_results):
@@ -1016,6 +1046,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if write_results:
                 write_results_apo_csv(apo_holo_dict, path_results)
                 write_results_holo_csv(apo_holo_dict_H, path_results)
+                #write_cndt_ligands_csv(cndt_lig_positions, path_results)
+                write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
 
 
     ########################################################
@@ -1209,7 +1241,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f"'{ligands_selection + interface_ligands_selection}' ligands found")
         '''
 
-        # Print ligand report
+        # Print universal ligand report
         print('\nQuery ligand information')
         print('Total atoms: ', len(ligands_atoms))
         print('Atom IDs: ', ligands_atoms)
@@ -1241,17 +1273,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             query_struct = query_structchain[:4]
             query_chain = query_structchain[4:]
-            
             candidate_struct = candidate_structchain[:4]
             candidate_chain = candidate_structchain[4:]
 
-            candidate_result = CandidateChainResult(query_chain=query_chain, candidate_struct=candidate_struct,
+            candidate_result = CandidateChainResult(query_struct=query_struct, query_chain=query_chain, candidate_struct=candidate_struct,
                                                 candidate_chain=candidate_chain)  # ,query_lig_positions=query_lig_positions
             
-            print(query_structchain, query_struct, query_chain)#, query_struct_path)
+            # Load PyMOL objects (if not loaded)
             query_struct_path = download_mmCIF_gz2(query_struct, pathSTRUCTS)
-            
-            #sys.exit(1)
             if query_struct in cmd.get_object_list('all'):
                 pass
             else:
@@ -1273,6 +1302,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('Alignment RMSD/TM score:', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm)
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported?
+                # All successful (non-discarded right below) alignments are saved and thus visualized
+                # aln_rms and aln_tm are the scores, they are saved into dicts (apo_holo_dict and apo_holo_dict_H)
 
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
@@ -1349,7 +1380,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     # Assess ligands (check their name identifiers to see if query ligand name is present)
                     #for i in cndt_lig_names:
-                    #    if i in query_lig_names or i in ligand_names:  # check in both lists (detected holo ligs + query ligs)  # TODO query_lig_names may be undefined
+                    #    if i in query_lig_names or i in ligand_names:  # check in both lists (detected holo ligs + query ligs)
                     #        found_ligands.add(i)
                     #    elif i not in nolig_resn:
                     #        found_ligands_xtra.add(i)
@@ -1389,7 +1420,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if query_chain_states[query_structchain] == 'holo':
 
                 #print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t confirmed query ligands: {query_lig_names}\t detected candidate ligands: {cndt_lig_names}\t eligible query ligands: {found_ligands}\t eligible non-query ligands: {found_ligands_xtra}')
-                print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t confirmed query ligands: {query_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
+                print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t verified query ligands: {query_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
 
                 # Apo result
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
@@ -1499,8 +1530,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             update_dict_of_lists(apo_holo_dict_H, res.apo_holo_dict_H_instance)        # key = query_structchain
             update_dict_of_lists(cndt_lig_positions, res.cndt_lig_positions_instance)  # key = candidate_structchain
         
+        # Remove duplicate values from dictionaries (cndt_lig_positions dict may have duplicates)
+        for key, value in cndt_lig_positions.items():
+            cndt_lig_positions[key] = list(cndt_lig_positions.fromkeys(value))  
 
-        # Clean objects/selections in PyMOL session
+        '''
+        # Clean objects/selections in PyMOL session [This is probably redundant]
         apo_win_structs = set()
         for key, values in apo_holo_dict.items():
             for value in values:
@@ -1526,6 +1561,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cmd.center('query_ligands')
         except:
             cmd.center(query_structchain)
+        '''
 
 
         # Save results as session (.pse.gz) or multisave (.cif)
@@ -1556,7 +1592,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #if broad_search_mode:    query_chain = 'apo_chain'
     #else:   query_chain = query_chain
 
-
+    # Universal results
+    write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
+    
     # Apo results
     write_results_apo_csv(apo_holo_dict, path_results)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
@@ -1666,7 +1704,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # reverse_search=1, OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
-    #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * *', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='5j72 a na 703', help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
@@ -1698,10 +1736,11 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
     #parser.add_argument('--query', type=str,   default='6XBY * adp,mg', help='main input query') # ATPase, big query
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
-    parser.add_argument('--query', type=str,   default='1a73 e mg 205')
+    #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg')
+
     
     # Issue part B: ligand specified to a correct but non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
