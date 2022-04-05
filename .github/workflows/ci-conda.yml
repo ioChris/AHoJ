@@ -28,7 +28,7 @@ jobs:
 
       - uses: actions/cache@v2
         env:
-          CACHE_NUMBER: 0   # increase to reset cache manually
+          CACHE_NUMBER: 1   # increase to reset cache manually
         with:
           path: ~/conda_pkgs_dir
           key: conda-${{ matrix.os }}-${{ hashFiles('_AHoJ/conda-env.yml') }}-${{ env.DATE }}-${{ env.CACHE_NUMBER }}
