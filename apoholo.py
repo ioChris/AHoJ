@@ -250,18 +250,18 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     if len(parts) == 1:
         autodetect_lig = 1               # overrides cmd line param
     elif len(parts) == 2:  # and autodetect_lig == 1:
-        chains = parts[1].upper()
+        chains = parts[1]#.upper()
         autodetect_lig = 1
     #elif len(parts) == 2 and autodetect_lig == 0:  # this triggers "ALL" chains mode
         #ligands = parts[1].upper()
     elif len(parts) == 3:
-        chains = parts[1].upper()        # adjust case, chains = upper
+        chains = parts[1]#.upper()        # adjust case, chains = upper
         ligands = parts[2].upper()       # adjust case, ligands = upper
 
     # When position is specified, there has to be a single ligand/residue specified
     elif len(parts) == 4 and len(parts[2]) < 4 and len(parts[2].split(',')) == 1:# and int(parts[3]):
         try:
-            chains = parts[1].upper()
+            chains = parts[1]#.upper()
             ligands = parts[2].upper()
             position = str(int(parts[3]))   # test if int
             #if ligands in std_rsds:
@@ -609,7 +609,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         # Convert chains to structchain combos
         user_structchains = list()
         for user_chain in user_chains:
-            user_structchain = struct.lower() + user_chain.upper()
+            user_structchain = struct.lower() + user_chain#.upper()
             user_structchains.append(user_structchain)
 
 
@@ -1066,8 +1066,17 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cmd.reinitialize('everything')
             cmd.load(query_struct_path)
 
+        # Configure search expression for interface ligands 
+        if ligand_names is not None:
+            if position is None:
+                search_interface_expression = query_struct + ' and hetatm and not solvent and resn ' + ligand_names_bundle
+            else:  # TODO we don't want all ligands
+                search_interface_expression = query_struct + ' and hetatm and not solvent and resn ' + ligand_names_bundle + ' and resi ' + position
+        else:
+            search_interface_expression = query_struct + ' and hetatm and not solvent and not polymer'
+        
         #print(struct, dictQueryChains[struct])
-        all_ligands_selection = cmd.select('structure_ligands', query_struct + ' and hetatm and not solvent and not polymer')
+        all_ligands_selection = cmd.select('structure_ligands', search_interface_expression)
 
         if all_ligands_selection != 0:
             myspace_intrfc = {'all_ligs': []}
@@ -1678,7 +1687,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
-    parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
+    #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     
@@ -1689,6 +1698,8 @@ def parse_args(argv):
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
     #parser.add_argument('--query', type=str,   default='6XBY * adp,mg', help='main input query') # ATPase, big query
+    #parser.add_argument('--query', type=str,   default='6XBY s nag')
+    parser.add_argument('--query', type=str,   default='6XBY b pov')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
@@ -1755,7 +1766,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
