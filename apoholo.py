@@ -33,7 +33,7 @@ from concurrent.futures import ProcessPoolExecutor; import multiprocessing  # mu
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.4.2'
+VERSION = '0.4.3'
 
 
 _global_lock = threading.Lock()                      # multi-threading
@@ -272,7 +272,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     else:
         raise ValueError(f"Invalid query '{query}': wrong number of parts")
 
-    if chains == '*':
+    if chains == '*' or chains == 'all':
         chains = 'ALL'
     elif not all(chain.isalnum() for chain in chains.split(',')):  # check that chains are alphanumeric characters
         raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains")
@@ -1664,7 +1664,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # OK apo 0, holo 16
-    #parser.add_argument('--query', type=str,   default='1a73 a,b zn', help='main input query') # OK apo 0, holo 32
+    #parser.add_argument('--query', type=str,   default='1a73 A,B zn', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # reverse_search=1, OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
@@ -1675,7 +1675,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query')
+    parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all', help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query')
     
@@ -1699,7 +1699,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query')
     #parser.add_argument('--query', type=str,   default='6XBY * adp,mg', help='main input query') # ATPase, big query
     #parser.add_argument('--query', type=str,   default='6XBY s nag')
-    parser.add_argument('--query', type=str,   default='6XBY b pov')
+    #parser.add_argument('--query', type=str,   default='6XBY b pov')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
@@ -1766,7 +1766,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
