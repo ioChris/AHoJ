@@ -105,11 +105,11 @@ class T02_Apoholo(unittest.TestCase):
 
     def test_broad_search(self):
         self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
-        self.tst_query("--query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+        self.tst_query("--query '2v0v A,B' ", expect_apo=4, expect_holo=12)
         
     def test_interface_ligands_search(self):
-        self.tst_query("--query '1a73 e mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
-        self.tst_query("--query '1a73 a mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
+        self.tst_query("--query '1a73 E mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
+        self.tst_query("--query '1a73 A mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
         self.tst_query("--query '6XBY A adp,mg' ", expect_apo=4, expect_holo=2)  # ADP is an interface ligand on non-query chain
         
 
