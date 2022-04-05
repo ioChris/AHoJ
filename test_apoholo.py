@@ -101,7 +101,7 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '3CQV A HEM' ",   expect_apo=6, expect_holo=5)
         self.tst_query("--query '3fav all zn' ",  expect_apo=2, expect_holo=0)
         self.tst_query("--query '2hka all c3s' ", expect_apo=2, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
-        self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
+        self.tst_query("--query '2v57 A,C prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
     def test_broad_search(self):
         self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
