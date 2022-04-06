@@ -63,11 +63,11 @@ class T02_Apoholo(unittest.TestCase):
         print("Query result:", res)
 
         if expect_apo > 0:
-            assert res.num_apo_chains >= expect_apo, "Found less APO chains"  # may be > due to future data
+            assert res.num_apo_chains >= expect_apo, f"Found less APO chains ({res.num_apo_chains} vs {expect_apo})"  # may find more due to future data
             assert non_blank_lines(res.result_dir + '/results_apo.csv') == 1 + expect_apo, "Bad results_apo.csv"
 
         if expect_holo > 0:
-            assert res.num_holo_chains >= expect_holo, "Found less HOLO chains"  # may be > due to future data
+            assert res.num_holo_chains >= expect_holo, f"Found less HOLO chains ({res.num_holo_chains} vs {expect_holo})"  # may find more due to future data
             assert non_blank_lines(res.result_dir + '/results_holo.csv') == 1 + expect_holo, "Bad results_holo.csv"
 
         # Test produced structure files
@@ -101,13 +101,17 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '3CQV A HEM' ",   expect_apo=6, expect_holo=5)
         self.tst_query("--query '3fav all zn' ",  expect_apo=2, expect_holo=0)
         self.tst_query("--query '2hka all c3s' ", expect_apo=2, expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
-        self.tst_query("--query '2v57 a,c prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
+        self.tst_query("--query '2v57 A,C prl' ", expect_apo=4, expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
 
-    def test_reverse_search(self):
-        #self.tst_query("--reverse_search 1 --query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
-        #self.tst_query("--reverse_search 1 --query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+    def test_broad_search(self):
         self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
-        self.tst_query("--query '2v0v a,b' ", expect_apo=4, expect_holo=12)
+        self.tst_query("--query '2v0v A,B' ", expect_apo=4, expect_holo=12)
+        
+    def test_interface_ligands_search(self):
+        self.tst_query("--query '1a73 E mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
+        self.tst_query("--query '1a73 A mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
+        self.tst_query("--query '6XBY A adp,mg' ", expect_apo=4, expect_holo=2)  # ADP is an interface ligand on non-query chain
+        
 
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
@@ -116,10 +120,21 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_main_fail("--query '1a73 \n XXXX' ")  # should fail if at least one is not valid
         # TODO add more tests cases
 
+
+    def assert_progress(self, res, expected_content=None):
+        progress_file = res.result_dir + '/.progress'
+        assert os.path.exists(progress_file), ".progress file was not created"
+        assert non_blank_lines(progress_file) == 1, ".progress doesn't have exactly one line"
+        content = read_file(progress_file)
+        assert content == expected_content, f".progress file has invalid value. actual: '{content}' expected: '{expected_content}'"
+
+
     def test_track_progress(self):
         res = self.tst_query("--query '3CQV A HEM' --track_progress 1", expect_apo=6, expect_holo=5)
-        assert non_blank_lines(res.result_dir + '/.progress') == 1
-        assert read_file(res.result_dir + '/.progress') == "11/11"
+        self.assert_progress(res, expected_content="11/11")
+        res = self.tst_query("--query '3fav all zn' --track_progress 1",  expect_apo=2, expect_holo=0)
+        self.assert_progress(res, expected_content="4/4")
+
 
 if __name__ == '__main__':
     sys.exit(unittest.main())
