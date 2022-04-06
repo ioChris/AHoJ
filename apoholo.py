@@ -129,9 +129,10 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
 
 
 def wrong_input_error():  # arg_job_id, arg_pathRSLTS):
-    print('ERROR: Wrong input format\nPlease use a whitespace character to separate input arguments')
-    print('Input format: <pdb_id> <chain> <ligand> <position> or <pdb_id> <chains> <ligands> or <pdb_id> <chains> or <pdb_id> <ligands> or <pdb_id>')
-    print('Input examples: "3fav A,B ZN" or "3fav * ZN" or "3fav ALL ZN" or "3fav"')
+    print('\n=== ERROR: Wrong input format ===')
+    print('-use a whitespace character to separate input arguments\n-chains are case-sensitive')
+    print('\nInput format structure:\n<pdb_id> <chain> <ligand/residue> <position> or\n<pdb_id> <chains> <ligands> or\n<pdb_id> <chains> or\n<pdb_id> <ligands> or\n<pdb_id>')
+    print('\nInput examples:\n"3fav A ZN 101"\n"3fav A,B ZN"\n"3fav * ZN"\n"3fav ALL ZN"\n"3fav"\n')
     #print('Exiting & deleting new results folder:', path_job_results)
     #if os.path.isdir(path_job_results):
     #    os.rmdir(path_job_results)
@@ -709,7 +710,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             non_protein_lig_atoms = cmd.identify('non-protein_lig_' + ligand_names_bundle)
             non_protein_lig_atoms = '+'.join(str(i) for i in non_protein_lig_atoms)
             s2n = 'ID ' + non_protein_lig_atoms
-            s3n = cmd.select('around_non-protein_lig' + unverified_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2n)
+            
+            try: # Catch wrong chain exception (wrong case or non-existing chains)
+                s3n = cmd.select('around_non-protein_lig' + unverified_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2n)
+            except Exception:
+                wrong_input_error()
 
             if s1n != 0 and s3n != 0:
                 non_protein_lig_chains[unverified_structchain] = cmd.get_chains('around_non-protein_lig' + unverified_structchain)
@@ -1675,7 +1680,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query')
+    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all', help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query')
     
@@ -1705,7 +1710,6 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg')
-
     
     # Issue part B: ligand specified to a correct but non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
@@ -1718,6 +1722,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7aeh a R8H', help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
     #parser.add_argument('--query', type=str,   default='2amq a his 164', help='main input query') # apo 41, holo 66, job 318 H, Crystal Structure Of SARS_CoV Mpro in Complex with an Inhibitor N3
     #parser.add_argument('--query', type=str,   default='6lu7 a R8H', help='main input query')
+    parser.add_argument('--query', type=str,   default='7krn a adp', help='main input query')
 
     # Water
     #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query') # OK apo 9, holo 7
@@ -1766,7 +1771,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
