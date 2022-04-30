@@ -292,3 +292,29 @@ Floating point number that represents angstroms and is applied as a scanning rad
 **`--min_tmscore`** : minimum TM-score [default = `0.5`, min/max = 0/1]
 
 Floating point number that is applied as a minimum accepted template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.
+
+##  Results
+
+The results can be downloaded as a zip file after a run is completed.
+
+#### Files
+
+In a successful run, AHoJ should generate the following files:
+
+i) PDB structure files (cif.gz format) for the query structure (whole structure) and the successfully processed apo and holo candidate chains, aligned to the respective query chain(s)
+Note: a given candidate chain could be a match for more than one query chains, and could thus appear more than once, in each case aligned to the respective query chain.
+
+ii) 1 or 2 CSV files with the successfully processed candidate chains for apo and holo chains respectively [results_apo.csv, results_holo.csv]. These CSV files contain the following information for each found chain: **`query_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, ligands`**
+Note: UniProt overlap refers to the percentage of sequence overlap that each candidate chain has over the query chain (higher is better, max is 100%). The ligands listed in the files refer to the ligands that were detected in the superimposed positions of the specified query ligands, thus they might not include ligands that bind elsewhere in the candidate chains. If the CSV file for apo chains includes ligands (which seems contradicting), it indicates that the user set the parameter **`--lig_free_sites`** to 0 (OFF), and thus any other ligands besides the query ligand were allowed in the superimposed binding sites of candidate structures.
+
+iii) 1 CSV file with information of the ligand positions for both query and candidate structures [ligands.csv]. This file is important for reference purposes and also if the user wants to reconstruct the PyMOL session with annotations locally.
+
+iv) Console log file with information from the standard output [console.log]. This file can be used for reference and for better understanding the mechanism of action of AHoJ.
+
+v) A PyMOL script file for loading the results into a PyMOL session [reconstruct_PyMOL_session.pml]. This is useful for viewing the results locally on the user's computer. The script has to be opened through PyMOL. The resulting session can then be saved by the user as a PyMOL session (.pse).
+
+#### Visualization
+
+i) The web-application allows the visualization of the results in the browser with the molstar (Mol*) viewer. https://github.com/rdk/AHoJ-webapp
+
+ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [reconstruct_PyMOL_session.pml]. The script has to be loaded from the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session, and through PyMOL, open the .pml file.
