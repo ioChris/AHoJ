@@ -188,8 +188,8 @@ The maximum arguments within the single line input are of this form:
 ~~~  
 
 * `pdb_id`: This is the 4-character code of a PDB protein structure. This argument is obligatory and only 1 PDB ID can be input per line. (i.e. “1a73” or “3fav” or “3FAV”). If it is the only argument (because the user does not know the ligand that binds to the structure or is using "reverse search", it will trigger automatic detection of ligands in the structure.
-* `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” or “*” in the case of all chains (i.e. “A” or “A,C,D” or “ALL” or “*”). This argument is obligatory if the user intends to provide any argument after that (i.e. ligands or position).
-* `ligand`: A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”) or “*” for the automatic detection of all ligands in the specified chain(s). Besides specifying the ligand directly by its name (and optionally, its position), the user can also specify a residue that binds the ligand and AHoJ will detect the ligand (as long as it is within 4.5 Angstroms of the residue). This approach can actually be more robust in cases where the ligand is assigned a chain outside of the protein chains, in which case the detection will fail (as AHoJ will discard non-UniProt chains as part of the chain validation). On the contrary, protein residues are assigned a polymer chain and is thus less likely to fail. This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo). Note: if planning to specify the `position` argument, you cannot use more than one ligand per query.
+* `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” or “\*” in the case of all chains (i.e. “A” or “A,C,D” or “ALL” or “\*”). This argument is obligatory if the user intends to provide any argument after that (i.e. ligands or position).
+* `ligand`: A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”) or “\*” for the automatic detection of all ligands in the specified chain(s). Besides specifying the ligand directly by its name (and optionally, its position), the user can also specify a residue that binds the ligand and AHoJ will detect the ligand (as long as it is within 4.5 Angstroms of the residue). This approach can actually be more robust in cases where the ligand is assigned a chain outside of the protein chains, in which case the detection will fail (as AHoJ will discard non-UniProt chains as part of the chain validation). On the contrary, protein residues are assigned a polymer chain and is thus less likely to fail. This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo). Note: if planning to specify the `position` argument, you cannot use more than one ligand per query.
 * `position`: This argument is an integer (i.e. “260” or “1”). It refers to the PDB index of the previously specified ligand or binding residue. This argument can only be specified when there is one ligand or residue specified.
                        
 ## Usage examples
@@ -252,11 +252,11 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 **`--xray_only`** x-ray structures only [default = `0`]
 
-0 or 1. When set to 1 (ON), only X-ray structures are considered. It overrides the NMR setting.
+0 or 1. When set to 1 (ON), only X-ray structures are considered. This overrides the NMR setting.
 
 **`--lig_free_sites`** : ligand-free sites [default = `1`]
 
-0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s).
+0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s). If the user wants to find apo structures that don't bind any ligands in the superimposed binding site(s) of the query ligand(s), they should set this value to 1 (default).
 
 [//]: # (**`--autodetect_lig`** : auto-detect ligands [default = `0`])
 
@@ -273,22 +273,22 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 **`--save_separate`** [default = `1`]
 
-0 or 1. When set to 1 (ON), the server will save all aligned chains that are in the opposite category from the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will save any apo chains that it will find. In a reverse search, it would save all holo chains. If the user wishes to save both apo and holo chains, they can turn on the next parameter, "save_oppst".
+0 or 1. When set to 1 (ON), the server will save all aligned chains that are in the opposite category from the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will save any apo chains that it will find. In the opposite case when the query structure is apo, it would save all holo chains. If the user wishes to save both apo and holo chains, they can turn on the next parameter, "save_oppst".
 
 **`--save_oppst`** : save opposite [default = `1`]
 
-0 or 1. When set to 1 (ON), the server will not only find, but also save chains that are in the same category with the starting query (apo or holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will also save any holo chains that it will find. In a reverse search (starting with an apo-protein and looking for holo), it will also save the apo chains that it will find. This setting is dependent on the previous parameter "save_separate" which has to be ON for this parameter to work. This setting does not affect the text output of the server which always includes both apo and holo chains.
+0 or 1. When set to 1 (ON), the server will not only find, but also save chains that are in the same category with the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will also save any holo chains that it will find. In the opposite case when the query structure is apo, it will also save the apo chains that it will find. This setting is dependent on the previous parameter "save_separate" which has to be ON for this parameter to work. This setting does not affect the search process of AHoJ which always includes both apo and holo chains.
 
-**`--overlap_threshold`** [default = `0`, min/max = 0/100]
+**`--overlap_threshold`** sequence overlap threshold [default = `0`, min/max = 0/100]
 
-Floating point number that represents a percentage (%) and is applied as a cutoff point when comparing the sequence overlap between the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate chains, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it would mean that the candidate chain has to completely overlap with the query chain. It can be longer than the query, but not shorter.
+Floating point number that represents a percentage (%) and is applied as a cutoff point when comparing the sequence overlap between the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate chains, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it means that the candidate chain has to completely cover the query chain. It can be longer than the query, but not shorter.
 
-Note: "100" guarantees a complete overlap, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff with the "min_tmscore" parameter.
+Note: "100" guarantees complete coverage, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff with the "min_tmscore" parameter.
 
-**`--lig_scan_radius`** : ligand scanning radius [default = `4.5`]
+**`--lig_scan_radius`** : ligand scanning radius [default = `4.0`]
 
-Floating point number that represents angstroms and is applied as a scanning radius for ligands, from the point of the superimposition of the query ligand(s) in the respective superimposed binding sites on the candidate chains. If the candidate has ligands bound outside this sphere, they will be tolerated, and the candidate will be characterised as apo-protein.
+Floating point number that represents angstroms and is applied as a scanning radius when looking for ligands in the candidate structures. This scanning radius is applied on the positions of the atoms of the superimposed query ligands to the aligned candidate structure, to scan for ligands. The resulting scanning space is a "carved" surface that has the shape of the query ligand, extended outward by the given radius. If the candidate structure binds ligands outside of this superimposed area, they will be ignored, and the candidate will be characterised as an apo-protein.
 
 **`--min_tmscore`** : minimum TM-score [default = `0.5`, min/max = 0/1]
 
-Floating point number that is applied as a minimum cutoff point for template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH. 
+Floating point number that is applied as a minimum accepted template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.
