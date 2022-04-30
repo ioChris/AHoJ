@@ -1757,7 +1757,7 @@ def parse_args(argv):
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
-    parser.add_argument('--lig_scan_radius',   type=float, default=4.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
+    parser.add_argument('--lig_scan_radius',   type=float, default=4.0,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
     parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
