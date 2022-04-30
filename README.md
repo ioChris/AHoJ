@@ -315,6 +315,6 @@ v) A PyMOL script file for loading the results into a PyMOL session [reconstruct
 
 #### Visualization
 
-i) The web-application allows the visualization of the results in the browser with the molstar (Mol*) viewer. https://github.com/rdk/AHoJ-webapp
+i) The web application allows the visualization of the results in the browser with the molstar (Mol*) viewer. Web application: https://github.com/rdk/AHoJ-webapp
 
 ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [reconstruct_PyMOL_session.pml]. The script has to be loaded from the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session, and through PyMOL, open the .pml file.
