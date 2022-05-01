@@ -301,7 +301,7 @@ The results can be downloaded as a zip file after a run is completed.
 
 In a successful run, AHoJ should generate the following files:
 
-i) PDB structure files (cif.gz format) for the query structure (whole structure) and the successfully processed apo and holo candidate chains, aligned to the respective query chain(s)
+i) PDB structure files (cif.gz format) for the query structure (whole structure) and the successfully processed apo and holo candidate chains, aligned to the respective query chain(s).
 
 Note: a given candidate chain could be a match for more than one query chains, and could thus appear more than once, in each case aligned to the respective query chain.
 
@@ -319,4 +319,5 @@ v) A PyMOL script file for loading the results into a PyMOL session [reconstruct
 
 i) The web application allows the visualization of the results in the browser with the molstar (Mol*) viewer. Web application: https://github.com/rdk/AHoJ-webapp
 
-ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [reconstruct_PyMOL_session.pml]. The script has to be loaded from the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session, and through PyMOL, open the .pml file.
+ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [reconstruct_PyMOL_session.pml]. The script has to be loaded from within the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session and open the .pml file through it. A PyMOL installation is needed for this to work (Incentive or Open-Source).
+
