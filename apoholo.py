@@ -1250,11 +1250,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
                 # Also do inverse TM align
-                #aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)
+                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)
 
-                print('Alignment RMSD/TM score:', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm)
-                #if aln_tm_i > aln_tm:
-                #    aln_tm = aln_tm_i
+                print('Alignment RMSD/TM score/TM score(inverse):', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm, aln_tm_i)
+                if aln_tm_i > aln_tm:
+                    aln_tm = aln_tm_i
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported?
                 # "aln_rms" is visualized, both aln_rms and aln_tm are saved and reported in results
