@@ -1249,11 +1249,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try:
                 aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
+                # Also do inverse TM align
+                #aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)
+
                 print('Alignment RMSD/TM score:', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm)
+                #if aln_tm_i > aln_tm:
+                #    aln_tm = aln_tm_i
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported?
-                # ^All successful (non-discarded right below) alignments are saved and thus visualized
-                # aln_rms and aln_tm are the scores, they are saved into dicts (apo_holo_dict and apo_holo_dict_H)
+                # "aln_rms" is visualized, both aln_rms and aln_tm are saved and reported in results
+
 
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
@@ -1657,7 +1662,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7aeh a R8H', help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
     #parser.add_argument('--query', type=str,   default='2amq a his 164', help='main input query') # apo 41, holo 66, job 318 H, Crystal Structure Of SARS_CoV Mpro in Complex with an Inhibitor N3
     #parser.add_argument('--query', type=str,   default='6lu7 a R8H', help='main input query')
-    parser.add_argument('--query', type=str,   default='7krn a adp', help='main input query')
+    #parser.add_argument('--query', type=str,   default='7krn a adp', help='main input query')
 
     # Water
     #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query') # OK apo 9, holo 7
@@ -1665,6 +1670,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * hoh', help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 x hoh 311', help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     #parser.add_argument('--query', type=str,   default='1pkz a tyr 9', help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
+    parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut a tpo', help='main input query') # OK apo 0, holo 3
