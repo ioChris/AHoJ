@@ -961,7 +961,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
         elif ligand_names is None:# and autodetect_lig == 1: 
             search_term = 'hetatm and not solvent and not polymer' # water as ligand should be ignored here without a position
-            print('\n*Search term = ', search_term)
+
         '''
         else: # ligands not specified (*/?) 
             print('\n====== No ligands specified: auto-detecting all ligands ======\n')
@@ -1216,14 +1216,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Atom IDs: ', ligands_atoms)
         print('Position/chain/name: ', query_lig_positions.get(query_structchain))
         print('State:', query_chain_states[query_structchain])  #, '/', len(query_lig_positions.get(query_structchain)))
-        print('qBS_centerofmass', qBS_centerofmass)
-        print('qBS_coords', qBS_coords)
-        #print(list(coords))
-        #print(type(coords))
 
-        
-        
-        #sys.exit(1)
+
 
         #print(query_lig_positions)
 
@@ -1333,8 +1327,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     # Check that the candidate covers the area around the superimposed query ligand
                     s1cbs = candidate_structchain + ' and polymer'
-                    s2cbs = 'qBS_CoM_' + ligand_ # pseudoatom center of mass for query ligand binding site
-                    #s2cbs = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
+                    #s2cbs = 'qBS_CoM_' + ligand_ # pseudoatom center of mass for query ligand binding site
+                    s2cbs = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
                     cBS_sele = cmd.select('cndtBS_arnd' + ligand_, s1cbs + ' near_to ' + lig_scan_radius + ' of ' + s2cbs)
                     if cBS_sele == 0:
                         print('*no binding residues around query ligand superposition, skipping ligand')
@@ -1380,7 +1374,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 found_cndt_bs_ratio = found_cndt_bs / len(query_lig_positions[query_structchain]) # calculate ratio of found ligands
                 
                 print(f'[{found_cndt_bs}] candidate binding sites detected out of total [{len(query_lig_positions[query_structchain])}] query binding sites')
-                print('Ratio:', found_cndt_bs_ratio)
+                print('Ratio (found/total):', found_cndt_bs_ratio)
                 
                 if found_cndt_bs != 0:
                     
@@ -1399,7 +1393,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                                 cmd.save(path_results + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                             cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
-    
                     # Holo result
                     else:
                         ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
@@ -1425,13 +1418,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             elif query_chain_states[query_structchain] == 'apo':
                 found_ligands_r = set()
                 found_ligands_xtra = set()
+                #found_cndt_bs = 0 # in an apo query, the cndt ligands should be checked to be in areas with query coverage
 
                 # Find ligands in candidate with broad search
                 cmd.select('cndt_ligands_' + candidate_structchain, candidate_struct + '& chain ' + candidate_chain + '& hetatm & not (polymer or solvent)')
 
                 # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be found # TODO
 
-                # Put selected atoms in a list
+                # Put selected atoms into list
                 myspace_r = {'r_positions': []}
                 cmd.iterate('cndt_ligands_' + candidate_structchain, 'r_positions.append(resi +" "+ chain +" "+ resn)', space = myspace_r)
 
@@ -1440,13 +1434,34 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     myspace_r[key] = list(myspace_r.fromkeys(value))   # preserves the order of values
                 print(f'-candidate ligands found: {myspace_r["r_positions"]}') # use set to remove redundant positions
 
-                # Transfer dict[key] values (just resn) into set for easier handling
-                for r_position in myspace_r['r_positions']: # use set to remove redundant positions
-                    r_atom_lig_name = r_position.split()[2]
+                # check if binding sites of cndt ligands exist in query
+                for ligand in myspace_r['r_positions']:
+                    #print('scanning candidate ligand:', ligand)
+                    resi = ligand.split()[0]
+                    chain = ligand.split()[1]
+                    resn = ligand.split()[2]
+                    ligand_ = ligand.replace(' ', '_') # remove spaces for selection name
+                    
+                    # Make selection of cndt binding site
+                    s1qchain = query_structchain + ' and polymer'
+                    s2cndtlig = '(' + candidate_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
+                    cndt_bs = cmd.select('clig_on_qbs_' + ligand_, s1qchain + ' near_to ' + lig_scan_radius + ' of ' + s2cndtlig)
+                    
+                    if cndt_bs == 0:
+                        print('*ligand validity: [invalid]\nno query chain residues around candidate ligand superposition, ignoring ligand')
+                        continue # skip this ligand
+                    else:
+                        print('*ligand validity: [valid]')  # query residues present around candidate ligand superposition
+                        
+                        # Register valid ligands
+                        r_atom_lig_name = ligand.split()[2]
 
-                    if r_atom_lig_name not in nolig_resn:  # exclude non ligands
-                        found_ligands_r.add(r_atom_lig_name)
-                        cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(r_position)
+                        if r_atom_lig_name not in nolig_resn:  # exclude non ligands
+                            found_ligands_r.add(r_atom_lig_name)
+                            cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(ligand)
+
+
+                #sys.exit(1)
                 
                 # Print verdict for chain & save it as ".cif.gz"
                 print('Found ligands: ', found_ligands_r)  # TODO found_ligands_r may be undefined
@@ -1832,7 +1847,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
