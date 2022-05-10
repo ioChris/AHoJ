@@ -974,7 +974,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('\n*Search term = ', search_term)
 
     if autodetect_lig == 1:
-        print('\nSearch mode: Broad')
+        print('\nSearch mode: Broad (auto-detecting query ligands)')
     else:
         print('\nSearch mode: Focused')
 
@@ -986,6 +986,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     query_chain_states = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
+
+    qBS_centerofmass = dict()
+    qBS_coords = dict()
 
     progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
     progress_processed_candidates = 0
@@ -1177,9 +1180,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 query_lig_positions[key] = list(query_lig_positions.fromkeys(value))   # preserves the order of values
 
 
-            # Print ligand report # Moved
+
 
             # Name query ligands as seperate selections per "residue"/position. Put real (detected) ligand names into set
+            # Find the center of mass for each ligand's binding site
             query_lig_names = set()
             for ligand in query_lig_positions[query_structchain]:
                 resi = ligand.split()[0]
@@ -1188,16 +1192,35 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 ligand_ = ligand.replace(' ', '_')
                 query_lig_names.add(resn)
                 cmd.select('holo_' + ligand_, query_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
+
+                # Center of mass (same w "get_coords")
+                s1qbs = query_struct + ' and polymer '
+                s2qbs = 'holo_' + ligand_
+                cmd.select('queryBS_' + ligand_, s1qbs + ' near_to ' + lig_scan_radius + ' of ' + s2qbs)
+                qBS_centerofmass[ligand_] = cmd.centerofmass('queryBS_' + ligand_)
+                #qBS_atoms = cmd.identify('queryBS_' + ligand_)
+                coords = cmd.get_coords('queryBS_' + ligand_)
+                qBS_coords[ligand_] = coords
+
+            
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
 
 
-        # Print universal ligand report
+        # Print universal ligand report (for apo or holo query)
         print('\nQuery ligand information')
         print('Total atoms: ', len(ligands_atoms))
         print('Atom IDs: ', ligands_atoms)
         print('Position/chain/name: ', query_lig_positions.get(query_structchain))
         print('State:', query_chain_states[query_structchain])  #, '/', len(query_lig_positions.get(query_structchain)))
+        print('qBS_centerofmass', qBS_centerofmass)
+        print('qBS_coords', qBS_coords)
+        #print(list(coords))
+        #print(type(coords))
+
+        
+        
+        #sys.exit(1)
 
         #print(query_lig_positions)
 
@@ -1249,20 +1272,18 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try:
                 aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
-                # Also do inverse TM align
-                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)
+                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
 
                 print('Alignment RMSD/TM score/TM score(inverse):', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm, aln_tm_i)
-                if aln_tm_i > aln_tm:
-                    aln_tm = aln_tm_i
+                #if aln_tm_i > aln_tm:                    aln_tm = aln_tm_i
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported?
-                # "aln_rms" is visualized, both aln_rms and aln_tm are saved and reported in results
+                # "aln_rms" is visualized, both numbers for aln_rms and aln_tm are reported in results
 
 
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
-            except:
+            except Exception:
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('Alignment RMSD/TM score: ERROR')
                 print('*poor alignment (error), discarding chain ', candidate_structchain)
@@ -1271,13 +1292,25 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 return candidate_result
 
             # Discard poor alignments
-            if aln_tm < min_tmscore:
+            if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
                 discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
                 print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
 
                 candidate_result.discard_reason = "poor alignment (below threshold)"
                 return candidate_result
-
+            
+            #cndt_coords = cmd.get_coords(candidate_struct + '& chain ' + candidate_chain)
+            cndt_com = cmd.centerofmass(candidate_structchain)
+            #cndt_com2 = cmd.com(candidate_structchain)
+            #print(cndt_coords)
+            print('cndt_centerofmass', cndt_com)
+            cmd.pseudoatom(object='cndt_chain_CoM', pos=cndt_com)
+            for ligand in qBS_centerofmass:
+                cmd.pseudoatom(object='qBS_CoM' + ligand, pos=qBS_centerofmass[ligand])
+                distance_com = cmd.get_distance('qBS_CoM' + ligand, 'cndt_chain_CoM')
+                print(distance_com)
+            
+            
 
             # Look for ligands in candidate chain
 
@@ -1298,6 +1331,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     cndt_sele_expression = '(' + candidate_struct + ' and hetatm)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
                     qr_lig_sele_expression = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
                     cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + lig_scan_radius + ' of ' + qr_lig_sele_expression)
+                    
+                    # Center of mass
+                    #s1cbs = 
+                    #s2cbs = 
+                    #query_lig_coords = cmd.get_coords(query)
+                    
+                    
+                    
+                    # Measure distance between query CoM and ligand chain CoM
+                    sys.exit(1)
 
                     # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be saved, we need to merge the two selections here
                     cmd.select(candidate_structchain, candidate_structchain + '_arnd_' + ligand_, merge=1)
@@ -1710,7 +1753,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
 
