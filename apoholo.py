@@ -1192,7 +1192,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 ligand_ = ligand.replace(' ', '_')
                 query_lig_names.add(resn)
                 cmd.select('holo_' + ligand_, query_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
-
+                '''
                 # Center of mass (of binding site) # it can be of ligand
                 s1qbs = query_struct + ' and polymer '
                 s2qbs = 'holo_' + ligand_
@@ -1201,10 +1201,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #qBS_atoms = cmd.identify('queryBS_' + ligand_)
                 coords = cmd.get_coords('queryBS_' + ligand_)
                 qBS_coords[ligand_] = coords
-                
                 # Save center of mass as pseudoatom selection
                 cmd.pseudoatom(object='qBS_CoM_' + ligand_, pos=qBS_centerofmass[ligand_])
-
+                '''
             
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
