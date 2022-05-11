@@ -184,6 +184,7 @@ class CandidateChainResult:
     passed: bool = False
     discard_reason: str = None
     tm_score: float = None
+    tm_score_i: float = None
     rmsd: float = None
 
     apo_holo_dict_instance: dict = None
@@ -363,7 +364,7 @@ def write_results_apo_csv(apo_holo_dict, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_apo.csv'
-    header = "#query_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
+    header = "#query_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, iTM_score, ligands\n"
 
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
@@ -376,7 +377,7 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_holo.csv'
-    header = "#query_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, ligands\n"
+    header = "#query_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, iTM_score, ligands\n"
 
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
@@ -1263,8 +1264,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
                     aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
                 else:
-                    aln_tm = 0.0
-                    aln_tm_i = 0.0
+                    aln_tm = 0
+                    aln_tm_i = 0
 
                 print('\nAlignment RMSD/TM score/TM score(inverse):', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm, aln_tm_i)
                 #if aln_tm_i > aln_tm:  aln_tm = aln_tm_i
@@ -1275,6 +1276,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
+                candidate_result.tm_score_i = aln_tm_i
             except Exception:
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('\nAlignment RMSD/TM score: ERROR')
@@ -1381,7 +1383,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Apo result
                     if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                         ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                        apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                        apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                         if len(found_ligands_xtra) > 0:
                             print('APO*')
                         else:
@@ -1393,7 +1395,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Holo result
                     else:
                         ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                        apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                        apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                         if len(found_ligands) > 0:
                             print('HOLO')
                         else:
@@ -1465,7 +1467,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Holo result
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
-                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                     print('HOLO')
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
@@ -1475,7 +1477,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Apo result
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
-                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
@@ -1679,7 +1681,7 @@ def parse_args(argv):
 
     # Main user query
     # Ligand
-    #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A zn', help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # reverse_search=1, OK apo 0, holo 16
@@ -1696,19 +1698,19 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query')
     #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # Fully apo, apo 8, holo 24
-    #parser.add_argument('--query', type=str,   default='2v0v a,b', help='main input query') # reverse_search=1, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v A,B', help='main input query') # reverse_search=1, apo 8, holo 24
 
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
-    #parser.add_argument('--query', type=str,   default='2v57 a,c prl', help='main input query') # OK apo 4, holo 0
+    #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
-    #parser.add_argument('--query', type=str,   default='2npq a bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
+    #parser.add_argument('--query', type=str,   default='2npq A bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
     #parser.add_argument('--query', type=str,   default='2hka all c3s') # first chain is apo, it was ignored before now works
     #parser.add_argument('--query', type=str,   default='1a73')
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
-    parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query') # apo 4, holo 2
+    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query') # apo 4, holo 2
     #parser.add_argument('--query', type=str,   default='6XBY * adp,mg', help='main input query') # ATPase, big query
     #parser.add_argument('--query', type=str,   default='6XBY s nag')
     #parser.add_argument('--query', type=str,   default='6XBY b pov')
@@ -1738,6 +1740,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3i34 x hoh 311', help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     #parser.add_argument('--query', type=str,   default='1pkz a tyr 9', help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
+    parser.add_argument('--query', type=str,   default='4hxj A,B', help='main input query')
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut A tpo', help='main input query') # OK apo 0, holo 3
