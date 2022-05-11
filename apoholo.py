@@ -63,9 +63,7 @@ def download_mmCIF_gz2(pdb_id, pdb_dir):   # Version 2 of download mmCIF gz (wit
     urlA = 'https://files.rcsb.org/download/'
     ext = '.cif.gz'
     url = urlA + pdb_id.upper() + ext
-
     pdb_id = pdb_id.lower()
-
     middle_bit = pdb_id[1:3]
     subdir = f'{pdb_dir}/{middle_bit}'
     file_path = f'{subdir}/{pdb_id}{ext}'
@@ -1356,7 +1354,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Find which ligands are present in query by matching their names (without set)
                     for cndt_position in myspace_cndt['cndt_positions']:
                         cndt_lig_resn = cndt_position.split()[2]
-                        
+
                         if cndt_lig_resn in query_lig_names or cndt_lig_resn in ligand_names:
                             found_ligands.add(cndt_lig_resn)
                             cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(cndt_position)
@@ -1364,9 +1362,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             found_ligands_xtra.add(cndt_lig_resn)
                             if lig_free_sites == 1:
                                 cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(cndt_position)
-                
+
                 # end ligand loop
-                
+
                 # Count how many binding sites were present in candidate chain
                 found_cndt_bs_ratio = found_cndt_bs / len(query_lig_positions[query_structchain]) # calculate ratio of found ligands
 
@@ -1515,7 +1513,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     local_pm = pymol2.PyMOL()
                     local_pm.start()
                     local_cmd = local_pm.cmd
-
                     local_cmd.load(query_struct_path)
 
                     return try_candidate_chain(local_cmd, query_structchain, cand_strchain)
@@ -1681,37 +1678,37 @@ def parse_args(argv):
 
     # Main user query
     # Ligand
-    #parser.add_argument('--query', type=str,   default='1a73 A zn', help='main input query') # OK apo 0, holo 16
-    #parser.add_argument('--query', type=str,   default='1a73 A,B zn', help='main input query') # OK apo 0, holo 32
-    #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # OK apo 0, holo 32
-    #parser.add_argument('--query', type=str,   default='1a73 a zn', help='main input query') # reverse_search=1, OK apo 0, holo 16
-    #parser.add_argument('--query', type=str,   default='1a73 * zn', help='main input query') # reverse_search=1, OK apo 0, holo 32
-    #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
-    #parser.add_argument('--query', type=str,   default='1a73 a', help='main input query') # apo 0, holo 16
-    #parser.add_argument('--query', type=str,   default='1a73 * *', help='main input query') # OK apo 0, holo 32
-    #parser.add_argument('--query', type=str,   default='5j72 a na 703', help='main input query') # apo 0, holo 0 (no UniProt chains)
-    #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # OK, apo 4, holo 12
-    #parser.add_argument('--query', type=str,   default='1a73 b mg 206', help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
-    #parser.add_argument('--query', type=str,   default='7s4z a *', help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    #parser.add_argument('--query', type=str,   default='3fav all zn', help='main input query')
-    #parser.add_argument('--query', type=str,   default='3fav all', help='main input query')
-    #parser.add_argument('--query', type=str,   default='1y57 a mpz', help='main input query')
-    #parser.add_argument('--query', type=str,   default='6h3c b,g zn', help='main input query') # OK apo 0, holo 4
-    #parser.add_argument('--query', type=str,   default='2v0v', help='main input query') # Fully apo, apo 8, holo 24
-    #parser.add_argument('--query', type=str,   default='2v0v A,B', help='main input query') # reverse_search=1, apo 8, holo 24
-
+    #parser.add_argument('--query', type=str,   default='1a73')
+    #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
+    #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
+    #parser.add_argument('--query', type=str,   default='1a73 a zn',    help='main input query') # reverse_search=1, OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # reverse_search=1, OK apo 0, holo 32
+    #parser.add_argument('--query', type=str,   default='1a73 e mg 205',help='main input query') # fail, ligand assigned non-polymer chain
+    #parser.add_argument('--query', type=str,   default='1a73 a',       help='main input query') # apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
+    #parser.add_argument('--query', type=str,   default='5j72 a na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
+    #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
+    #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
+    #parser.add_argument('--query', type=str,   default='7s4z a *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
+    #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
+    #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
+    #parser.add_argument('--query', type=str,   default='1y57 a mpz',   help='main input query')
+    #parser.add_argument('--query', type=str,   default='6h3c b,g zn',  help='main input query') # OK apo 0, holo 4
+    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # reverse_search=1, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
-    #parser.add_argument('--query', type=str,   default='2npq A bog', help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
-    #parser.add_argument('--query', type=str,   default='1ksw a NBS', help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
-    #parser.add_argument('--query', type=str,   default='1ai5', help='main input query') # negative uniprot overlap (fixed)
-    #parser.add_argument('--query', type=str,   default='2hka all c3s') # first chain is apo, it was ignored before now works
-    #parser.add_argument('--query', type=str,   default='1a73')
+    #parser.add_argument('--query', type=str,   default='2npq A bog',   help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
+    #parser.add_argument('--query', type=str,   default='1ksw a NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
+    #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
+    #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # first chain is apo, it was ignored before now works
+
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
-    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg', help='main input query') # apo 4, holo 2
-    #parser.add_argument('--query', type=str,   default='6XBY * adp,mg', help='main input query') # ATPase, big query
+    #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
+    #parser.add_argument('--query', type=str,   default='6XBY * adp,mg',  help='main input query') # ATPase, big query
     #parser.add_argument('--query', type=str,   default='6XBY s nag')
     #parser.add_argument('--query', type=str,   default='6XBY b pov')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
@@ -1724,30 +1721,30 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205', help='main input query') # fail, ligand assigned non-polymer chain
 
     # Residue
-    #parser.add_argument('--query', type=str,   default='1a73 a ser', help='main input query') # expected parsing fail
+    #parser.add_argument('--query', type=str,   default='1a73 a ser',    help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='1a73 a ser 97', help='main input query') # OK apo 4, holo 12
 
     # SARS CoV 2
-    #parser.add_argument('--query', type=str,   default='7aeh a R8H', help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
+    #parser.add_argument('--query', type=str,   default='7aeh a R8H',     help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
     #parser.add_argument('--query', type=str,   default='2amq a his 164', help='main input query') # apo 41, holo 66, job 318 H, Crystal Structure Of SARS_CoV Mpro in Complex with an Inhibitor N3
-    #parser.add_argument('--query', type=str,   default='6lu7 a R8H', help='main input query')
-    #parser.add_argument('--query', type=str,   default='7krn a adp', help='main input query')
+    #parser.add_argument('--query', type=str,   default='6lu7 a R8H',     help='main input query')
+    #parser.add_argument('--query', type=str,   default='7krn a adp',     help='main input query')
 
     # Water
-    #parser.add_argument('--query', type=str,   default='1a73 b hoh 509', help='main input query') # OK apo 9, holo 7
-    #parser.add_argument('--query', type=str,   default='1a73 * hoh 509', help='main input query') # OK apo 9, holo 7
-    #parser.add_argument('--query', type=str,   default='1a73 * hoh', help='main input query') # expected parsing fail
-    #parser.add_argument('--query', type=str,   default='3i34 x hoh 311', help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
-    #parser.add_argument('--query', type=str,   default='1pkz a tyr 9', help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
+    #parser.add_argument('--query', type=str,   default='1a73 b hoh 509',  help='main input query') # OK apo 9, holo 7
+    #parser.add_argument('--query', type=str,   default='1a73 * hoh 509',  help='main input query') # OK apo 9, holo 7
+    #parser.add_argument('--query', type=str,   default='1a73 * hoh',      help='main input query') # expected parsing fail
+    #parser.add_argument('--query', type=str,   default='3i34 x hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
+    #parser.add_argument('--query', type=str,   default='1pkz a tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
-    parser.add_argument('--query', type=str,   default='4hxj A,B', help='main input query')
+    parser.add_argument('--query', type=str,   default='4hxj A,B',         help='main input query')
 
     # Non standard residues
-    #parser.add_argument('--query', type=str,   default='6sut A tpo', help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='6sut a', help='main input query') # OK apo 0, holo 3
+    #parser.add_argument('--query', type=str,   default='6sut A tpo',     help='main input query') # OK apo 0, holo 3
+    #parser.add_argument('--query', type=str,   default='6sut a',         help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='6sut a tpo,*', help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='1a73 a zn 201', help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='6sut a tpo,*',   help='main input query') # OK apo 0, holo 3
+    #parser.add_argument('--query', type=str,   default='1a73 a zn 201',  help='main input query') # OK apo 0, holo 16
 
     # Long queries
     #parser.add_argument('--query', type=str,   default='1cim A', help='main input query')
