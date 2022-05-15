@@ -1165,16 +1165,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Transfer temporary list with positions to dict
             for i in myspace['positions']:
-                    query_lig_positions.setdefault(query_structchain, []).append(i)
+                query_lig_positions.setdefault(query_structchain, []).append(i)
 
             # Remove duplicate values from query_lig_positions
             for key, value in query_lig_positions.items():
                 query_lig_positions[key] = list(query_lig_positions.fromkeys(value))   # preserves the order of values
 
 
-
             # Name query ligands as seperate selections per "residue"/position. Put real (detected) ligand names into set
-
             query_lig_names = set()
             for ligand in query_lig_positions[query_structchain]:
                 resi = ligand.split()[0]
@@ -1183,8 +1181,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 ligand_ = ligand.replace(' ', '_')
                 query_lig_names.add(resn)
                 cmd.select('holo_' + ligand_, query_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
-                '''
-                # Find the center of mass for each ligand's binding site - or it can be of ligand
+
+                '''# Find the center of mass for each ligand's binding site - or it can be of ligand
                 s1qbs = query_struct + ' and polymer '
                 s2qbs = 'holo_' + ligand_
                 cmd.select('queryBS_' + ligand_, s1qbs + ' near_to ' + lig_scan_radius + ' of ' + s2qbs)
@@ -1195,6 +1193,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Save center of mass as pseudoatom selection
                 cmd.pseudoatom(object='qBS_CoM_' + ligand_, pos=qBS_centerofmass[ligand_])
                 '''
+
 
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
