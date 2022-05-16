@@ -104,7 +104,7 @@ def load_precompiled_data(workdir) -> PrecompiledData:
 
 
 def print_dict_readable(input_dict):
-    print('')
+    #print('')
     for i, j in input_dict.items():
         print(i, j)
 
@@ -371,6 +371,7 @@ def group_mapped_res_by_chain(mapped_res_list):
 def examine_cndt_mapped_bs_res(dict_of_bndgres_pdb_to_unp, query_struct, candidates_unp_dict):
     candidate_hits = dict()
     for chain, positions in dict_of_bndgres_pdb_to_unp.items():
+        chain = chain # to use existing candidates dict
         query_structchain = query_struct + chain
         candidates = candidates_unp_dict[query_structchain] # Get candidates from UniProt ID
         
@@ -435,3 +436,15 @@ def evaluate_candidate_bs_rsds(dict_of_candidate_bs_rsds_scores):
         candidate_scores.setdefault(candidate, []).append(str(current_score) + '/' + str(len(scores)) + ' ' + ratio)
     return candidate_scores
 
+
+# Put candidates over certain threshold to dict for further processing (applies on precalculated % scores)
+def good_candidates_from_residue_mapping(candidate_score_dict, binding_residue_threshold):
+    dict_rsd_map_candidates = dict()
+    for key, value in candidate_score_dict.items():
+        cndt_structchain_part = key.split('.')[0]
+        qr_structchain_part = key.split('.')[1]
+        brsds_percent = int(value[0].split()[1][:-1])
+        if brsds_percent >= binding_residue_threshold:
+            #print(cndt_structchain_part, brsds_percent)
+            dict_rsd_map_candidates.setdefault(qr_structchain_part, []).append(cndt_structchain_part)
+    return dict_rsd_map_candidates

@@ -7,6 +7,7 @@ import copy
 import pathlib
 
 from common import get_workdir, load_dict_binary, tmalign2, write_file
+from residue_mapping import download_sifts_xml_gz, map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, print_dict_readable, good_candidates_from_residue_mapping
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
@@ -439,6 +440,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Advanced
     overlap_threshold = args.overlap_threshold
+    bndgrsds_threshold = args.bndgrsds_threshold
     lig_scan_radius = args.lig_scan_radius
     min_tmscore = args.min_tmscore
     nonstd_rsds_as_lig = args.nonstd_rsds_as_lig
@@ -490,6 +492,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     pathSTRUCTS = path_root + '/structures'    # Directory with ALL pdb structures (used for fetch/download)
     pathLIGS = path_root + '/ligands'          # Directory with ALL pdb ligands (used for fetch/download)
     pathQRS = path_root + '/queries'           # Directory/index with parameters of previously run jobs
+    pathXML = path_root + '/rsd_mappings'      # Directory with xml files for residue mappings
 
     # TODO make next job_id generation less clumsy
     global _global_lock
@@ -537,6 +540,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     else:
         print('Creating queries directory:\t', pathQRS)
         os.makedirs(pathQRS)
+    if os.path.isdir(pathXML):
+        print('XML file directory:\t', pathXML)
+    else:
+        print('Creating XML file directory:\t', pathXML)
+        os.makedirs(pathXML)
     print('Done\n')
 
 
@@ -732,6 +740,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Get apo candidates from rSIFTS dict, calculate sequence overlap
     # Look for longest UniProt mapping of query chains
     dictApoCandidates = dict()
+    dictApoCandidates_b = dict()
     uniprot_overlap_all = dict() # mostly for reference/monitoring
     uniprot_overlap = dict() # overlap of successful hits
 
@@ -789,6 +798,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
                     dict_key = user_structchain + ' ' + x1 + ' ' + x2
                     dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
+                    dictApoCandidates_b.setdefault(dict_key.split()[0], []).append(candidate) # same dict without query UNP coverage or candidate percentage
                     uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent)) # this keeps only successful overlaps
             else:
                 own_chains.append(candidate)
@@ -1182,22 +1192,39 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 query_lig_names.add(resn)
                 cmd.select('holo_' + ligand_, query_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
 
-                '''# Find the center of mass for each ligand's binding site - or it can be of ligand
-                s1qbs = query_struct + ' and polymer '
-                s2qbs = 'holo_' + ligand_
-                cmd.select('queryBS_' + ligand_, s1qbs + ' near_to ' + lig_scan_radius + ' of ' + s2qbs)
-                qBS_centerofmass[ligand_] = cmd.centerofmass('queryBS_' + ligand_)
-                #qBS_atoms = cmd.identify('queryBS_' + ligand_)
-                coords = cmd.get_coords('queryBS_' + ligand_)
-                qBS_coords[ligand_] = coords
-                # Save center of mass as pseudoatom selection
-                cmd.pseudoatom(object='qBS_CoM_' + ligand_, pos=qBS_centerofmass[ligand_])
-                '''
+            # Find binding site residues (protein only)
+            binding_res_dict = dict()
+            for structchain_i, ligands in query_lig_positions.items():
+                for ligand in ligands:
+                    ligand = ligand.replace(' ', '_')
 
+                    # Find ligand
+                    cmd.select(ligand + '_' + struct, struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn)
+
+                    # Find & select binding residues
+                    s1 = struct + ' and polymer.protein'
+                    s2 = ligand + '_' + struct
+                    cmd.select('arnd_' + ligand, s1 + ' near_to ' + lig_scan_radius + ' of ' + s2)
+
+                    # Iterate and identify residues
+                    myspace_positions = {'binding_resis': []}
+                    cmd.iterate('arnd_' + ligand, 'binding_resis.append( segi+"_"+chain+"_"+resn+"_"+resi )', space=myspace_positions)
+
+                    # Remove duplicate values from query_lig_positions & Transfer binding sites to global dictionary
+                    for key, value in myspace_positions.items():
+                        binding_res_dict[ligand] = list(myspace_positions.fromkeys(value))
+
+            # Unpack binding residues into a single list
+            binding_res_unpacked = []
+            for sublist in binding_res_dict.values():
+                binding_res_unpacked.extend(sublist)
+            binding_res_unpacked = list(dict.fromkeys(binding_res_unpacked)) # Remove duplicates
+                
 
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
-
+        
+        
 
         # Print universal ligand report for query chain
         print('\nQuery ligand information')
@@ -1205,7 +1232,57 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Atom IDs: ', ligands_atoms)
         print('Position/chain/name: ', query_lig_positions.get(query_structchain))
         print('State:', query_chain_states[query_structchain])  #, '/', len(query_lig_positions.get(query_structchain)))
-        #print(query_lig_positions)
+        #print('\nquery_lig_positions', query_lig_positions)
+
+        # Print binding site report for query chain
+        total1 = sum(len(v) for v in binding_res_dict.values())
+        total2 = len(binding_res_unpacked)
+        #print(binding_res_dict)
+        print('\nQuery binding site information')
+        print(f'Parsing query structure [{struct}]')
+        print('\nDetecting binding residues of query chain (segment, chain, pdb residue number)')
+        print(f'\nBinding residues clustered per binding site:\n{binding_res_dict}')
+        print(f'\nUnique binding residues (segment, chain, pdb residue number):\n{binding_res_unpacked}')
+        print(f'\nTotal/unique binding residues: [{total1}]/[{total2}]')
+
+
+        ###### residue mapping section ######
+        try:
+            pdb_xml = download_sifts_xml_gz(query_struct, pathXML)
+        except Exception:
+            print('SIFTS server unavailable')
+            #sys.exit(0)
+
+        # Map PDB (binding) residues of query to UniProt residue numbers
+        print('\nMapping query chain binding residues from PDB to UniProt numbering')
+        bndgres_pdb_to_unp =  map_pdb_resnum_to_uniprot(binding_res_unpacked, pdb_xml)
+        print(bndgres_pdb_to_unp)
+
+        # Group (UNP num) binding residues by chain (list in, dict out)
+        bndgres_pdb_to_unp_chains = group_mapped_res_by_chain(bndgres_pdb_to_unp)
+        print(f'\nBinding residues [UNP] grouped by query structure chain:\n{bndgres_pdb_to_unp_chains}')
+
+        # Find whether mapped binding residues are present in each candidate chain
+        candidate_hits = examine_cndt_mapped_bs_res(bndgres_pdb_to_unp_chains, query_struct, dictApoCandidates_b)# candidates_unp_dict) 
+        #print_dict_readable(candidate_hits)
+
+        # Intermediate step to remove negative score when positive is present for the same position
+        candidate_metahits = remove_negative_duplicate_cndt_bs_res_pos(candidate_hits)
+        #print_dict_readable(candidate_metahits)
+
+        # Count how many binding residues (out of total) are present in candidate
+        candidate_scores = evaluate_candidate_bs_rsds(candidate_metahits)
+        print('candidate scores', print_dict_readable(candidate_scores))
+
+        # Put candidates over certain threshold to dict for further processing (applies on precalculated % scores)
+        dict_rsd_map_candidates = good_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold)
+
+        print('\ndict_rsd_map_candidates', print_dict_readable(dict_rsd_map_candidates))
+        #print('\ndictApoCandidates:', print_dict_readable(dictApoCandidates_b))
+        print('\ndictApoCandidates_1', print_dict_readable(dictApoCandidates_1))
+        print('\ndict_rsd_map_candidates', print_dict_readable(dict_rsd_map_candidates))
+        #sys.exit(0)
+        #continue
 
 
 
@@ -1290,8 +1367,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 candidate_result.discard_reason = "poor alignment (below threshold)"
                 return candidate_result
 
-            '''
-            # Center of mass candidate
+            '''# Center of mass candidate
             cndt_com = cmd.centerofmass(candidate_structchain)
             print('cndt_centerofmass', cndt_com)
             cmd.pseudoatom(object='cndt_chain_CoM', pos=cndt_com)
@@ -1735,8 +1811,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * hoh',      help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 x hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     #parser.add_argument('--query', type=str,   default='1pkz a tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
-    #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
-    parser.add_argument('--query', type=str,   default='4hxj A,B',         help='main input query')
+    parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
+    #parser.add_argument('--query', type=str,   default='4hxj A,B',         help='main input query')
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut A tpo',     help='main input query') # OK apo 0, holo 3
@@ -1762,6 +1838,7 @@ def parse_args(argv):
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
+    parser.add_argument('--bndgrsds_threshold',type=float, default=1.0,   help='Percentage of binding residues of the query that have to be present in the candidate according to UNP residue mapping, for the candidate to be considered, condition is ">="')
     parser.add_argument('--lig_scan_radius',   type=float, default=4.0,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
     parser.add_argument('--min_tmscore',       type=float, default=0.0,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
