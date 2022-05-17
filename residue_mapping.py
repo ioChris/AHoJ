@@ -7,18 +7,19 @@ Created on Fri May 13 18:33:16 2022
 
 ''' test residue mapping'''
 
-import os, pathlib, wget, sys
+import os, pathlib, wget
+#import sys
 from lxml import etree
 #from get_root_path import root_path
-
+'''
 import pickle
 from dataclasses import dataclass
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
 import pymol.cmd as cmd
-
-
+'''
+'''
 def root_path():
     npath = os.path.normpath(os.getcwd())   # Normalize the path string into a proper string for the OS
     if npath.split(os.sep)[1] == 'Users' and 'Chris' in npath.split(os.sep)[2]: # Check "User" and "Chris" are part of the path
@@ -42,7 +43,7 @@ class PrecompiledData:
 
 def load_dict_binary(path):
     return pickle.load(open(path, "rb"))
-
+'''
 
 def download_sifts_xml_gz(pdb_id, sifts_dir):
     urlA = 'ftp://ftp.ebi.ac.uk/pub/databases/msd/sifts/split_xml/'
@@ -81,7 +82,7 @@ def download_mmCIF_gz2(pdb_id, pdb_dir):   # Version 2 of download mmCIF gz (wit
     else:
         return file_path
 
-
+'''
 def load_precompiled_data_bin(workdir) -> PrecompiledData:
     pathSIFTS = workdir + '/SIFTS'
     fileSIFTSdict = pathSIFTS + '/pdb_chain_uniprot_dict.bin'
@@ -101,10 +102,11 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     res = load_precompiled_data_bin(workdir)
     print('Done loading pre-compiled data\n')
     return res
+'''
 
-
-def print_dict_readable(input_dict):
-    #print('')
+def print_dict_readable(input_dict, header_msg):
+    print('')
+    print(header_msg)
     for i, j in input_dict.items():
         print(i, j)
 
@@ -130,7 +132,7 @@ def map_uniprot_resnum_to_pdb2(uniprot_resnum_list, sifts_xml_file):
         # Find the right chain (entities in the xml doc)
         ent = './/{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}entity'
         for chain in root.findall(ent):
-            # IMPORTANT - entityId is not the chain ID!!! it is just in alphabetical order!
+            # IMPORTANT - entityId is not the chain ID
             if chain.attrib['entityId'] == chain_id:
                 # Find the "crossRefDb" tag that has the attributes dbSource="UniProt" and  dbResNum="your_resnum_here"
                 # Then match it to the crossRefDb dbResNum that has the attribute dbSource="PDBresnum"
@@ -187,7 +189,7 @@ def map_pdb_resnum_to_uniprot(pdb_resnum_list, sifts_xml_file):
         # Find the right segment (entities in the xml doc)
         ent = './/{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}entity'
         for segment in root.findall(ent):
-            # IMPORTANT - entityId is not the chain ID!!! it is just in alphabetical order!
+            # IMPORTANT - entityId is not the chain ID
             if segment.attrib['entityId'] == segi_id:
                 # Find the "crossRefDb" tag that has the attributes dbSource="UniProt" and  dbResNum="your_resnum_here"
                 # Then match it to the crossRefDb dbResNum that has the attribute dbSource="PDBresnum"
@@ -448,3 +450,16 @@ def good_candidates_from_residue_mapping(candidate_score_dict, binding_residue_t
             #print(cndt_structchain_part, brsds_percent)
             dict_rsd_map_candidates.setdefault(qr_structchain_part, []).append(cndt_structchain_part)
     return dict_rsd_map_candidates
+
+# Put candidates under certain threshold to dict for further processing (applies on precalculated % scores)
+def bad_candidates_from_residue_mapping(candidate_score_dict, binding_residue_threshold):
+    bad_candidates = dict()
+    for key, value in candidate_score_dict.items():
+        cndt_structchain_part = key.split('.')[0]
+        qr_structchain_part = key.split('.')[1]
+        brsds_percent = int(value[0].split()[1][:-1])
+        if brsds_percent < binding_residue_threshold:
+            #print(cndt_structchain_part, brsds_percent)
+            bad_candidates.setdefault(qr_structchain_part, []).append(cndt_structchain_part)
+    return bad_candidates
+

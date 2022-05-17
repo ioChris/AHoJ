@@ -7,7 +7,7 @@ import copy
 import pathlib
 
 from common import get_workdir, load_dict_binary, tmalign2, write_file
-from residue_mapping import download_sifts_xml_gz, map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, print_dict_readable, good_candidates_from_residue_mapping
+from residue_mapping import download_sifts_xml_gz, map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, print_dict_readable, good_candidates_from_residue_mapping, bad_candidates_from_residue_mapping
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
@@ -740,14 +740,20 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Get apo candidates from rSIFTS dict, calculate sequence overlap
     # Look for longest UniProt mapping of query chains
     dictApoCandidates = dict()
-    dictApoCandidates_b = dict()
-    uniprot_overlap_all = dict() # mostly for reference/monitoring
-    uniprot_overlap = dict() # overlap of successful hits
+    #dictApoCandidates_b = dict()
+    uniprot_overlap_all = dict() # overlap of all UniProt chains
+    uniprot_overlap = dict() # overlap of successful hits over user threshold
+    user_structchains_unp = dict()
 
     for user_structchain in user_structchains:
         print('\nLooking for longest UniProt mapping for query chain', user_structchain)
         query_uniprot_lengths = list()
         query_uniprot_lengths_dict = dict()
+
+        # Get UniProt IDs of query chains to build rsd mappings dict
+        usr_uniprot_id = dict_SIFTS[user_structchain]
+        user_structchains_unp[user_structchain] = usr_uniprot_id
+        #print(user_structchain, usr_uniprot_id)
 
         # Iterate through UniProt IDs and their structchains
         for key, values in dict_rSIFTS.items():  # key = UniProt accession, values = structchains + SP_BEG + SP_END
@@ -798,7 +804,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
                     dict_key = user_structchain + ' ' + x1 + ' ' + x2
                     dictApoCandidates.setdefault(dict_key, []).append(candidate+' '+str(result)+' '+str(percent))
-                    dictApoCandidates_b.setdefault(dict_key.split()[0], []).append(candidate) # same dict without query UNP coverage or candidate percentage
+                    #dictApoCandidates_b.setdefault(dict_key.split()[0], []).append(candidate) # same dict without query UNP coverage or candidate percentage
                     uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent)) # this keeps only successful overlaps
             else:
                 own_chains.append(candidate)
@@ -816,19 +822,47 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
     print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
+    # Get apo candidates for rsd mapping set (larger subset)
+    dictApoCandidates_b = dict()
+    for key, value in user_structchains_unp.items():
+        candidates = dict_rSIFTS[value]
+        dictApoCandidates_b[key] = candidates
+
+    #print(dictApoCandidates)
+    #print(dictApoCandidates_b)
+    #sys.exit(1)
 
 
-    ## Apo/holo candidate evaluation
+    # End script if there are 0 total candidate chains
+    if total_chains == 0:
+        print('=== Ending program ===')
+        sys.exit(1)
 
-    # Put all structures for downloading into set
-    apo_candidate_structs = set()
-    for key, values in dictApoCandidates.items():
-        for i in values:    # iterate over the values in each key, i = struct/chain combo & SP_BEG SP_END etc
-            candidate_struct = i.split()[0][:4]  # split value strings to get structure only
-            apo_candidate_structs.add(candidate_struct)
+
+    ## Candidate structure evaluation
+
+
+    def structures_from_structchains(candidate_dict_in):  # (dict in, set out) function to create a set of PDB codes to download from a dict of structchains
+        list_out = list()
+        for key, values in candidate_dict_in.items():
+            for i in values:    # iterate over the values in each key, i = struct/chain combo & SP_BEG SP_END etc
+                candidate_struct = i.split()[0][:4]  # split value strings to get structure only
+                list_out.append(candidate_struct)
+        return list_out  #list(dict.fromkeys(list_out))  # remove redundancy & preserve order
+
+    # Put all structures for downloading into set [include rsd mapping candidates]
+    apo_candidate_structs1 = structures_from_structchains(dictApoCandidates)
+    #print(apo_candidate_structs1)
+    apo_candidate_structs2 = structures_from_structchains(dictApoCandidates_b)  # Add the rest UniProt structures
+    #print(apo_candidate_structs2)
+    apo_candidate_structs = apo_candidate_structs1 + apo_candidate_structs2
+    apo_candidate_structs = list(dict.fromkeys(apo_candidate_structs))  # remove redundancy & preserve order
+    #print(apo_candidate_structs)
+
     print('Total structures to be parsed: ', len(apo_candidate_structs), '\n')
+    #sys.exit(1)
 
-    # Download/load the candidate structures to specified directory [TODO this should be replaced by load later]
+    # Download candidate structures to specified directory [#TODO this should be replaced by load]
     for apo_candidate_structure in apo_candidate_structs:
         try:
             download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
@@ -882,17 +916,30 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('Structures to discard:\t', len(discard_structs))
     if len(discard_structs) > 0:
         print('Discarding structures\t', discard_structs)
-    dictApoCandidates_1 = dict()
-    for key, values in dictApoCandidates.items():
-        for i in values[:apo_chain_limit]:
-            if i.split()[0][:4] in discard_structs:
-                print('removing apo', i.split()[0], 'from holo', key.split()[0])
-            else:
-                dictApoCandidates_1.setdefault(key.split()[0], []).append(i.split()[0])
+
+
+    def remove_low_res_structs(candidates_dict, low_res_structs_set, cleave=0, chain_limit=apo_chain_limit): # return dict with good candidates only
+        dict_out = dict()
+        for key, values in candidates_dict.items():
+            for i in values[:chain_limit]:
+                if i.split()[0][:4] in low_res_structs_set:
+                    print(f'removing candidate chain [{i.split()[0]}] from query chain [{key.split()[0]}]')
+                else:
+                    if cleave == 0:
+                        dict_out.setdefault(key.split()[0], []).append(i)
+                    else:
+                        dict_out.setdefault(key.split()[0], []).append(i.split()[0]) # same dict without calculated UNP coverage or candidate percentage
+        return dict_out
+
+    # Discard candidate structures below threshold(s). Put remainder into new dict
+    dictApoCandidates_1 = remove_low_res_structs(dictApoCandidates, discard_structs, 1) # cleave this dict (discard UniProt numbering)
+    dictApoCandidates_b1 = remove_low_res_structs(dictApoCandidates_b, discard_structs)
+
 
     eligible_chains = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
     print(f'\nCandidate chains satisfying user requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains}')
     print(dictApoCandidates_1) # helper print
+    #sys.exit(1)
 
     # Make dict with query struct:chains
     dictQueryChains = dict()
@@ -985,6 +1032,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     query_chain_states = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
+    dict_rsd_map_candidates = dict()
+    bad_candidates_rsd_map = dict()
+    final_candidates = dict()
 
     #qBS_centerofmass = dict()
     #qBS_coords = dict()
@@ -1208,7 +1258,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     # Iterate and identify residues
                     myspace_positions = {'binding_resis': []}
-                    cmd.iterate('arnd_' + ligand, 'binding_resis.append( segi+"_"+chain+"_"+resn+"_"+resi )', space=myspace_positions)
+                    cmd.iterate('arnd_' + ligand, 'binding_resis.append(segi+"_"+chain+"_"+resn+"_"+resi)', space=myspace_positions)
 
                     # Remove duplicate values from query_lig_positions & Transfer binding sites to global dictionary
                     for key, value in myspace_positions.items():
@@ -1219,12 +1269,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             for sublist in binding_res_dict.values():
                 binding_res_unpacked.extend(sublist)
             binding_res_unpacked = list(dict.fromkeys(binding_res_unpacked)) # Remove duplicates
-                
 
+            # Pass auto-detected ligands as user ligands
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
-        
-        
+
 
         # Print universal ligand report for query chain
         print('\nQuery ligand information')
@@ -1234,55 +1283,83 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('State:', query_chain_states[query_structchain])  #, '/', len(query_lig_positions.get(query_structchain)))
         #print('\nquery_lig_positions', query_lig_positions)
 
+
         # Print binding site report for query chain
-        total1 = sum(len(v) for v in binding_res_dict.values())
-        total2 = len(binding_res_unpacked)
-        #print(binding_res_dict)
-        print('\nQuery binding site information')
-        print(f'Parsing query structure [{struct}]')
-        print('\nDetecting binding residues of query chain (segment, chain, pdb residue number)')
-        print(f'\nBinding residues clustered per binding site:\n{binding_res_dict}')
-        print(f'\nUnique binding residues (segment, chain, pdb residue number):\n{binding_res_unpacked}')
-        print(f'\nTotal/unique binding residues: [{total1}]/[{total2}]')
+        if query_chain_states[query_structchain] == 'holo':
+            total1 = sum(len(v) for v in binding_res_dict.values())
+            total2 = len(binding_res_unpacked)
+            #print(binding_res_dict)
+            print('\nQuery binding site information')
+            #print(f'Parsing query structure [{struct}]')
+            #print('Detecting binding residues of query chain (segment, chain, pdb residue number)')
+            print(f'Binding residues clustered per binding site:\n{binding_res_dict}')
+            print(f'Unique binding residues (segment, chain, pdb residue number):\n{binding_res_unpacked}')
+            print(f'Total/unique binding residues: [{total1}]/[{total2}]')
 
 
-        ###### residue mapping section ######
-        try:
-            pdb_xml = download_sifts_xml_gz(query_struct, pathXML)
-        except Exception:
-            print('SIFTS server unavailable')
+
+        ###### Residue mapping section ######
+
+        if query_chain_states[query_structchain] == 'holo':
+            try:
+                pdb_xml = download_sifts_xml_gz(query_struct, pathXML)
+            except Exception:
+                print('SIFTS server unavailable')  # Handle exception
+                #sys.exit(0)
+
+            # Map PDB (binding) residues of query to UniProt residue numbers
+            print('\nMapping query chain binding residues from PDB to UniProt numbering')
+            bndgres_pdb_to_unp =  map_pdb_resnum_to_uniprot(binding_res_unpacked, pdb_xml)
+            print(bndgres_pdb_to_unp)
+
+            # Group (UNP num) binding residues by chain (list in, dict out)
+            bndgres_pdb_to_unp_chains = group_mapped_res_by_chain(bndgres_pdb_to_unp)
+            print(f'\nBinding residues [UNP] grouped by query structure chain:\n{bndgres_pdb_to_unp_chains}')
+
+            # Find whether mapped binding residues are present in each candidate chain
+            candidate_hits = examine_cndt_mapped_bs_res(bndgres_pdb_to_unp_chains, query_struct, dictApoCandidates_b1)# candidates_unp_dict) 
+
+            # Intermediate step to remove negative score when positive is present for the same position
+            candidate_metahits = remove_negative_duplicate_cndt_bs_res_pos(candidate_hits)
+
+            # Count how many binding residues (out of total) are present in candidate
+            candidate_scores = evaluate_candidate_bs_rsds(candidate_metahits)
+
+            # Put candidates over/under certain threshold to dicts for further processing (applies on precalculated % scores)
+            dict_rsd_map_candidates[query_structchain] = good_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold)[query_structchain]
+            bad_candidates_rsd_map[query_structchain]  = bad_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold)[query_structchain]
+
+
+            #print_dict_readable(candidate_hits,'candidate_hits')
+            #print_dict_readable(candidate_metahits, 'candidate_metahits')
+            #print_dict_readable(candidate_scores, 'candidate_scores')
+            #print_dict_readable(dictApoCandidates_b1, 'dictApoCandidates_b1')
+            print_dict_readable(dictApoCandidates_1, 'dictApoCandidates_1')
+            print_dict_readable(dict_rsd_map_candidates, 'dict_rsd_map_candidates')
+            #print_dict_readable(bad_candidates_rsd_map, 'bad_candidates_rsd_map')
+
             #sys.exit(0)
+            #continue
 
-        # Map PDB (binding) residues of query to UniProt residue numbers
-        print('\nMapping query chain binding residues from PDB to UniProt numbering')
-        bndgres_pdb_to_unp =  map_pdb_resnum_to_uniprot(binding_res_unpacked, pdb_xml)
-        print(bndgres_pdb_to_unp)
 
-        # Group (UNP num) binding residues by chain (list in, dict out)
-        bndgres_pdb_to_unp_chains = group_mapped_res_by_chain(bndgres_pdb_to_unp)
-        print(f'\nBinding residues [UNP] grouped by query structure chain:\n{bndgres_pdb_to_unp_chains}')
 
-        # Find whether mapped binding residues are present in each candidate chain
-        candidate_hits = examine_cndt_mapped_bs_res(bndgres_pdb_to_unp_chains, query_struct, dictApoCandidates_b)# candidates_unp_dict) 
-        #print_dict_readable(candidate_hits)
+    # Assemble final dictionary of candidates and start candidate alignment loop
+    # For holo query chain, get rsd_map candidates, otherwise get UNP overlap candidates
+    print_dict_readable(query_chain_states, 'query_chain_states')
+    for key, value in query_chain_states.items():
+        if value == 'holo':
+            final_candidates[key] = dict_rsd_map_candidates[key]
+        elif value == 'apo':
+            final_candidates[key] = dictApoCandidates_1[key]
 
-        # Intermediate step to remove negative score when positive is present for the same position
-        candidate_metahits = remove_negative_duplicate_cndt_bs_res_pos(candidate_hits)
-        #print_dict_readable(candidate_metahits)
+    print_dict_readable(final_candidates,'final_candidates')
+    #sys.exit(0)
 
-        # Count how many binding residues (out of total) are present in candidate
-        candidate_scores = evaluate_candidate_bs_rsds(candidate_metahits)
-        print('candidate scores', print_dict_readable(candidate_scores))
-
-        # Put candidates over certain threshold to dict for further processing (applies on precalculated % scores)
-        dict_rsd_map_candidates = good_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold)
-
-        print('\ndict_rsd_map_candidates', print_dict_readable(dict_rsd_map_candidates))
-        #print('\ndictApoCandidates:', print_dict_readable(dictApoCandidates_b))
-        print('\ndictApoCandidates_1', print_dict_readable(dictApoCandidates_1))
-        print('\ndict_rsd_map_candidates', print_dict_readable(dict_rsd_map_candidates))
-        #sys.exit(0)
+    for query_structchain, candidates_structchains in final_candidates.items():
+        print('')
+        print(f'=== Processing final candidates for query chain {query_structchain} ===')
         #continue
+
 
 
 
@@ -1456,7 +1533,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Apo result
                     if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                         ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                        apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                        apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                         if len(found_ligands_xtra) > 0:
                             print('APO*')
                         else:
@@ -1468,7 +1545,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Holo result
                     else:
                         ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                        apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                        apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                         if len(found_ligands) > 0:
                             print('HOLO')
                         else:
@@ -1540,7 +1617,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Holo result
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
-                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                     print('HOLO')
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
@@ -1550,7 +1627,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Apo result
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
-                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
@@ -1762,7 +1839,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205',help='main input query') # fail, ligand assigned non-polymer chain
     #parser.add_argument('--query', type=str,   default='1a73 a',       help='main input query') # apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
-    #parser.add_argument('--query', type=str,   default='5j72 a na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
+    #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z a *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
@@ -1806,7 +1883,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7krn a adp',     help='main input query')
 
     # Water
-    #parser.add_argument('--query', type=str,   default='1a73 b hoh 509',  help='main input query') # OK apo 9, holo 7
+    #parser.add_argument('--query', type=str,   default='1a73 B hoh 509',  help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh 509',  help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh',      help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 x hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
@@ -1816,8 +1893,8 @@ def parse_args(argv):
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut A tpo',     help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='6sut a',         help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='6sut a tpo 285', help='main input query') # OK apo 0, holo 3
+    #parser.add_argument('--query', type=str,   default='6sut A',         help='main input query') # OK apo 0, holo 3
+    #parser.add_argument('--query', type=str,   default='6sut A tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut a tpo,*',   help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='1a73 a zn 201',  help='main input query') # OK apo 0, holo 16
 
@@ -1840,7 +1917,7 @@ def parse_args(argv):
     parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
     parser.add_argument('--bndgrsds_threshold',type=float, default=1.0,   help='Percentage of binding residues of the query that have to be present in the candidate according to UNP residue mapping, for the candidate to be considered, condition is ">="')
     parser.add_argument('--lig_scan_radius',   type=float, default=4.0,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
-    parser.add_argument('--min_tmscore',       type=float, default=0.0,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
+    parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
 
@@ -1849,7 +1926,7 @@ def parse_args(argv):
     parser.add_argument('--look_in_archive',   type=int,   default=0,     help='0/1: Search if the same query has been processed in the past (can give very fast results)')
 
     # Internal
-    parser.add_argument('--apo_chain_limit',   type=int,   default=999,   help='limit number of apo chains to consider when aligning (for fast test runs)')
+    parser.add_argument('--apo_chain_limit',   type=int,   default=9999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
