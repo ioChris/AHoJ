@@ -376,17 +376,17 @@ def examine_cndt_mapped_bs_res(dict_of_bndgres_pdb_to_unp, query_struct, candida
         chain = chain # to use existing candidates dict
         query_structchain = query_struct + chain
         candidates = candidates_unp_dict[query_structchain] # Get candidates from UniProt ID
-        
+
         for candidate_entry in candidates:
             candidate_structchain = candidate_entry.split()[0]
             candidate_struct = candidate_structchain[:4]
-            
+
             if candidate_struct != query_struct: # eliminate candidates of the same structure
-                
+
                 # Make dict with candidate structchain and UniProt range(s) as values, then check overlap
                 cndt_SP_BEG = int(candidate_entry.split()[1])
                 cndt_SP_END = int(candidate_entry.split()[2])
-                
+
                 # Loop through positions, look if position is within UniProt range
                 for position in positions:
                     if int(position) >= cndt_SP_BEG and int(position) <= cndt_SP_END:

@@ -453,6 +453,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Internal
     apo_chain_limit = args.apo_chain_limit
     intrfc_lig_radius = args.intrfc_lig_radius
+    hoh_scan_radius = args.hoh_scan_radius # TODO replace with dynamic function for scan radius
 
     # Saving
     save_oppst = args.save_oppst
@@ -466,6 +467,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #    autodetect_lig = 1
     lig_scan_radius = str(lig_scan_radius)      # needs to be str
     intrfc_lig_radius = str(intrfc_lig_radius)  # needs to be str
+    hoh_scan_radius = str(hoh_scan_radius)      # needs to be str
+    cndtlig_scan_radius = lig_scan_radius       # default
     #broad_search_mode = False # previously called "reverse_mode"
 
     # Pass settings to a string
@@ -964,8 +967,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if position is not None: # (4 args) assumes that everything is specified (chains(taken care of), 1 ligand, position) ignore_autodetect_lig
         
         if ligand_names[0] == 'HOH': # mark selection & change lig scan radius (unless user has set it to lower than 3)
-            if float(lig_scan_radius) > 3:
-                lig_scan_radius = '3'
+            #if float(lig_scan_radius) > 3:
+                #lig_scan_radius = '3'
             search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
 
         elif ligand_names[0] in nonstd_rsds: # find ligands
@@ -1332,7 +1335,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             #print_dict_readable(candidate_hits,'candidate_hits')
             #print_dict_readable(candidate_metahits, 'candidate_metahits')
-            #print_dict_readable(candidate_scores, 'candidate_scores')
+            print_dict_readable(candidate_scores, 'candidate_scores')
             #print_dict_readable(dictApoCandidates_b1, 'dictApoCandidates_b1')
             print_dict_readable(dictApoCandidates_1, 'dictApoCandidates_1')
             print_dict_readable(dict_rsd_map_candidates, 'dict_rsd_map_candidates')
@@ -1409,14 +1412,22 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Align candidate to query chain
 
             try:
-                aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
+                aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=1)
+                #save_alignment = '/' + candidate_structchain + '_to_' + query_structchain + '.aln'
+                #cmd.save(path_results + save_alignment, 'alnobj')
+                
+                #print(round(aln_rms[0], 3))
+                #if min_tmscore != 0:
+                
 
-                if min_tmscore != 0:
-                    aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=0)
-                    aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
-                else:
-                    aln_tm = 0
-                    aln_tm_i = 0
+                aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=1)
+                #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
+                #print('\nrms_cur', round(rms_cur, 3))
+                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
+
+                #else:
+                #    aln_tm = 0
+                #    aln_tm_i = 0
 
                 print('\nAlignment RMSD/TM score/TM score(inverse):', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm, aln_tm_i)
                 #if aln_tm_i > aln_tm:  aln_tm = aln_tm_i
@@ -1428,13 +1439,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
                 candidate_result.tm_score_i = aln_tm_i
-            except Exception:
+            except Exception as ex:
+                print('Exception: ', ex)
                 discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('\nAlignment RMSD/TM score: ERROR')
                 print('*poor alignment (error), discarding chain ', candidate_structchain)
 
                 candidate_result.discard_reason = "alignment error"
                 return candidate_result
+            #sys.exit(1)
 
             # Discard poor alignments
             if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
@@ -1484,10 +1497,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         found_cndt_bs += 1
                         print('*binding residues present around query ligand superposition')
 
-                    # Around selection: look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
+                    # Look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
+                    if resn == 'HOH':
+                        cndtlig_scan_radius = hoh_scan_radius  # Decide whether to switch back to default after scanning once
                     cndt_sele_expression = '(' + candidate_struct + ' and hetatm)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
                     qr_lig_sele_expression = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
-                    cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + lig_scan_radius + ' of ' + qr_lig_sele_expression)
+                    cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + qr_lig_sele_expression)
 
 
                     # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be saved, we need to merge the two selections here
@@ -1917,6 +1932,7 @@ def parse_args(argv):
     parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
     parser.add_argument('--bndgrsds_threshold',type=float, default=1.0,   help='Percentage of binding residues of the query that have to be present in the candidate according to UNP residue mapping, for the candidate to be considered, condition is ">="')
     parser.add_argument('--lig_scan_radius',   type=float, default=4.0,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
+
     parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
@@ -1930,9 +1946,10 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
-    parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='angstrom radius to look around atoms of ligand for interactions with protein atoms')
+    parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
+    parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water ligands only)')
 
     # Saving
     parser.add_argument('--save_oppst',        type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
