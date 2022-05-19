@@ -7,7 +7,7 @@ import copy
 import pathlib
 
 from common import get_workdir, load_dict_binary, tmalign2, write_file
-from residue_mapping import download_sifts_xml_gz, map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, print_dict_readable, good_candidates_from_residue_mapping, bad_candidates_from_residue_mapping
+from residue_mapping import map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, print_dict_readable, good_candidates_from_residue_mapping, bad_candidates_from_residue_mapping, get_scores_from_residue_mapping
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
@@ -91,6 +91,22 @@ def download_mmCIF_lig(lig_id, destination_path):   # Download mmCIF for ligands
     else:
         return file_path
 
+
+def download_sifts_xml_gz(pdb_id, sifts_dir):
+    urlA = 'ftp://ftp.ebi.ac.uk/pub/databases/msd/sifts/split_xml/'
+    ext = '.xml.gz'
+    middle_bit = pdb_id[1:3]
+    pdb_id = pdb_id.lower()
+    url = urlA + f'{middle_bit}/' + pdb_id + ext
+    subdir = f'{sifts_dir}/{middle_bit}'
+    file_path = f'{subdir}/{pdb_id}{ext}'
+    if not os.path.isfile(file_path):
+        pathlib.Path(subdir).mkdir(exist_ok=True)
+        print(f'Downloading: {pdb_id + ext}')
+        wget.download(url, subdir)
+        return file_path
+    else:
+        return file_path
 
 def add_log(msg, log_file):     # Create error log
     msg = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime()) + '\t' + msg
@@ -185,6 +201,8 @@ class CandidateChainResult:
     tm_score: float = None
     tm_score_i: float = None
     rmsd: float = None
+    #bndg_rsd_ratio: str
+    #bndg_rsd_percent: str
 
     apo_holo_dict_instance: dict = None
     apo_holo_dict_H_instance: dict = None
@@ -363,7 +381,7 @@ def write_results_apo_csv(apo_holo_dict, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_apo.csv'
-    header = "#query_chain, apo_chain, %UniProt_overlap, RMSD, TM_score, iTM_score, ligands\n"
+    header = "#query_chain, apo_chain, %UniProt_overlap, Mapped_bndg_rsds_ratio, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
 
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
@@ -376,7 +394,7 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_holo.csv'
-    header = "#query_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, iTM_score, ligands\n"
+    header = "#query_chain, apo_chain, %UniProt_overlap, Mapped_bndg_rsds_ratio, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
 
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
@@ -1408,6 +1426,21 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 cmd.load(candidate_struct_path)
             cmd.select(candidate_structchain, candidate_struct + '& chain ' + candidate_chain)
 
+            # Get mapped binding residue scores for query/candidate chain combo
+            bndg_rsd_scores = get_scores_from_residue_mapping(candidate_scores, query_structchain, candidate_structchain)
+            if bndg_rsd_scores != '-':
+                bndg_rsd_ratio = bndg_rsd_scores.split()[0]
+                bndg_rsd_percent = bndg_rsd_scores.split()[1][:-1]
+            else:
+                bndg_rsd_ratio = bndg_rsd_scores
+                bndg_rsd_percent = bndg_rsd_scores
+            #print(f'\nBinding residue scores for {candidate_structchain}.{query_structchain}: {bndg_rsd_scores}')
+            #print(f'Binding residue scores for {candidate_structchain}.{query_structchain}: {bndg_rsd_ratio}, {bndg_rsd_percent}')
+            # Pass scores to results
+            #candidate_result.bndg_rsd_ratio = bndg_rsd_ratio
+            #candidate_result.bndg_rsd_percent = bndg_rsd_percent
+
+
 
             # Align candidate to query chain
 
@@ -1415,10 +1448,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=1)
                 #save_alignment = '/' + candidate_structchain + '_to_' + query_structchain + '.aln'
                 #cmd.save(path_results + save_alignment, 'alnobj')
-                
-                #print(round(aln_rms[0], 3))
+                #print(aln_rms)
                 #if min_tmscore != 0:
-                
 
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=1)
                 #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
@@ -1428,8 +1459,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #else:
                 #    aln_tm = 0
                 #    aln_tm_i = 0
+                
+                # Round alignment scores before printing/saving
+                aln_rms = round(aln_rms[0], 2)
+                aln_tm = round(aln_tm, 2)
+                aln_tm_i = round(aln_tm_i, 2)
 
-                print('\nAlignment RMSD/TM score/TM score(inverse):', candidate_structchain, query_structchain, round(aln_rms[0], 3), aln_tm, aln_tm_i)
+                print('\nAlignment scores [RMSD/TM-score/inverse TM-score]:', candidate_structchain, query_structchain, aln_rms, aln_tm, aln_tm_i)
                 #if aln_tm_i > aln_tm:  aln_tm = aln_tm_i
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported?
@@ -1451,7 +1487,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Discard poor alignments
             if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
-                discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(round(aln_rms[0], 3)) +'/'+ str(aln_tm) + '\n')
+                discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(aln_rms) +'/'+ str(aln_tm) + '\n')
                 print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
 
                 candidate_result.discard_reason = "poor alignment (below threshold)"
@@ -1491,11 +1527,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     s2cbs = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
                     cBS_sele = cmd.select('cndtBS_arnd' + ligand_, s1cbs + ' near_to ' + lig_scan_radius + ' of ' + s2cbs)
                     if cBS_sele == 0:
-                        print('*no binding residues around query ligand superposition, skipping ligand')
-                        continue # skip this ligand
+                        print('*no candidate residues found around query ligand superposition, skipping ligand')
+                        #continue # skip this ligand
                     else:
                         found_cndt_bs += 1
-                        print('*binding residues present around query ligand superposition')
+                        print('*candidate residues present around query ligand superposition')
 
                     # Look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
                     if resn == 'HOH':
@@ -1532,23 +1568,29 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                 # end ligand loop
 
-                # Count how many binding sites were present in candidate chain
-                found_cndt_bs_ratio = found_cndt_bs / len(query_lig_positions[query_structchain]) # calculate ratio of found ligands
+                # Count how many binding sites are occupied by candidate residues in candidate chain
+                found_cndt_bs_ratio = 100 * found_cndt_bs / len(query_lig_positions[query_structchain]) # calculate ratio of found ligands
 
 
                 # Print verdict for chain & save it as ".cif.gz"
+                print(f'[Superposition] Number of superimposed query binding sites occupied by candidate residues: [{found_cndt_bs}/{len(query_lig_positions[query_structchain])} {found_cndt_bs_ratio}%]')
+                #print(f'[{found_cndt_bs}] candidate binding sites detected out of total [{len(query_lig_positions[query_structchain])}] query binding sites')
+                #print('Ratio (found/total):', found_cndt_bs_ratio)
+                print(f'[UNP-mapping] Number of query chain binding residues mapped onto candidate chain: [{bndg_rsd_scores}]')
 
-                print(f'[{found_cndt_bs}] candidate binding sites detected out of total [{len(query_lig_positions[query_structchain])}] query binding sites')
-                print('Ratio (found/total):', found_cndt_bs_ratio)
-
-                if found_cndt_bs != 0:
+                if found_cndt_bs != 0: # Condition to keep/discard candidate # TODO decide whether to keep or not
 
                     print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t verified query ligands: {query_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
 
+                    ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
+                    append_expression = candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+
+
                     # Apo result
                     if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
-                        ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                        apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                        #ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
+                        #append_expression = candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                        apo_holo_dict_instance.setdefault(query_structchain, []).append(append_expression)
                         if len(found_ligands_xtra) > 0:
                             print('APO*')
                         else:
@@ -1559,8 +1601,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             cmd.save(path_results + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
                     # Holo result
                     else:
-                        ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                        apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                        #ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
+                        #append_expression = candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                        apo_holo_dict_H_instance.setdefault(query_structchain, []).append(append_expression)
                         if len(found_ligands) > 0:
                             print('HOLO')
                         else:
@@ -1629,10 +1672,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Print verdict for chain & save it as ".cif.gz"
                 print('Found ligands: ', found_ligands_r)
 
+                
                 # Holo result
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
-                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                    append_expression = candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                    apo_holo_dict_H_instance.setdefault(query_structchain, []).append(append_expression)
                     print('HOLO')
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
@@ -1642,7 +1687,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Apo result
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
-                    apo_holo_dict_instance.setdefault(query_structchain, []).append(candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + str(round(aln_rms[0], 3)) + ' ' + str(round(aln_tm, 3)) + ' ' + str(round(aln_tm_i, 3)) + ' ' + ligands_str)
+                    append_expression = candidate_structchain + ' ' + uniprot_overlap_all[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                    apo_holo_dict_instance.setdefault(query_structchain, []).append(append_expression)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
                     else:
