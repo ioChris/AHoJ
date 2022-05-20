@@ -1568,8 +1568,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
                 # Print verdict for chain & save as ".cif.gz"
+                print('\t\t\t\t\t\t\t\t*** Chain evaluation ***')
                 print(f'[Superposition] Number of superimposed query binding sites occupied by candidate residues: [{found_cndt_bs}/{len(query_lig_positions[query_structchain])} {found_cndt_bs_ratio}%]')
-                print(f'[UNP binding residue mapping] Number of query chain binding residues mapped onto candidate chain: [{bndg_rsd_scores}]')
+                print(f'[UNP residue mapping] Number of query chain binding residues mapped onto candidate chain: [{bndg_rsd_scores}]')
                 print(f'[UNP seq. overlap] Percentage of overall UniProt sequence overlap with query chain: [{uniprot_overlap_all[candidate_structchain][0].split()[1]}]')
 
 
@@ -1972,7 +1973,7 @@ def parse_args(argv):
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0,     help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
     parser.add_argument('--bndgrsds_threshold',type=float, default=1.0,   help='Percentage of binding residues of the query that have to be present in the candidate according to UNP residue mapping, for the candidate to be considered, condition is ">="')
-    parser.add_argument('--lig_scan_radius',   type=float, default=4.0,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
+    parser.add_argument('--lig_scan_radius',   type=float, default=4.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)')
 
     parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
@@ -1987,7 +1988,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water ligands only)')
