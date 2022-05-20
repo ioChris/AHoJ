@@ -110,7 +110,10 @@ def map_pdb_resnum_to_uniprot(pdb_resnum_list, sifts_xml_file):
                     parent = my_pdb_residue[0].getparent()
                     pres = './/{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}crossRefDb[@dbSource="UniProt"]'
                     my_uniprot_residue = parent.findall(pres)
-                    my_unp_resnum = int(my_uniprot_residue[0].attrib['dbResNum'])
+                    try:
+                        my_unp_resnum = int(my_uniprot_residue[0].attrib['dbResNum'])
+                    except Exception: # Ignore atom residues annotated in non-protein chains (i.e. 2amq)
+                        continue
                     #my_pdb_chain = str(my_uniprot_residue[0].attrib['dbChainId']) # UniProt field has no chain in xml
                     my_pdb_chain = chain_id
                     resichain_pdb = my_pdb_chain + '.' + str(my_unp_resnum)
@@ -144,29 +147,31 @@ def group_mapped_res_by_chain(mapped_res_list):
 
 
 # Find whether mapped binding residues are present in each candidate chain
-def examine_cndt_mapped_bs_res(dict_of_bndgres_pdb_to_unp, query_struct, candidates_unp_dict):
+def examine_cndt_mapped_bs_res(dict_of_bndgres_pdb_to_unp, query_structchain, candidates_unp_dict):
     candidate_hits = dict()
+    query_struct = query_structchain[:4]
+    query_chain = query_structchain[4:]
+
     for chain, positions in dict_of_bndgres_pdb_to_unp.items():
-        chain = chain # to use existing candidates dict
-        query_structchain = query_struct + chain
-        candidates = candidates_unp_dict[query_structchain] # Get candidates from UniProt ID
+        if chain == query_chain: # Only examine residues of query structchain (ignore interface chains/resis)
+            candidates = candidates_unp_dict[query_structchain] # Get candidates from UniProt ID
 
-        for candidate_entry in candidates:
-            candidate_structchain = candidate_entry.split()[0]
-            candidate_struct = candidate_structchain[:4]
+            for candidate_entry in candidates:
+                candidate_structchain = candidate_entry.split()[0]
+                candidate_struct = candidate_structchain[:4]
 
-            if candidate_struct != query_struct: # eliminate candidates of the same structure
+                if candidate_struct != query_struct: # eliminate candidates of the same structure
 
-                # Make dict with candidate structchain and UniProt range(s) as values, then check overlap
-                cndt_SP_BEG = int(candidate_entry.split()[1])
-                cndt_SP_END = int(candidate_entry.split()[2])
+                    # Make dict with candidate structchain and UniProt range(s) as values, then check overlap
+                    cndt_SP_BEG = int(candidate_entry.split()[1])
+                    cndt_SP_END = int(candidate_entry.split()[2])
 
-                # Loop through positions, look if position is within UniProt range
-                for position in positions:
-                    if int(position) >= cndt_SP_BEG and int(position) <= cndt_SP_END:
-                        candidate_hits.setdefault(candidate_structchain+'.'+query_structchain, []).append(chain + '.' + position + ' ' + str(1))
-                    else:
-                        candidate_hits.setdefault(candidate_structchain+'.'+query_structchain, []).append(chain + '.' + position + ' ' + str(0))
+                    # Loop through positions, look if position is within UniProt range
+                    for position in positions:
+                        if int(position) >= cndt_SP_BEG and int(position) <= cndt_SP_END:
+                            candidate_hits.setdefault(candidate_structchain+'.'+query_structchain, []).append(chain + '.' + position + ' ' + str(1))
+                        else:
+                            candidate_hits.setdefault(candidate_structchain+'.'+query_structchain, []).append(chain + '.' + position + ' ' + str(0))
     return candidate_hits
 
 
@@ -191,7 +196,7 @@ def remove_negative_duplicate_cndt_bs_res_pos(dict_of_candidate_bs_rsds_assessme
     return candidate_metahits
 
 
-# Count how many binding residues (out of total) are present in candidate
+# Count number of mapped binding residues (out of total) present in candidate
 def evaluate_candidate_bs_rsds(dict_of_candidate_bs_rsds_scores):
     # dict e.g. "1lbaA.1aroL ['L.19 1', 'L.20 1', 'L.131 1']"    
     candidate_scores = dict()
@@ -241,5 +246,4 @@ def get_scores_from_residue_mapping(candidate_score_dict, query_struchain, candi
         scores = scores[0]
     except Exception:
         scores = '-'
-    
     return scores
