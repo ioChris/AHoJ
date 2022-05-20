@@ -47,6 +47,7 @@ The python version and packages used to run the application appear below:
 * wget		  3.2
 * tmalign 20170708 
 * pymol-psico 3.4.19
+* lxml     4.8.0
 
 
 Note: Newer versions of these packages should be functional as long as they are inter-compatible, including the open-source version of PyMOL.
@@ -84,6 +85,7 @@ conda install -c anaconda pywget
 conda install -c speleo3 tmalign
 conda install -c speleo3 pymol-psico
 conda install -c conda-forge rich pytest-sugar
+conda install -c conda-forge lxml 
 ~~~     
 
 ##### 4.  Install Open-source PyMOL
