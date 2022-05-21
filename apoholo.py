@@ -860,7 +860,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
 
-    # Merge calculated UniProt overlap percentages of same chains into a single percentage    
+    # Merge calculated UniProt overlap percentages of same chains into a single percentage
     uniprot_overlap_merged = merge_fragmented_unp_overlaps(uniprot_overlap_all)
     #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
     #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
