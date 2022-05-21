@@ -315,11 +315,11 @@ iii) 1 CSV file with information of the ligand positions for both query and cand
 
 iv) Console log file with information from the standard output [console.log]. This file can be used for reference and for better understanding the mechanism of action of AHoJ.
 
-v) A PyMOL script file for loading the results into a PyMOL session [reconstruct_PyMOL_session.pml]. This is useful for viewing the results locally on the user's computer. The script has to be opened through PyMOL. The resulting session can then be saved by the user as a PyMOL session (.pse).
+v) A PyMOL script file for loading the results into a PyMOL session [load_results_into_PyMOL.pml]. This is useful for viewing the results locally on the user's computer. The script has to be opened through PyMOL. The resulting session can then be saved by the user as a PyMOL session (.pse).
 
 #### Visualization
 
 i) The web application allows the visualization of the results in the browser with the molstar (Mol*) viewer. Web application: https://github.com/rdk/AHoJ-webapp
 
-ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [reconstruct_PyMOL_session.pml]. The script has to be loaded from within the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session and open the .pml file through it. A PyMOL installation is needed for this to work (Incentive or Open-Source).
+ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [load_results_into_PyMOL.pml]. The script has to be loaded from within the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session and open the .pml file through it. A PyMOL installation is needed for this to work (Incentive or Open-Source).
 
