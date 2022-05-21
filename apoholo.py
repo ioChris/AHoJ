@@ -32,7 +32,7 @@ from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # 
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.4.4'
+VERSION = '0.4.5'
 
 
 _global_lock = threading.Lock()                      # multi-threading
