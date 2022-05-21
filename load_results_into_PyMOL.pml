@@ -79,7 +79,7 @@ for file in all_files:
     if ligands_list: # If ligands file was found and was not empty
 
         if object_name.startswith('query'):  # Query
-            struct = object_name[6:]
+            struct = object_name.split('_')[1]
 
             # Get ligands for this object
             try:
@@ -101,8 +101,8 @@ for file in all_files:
 
         else:  # Result
 
-            structchain_result = object_name[-22:-17]
-            structchain_query = object_name[-5:]
+            structchain_result = object_name.split('_')[1]
+            structchain_query = object_name.split('_')[4]
 
             # Get ligands for this object
             try:

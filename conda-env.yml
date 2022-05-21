@@ -11,3 +11,4 @@ dependencies:
   - pytest
   - pytest-sugar
   - rich
+  - lxml
