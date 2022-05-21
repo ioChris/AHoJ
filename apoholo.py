@@ -113,12 +113,22 @@ def merge_fragmented_unp_overlaps(fragmented_overlap_dict):
     merged_overlap_dict = dict()
     for key, values in fragmented_overlap_dict.items(): # key = candidate structchain, values = <query_structchain %UNP_overlap>
         if len(values) > 1:
-            total_overlap = 0
+            #total_overlap = 0
+            temp_dict = dict()
             for value in values:
                 chain = value.split()[0]
                 overlap = value.split()[1]
-                total_overlap += float(overlap)
-            merged_overlap_dict.setdefault(key, []).append(chain + ' ' + str(round(total_overlap, 1)))
+                if chain in temp_dict.keys(): # structchain has already a unp fragment
+                    new_overlap = float(temp_dict[chain]) + float(overlap)
+                    temp_dict[chain] = str(round(new_overlap, 1))
+                else:
+                    temp_dict[chain] = overlap
+                #total_overlap += float(overlap)
+            #merged_overlap_dict.setdefault(key, []).append(chain + ' ' + str(round(total_overlap, 1)))
+            temp_list = list()
+            for x, y in temp_dict.items():
+                temp_list.append(x + ' ' + y)
+            merged_overlap_dict[key] = temp_list
         else:
             merged_overlap_dict[key] = values
     return merged_overlap_dict
@@ -846,8 +856,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             else:
                 own_chains.append(candidate)
 
-        print(f'Total chains for {uniprot_id}: {len(dict_rSIFTS[uniprot_id])}')
-        print(f'Total chains for {uniprot_id} excluding query structure: {len(dict_rSIFTS[uniprot_id]) - len(own_chains)}')
+        #print(f'Total chains for {uniprot_id}: {len(dict_rSIFTS[uniprot_id])}')
+        print(f'Total chains for {uniprot_id} (including/excluding query structure): [{len(dict_rSIFTS[uniprot_id])}]/[{len(dict_rSIFTS[uniprot_id]) - len(own_chains)}]')
         #print(dict_rSIFTS[uniprot_id], own_chains)
 
         if len(dict_rSIFTS[uniprot_id]) > len(own_chains):
@@ -862,8 +872,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Merge calculated UniProt overlap percentages of same chains into a single percentage
     uniprot_overlap_merged = merge_fragmented_unp_overlaps(uniprot_overlap_all)
-    #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
+
     #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
+    #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
+    #sys.exit(1)
 
     # Get apo candidates for rsd mapping set (larger subset)
     #dictApoCandidates_b = dict()
@@ -1480,7 +1492,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Align candidate to query chain
             print(f'\n{candidate_structchain} -> {query_structchain}')
             try:
-                aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=1)
+                aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=0)
                 #save_alignment = '/' + candidate_structchain + '_to_' + query_structchain + '.aln'
                 #cmd.save(path_results + save_alignment, 'alnobj')
                 #print(aln_rms)
@@ -1950,8 +1962,9 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1ksw a NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # first chain is apo, it was ignored before now works
+    #parser.add_argument('--query', type=str,   default='2hka ALL', help='main input query') #
     #parser.add_argument('--query', type=str,   default='6j19 all atp', help='main input query') # problematic case, 6j19B has wrong UNP mapping in SIFTS 
-    parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
+    #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
@@ -1969,7 +1982,7 @@ def parse_args(argv):
 
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 A ser',    help='main input query') # expected parsing fail
-    #parser.add_argument('--query', type=str,   default='1a73 A ser 97', help='main input query') # OK apo 4, holo 12
+    parser.add_argument('--query', type=str,   default='1a73 A ser 97', help='main input query') # OK apo 4, holo 12
 
     # SARS CoV 2
     #parser.add_argument('--query', type=str,   default='7aeh A R8H',     help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
