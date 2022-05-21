@@ -12,7 +12,7 @@ from lxml import etree
 
 
 def print_dict_readable(input_dict, header_msg):
-    print('')
+    #print('')
     print(header_msg)
     for i, j in input_dict.items():
         print(i, j)
