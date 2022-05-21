@@ -502,8 +502,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Saving
     save_oppst = args.save_oppst
     save_separate = args.save_separate
-    save_session = args.save_session
-    multisave = args.multisave
+    #save_session = args.save_session
+    #multisave = args.multisave
 
     # Adjust input, resolve conflicts
     autodetect_lig = 0 # default OFF
@@ -1802,16 +1802,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cndt_lig_positions[key] = list(cndt_lig_positions.fromkeys(value))  
 
 
-        # Save results as session (.pse.gz) or multisave (.cif)
-        filename_body = path_results + '/' + 'aln_' + query_struct     #filename_body = pathRSLTS + '/' + 'aln_' + query_structchain + '_to_' + '_'.join(cmd.get_object_list('all and not ' + query_struct))
-        filename_pse = filename_body + '.pse.gz'
-        filename_multi = filename_body + '_multi.cif'
-        if len(apo_holo_dict) > 0:    #len(dictApoCandidates_1) > 0:    #if len(cmd.get_object_list('all')) > 1:
-            if save_session == 1:
-                cmd.save(filename_pse)
-            if multisave == 1:
-                cmd.multisave(filename_multi, append=1)
-
     track_progress()
     # end for
 
@@ -1822,13 +1812,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Discarded candidate chains: ', len(discarded_chains))
         #print(f"{' '.join(map(str, discarded_chains))}\n")
 
-    # Print calculated UniProt overlap
-    #print('Uniprot overlap dictionary\n', uniprot_overlap)
-
-
-    ## Save results in text output
-    #if broad_search_mode:    query_chain = 'apo_chain'
-    #else:   query_chain = query_chain
 
     # Universal results
     write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
@@ -1836,25 +1819,17 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Apo results
     write_results_apo_csv(apo_holo_dict, path_results)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
-    if len(apo_holo_dict) > 0:  #if save_separate == 1 or multisave == 1 or save_session == 1:
-        # Print apo dict
-        print('\nApo chains: ', num_apo_chains)
-        for key in apo_holo_dict:
-            print(key, apo_holo_dict.get(key))
-    else:
-        print('No apo forms found')
-
+    print('\nApo chains: ', num_apo_chains)
+    for key in apo_holo_dict:
+        print(key, apo_holo_dict.get(key))
 
     # Holo results
     write_results_holo_csv(apo_holo_dict_H, path_results)
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
-    if len(apo_holo_dict_H) > 0:
-        # Print holo dict
-        print('\nHolo chains: ', num_holo_chains)
-        for key in apo_holo_dict_H:
-            print(key, apo_holo_dict_H.get(key))
-    else:
-        print('\nNo holo forms found')
+    print('\nHolo chains: ', num_holo_chains)
+    for key in apo_holo_dict_H:
+        print(key, apo_holo_dict_H.get(key))
+
 
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
@@ -1943,7 +1918,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 a zn',    help='main input query') # reverse_search=1, OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 E mg 205',help='main input query') # fail, ligand assigned non-polymer chain
-    #parser.add_argument('--query', type=str,   default='1a73 A',       help='main input query') # apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 A',       help='main input query') # apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
@@ -1982,7 +1957,7 @@ def parse_args(argv):
 
     # Residue
     #parser.add_argument('--query', type=str,   default='1a73 A ser',    help='main input query') # expected parsing fail
-    parser.add_argument('--query', type=str,   default='1a73 A ser 97', help='main input query') # OK apo 4, holo 12
+    #parser.add_argument('--query', type=str,   default='1a73 A ser 97', help='main input query') # OK apo 4, holo 12
 
     # SARS CoV 2
     #parser.add_argument('--query', type=str,   default='7aeh A R8H',     help='main input query') # apo 116, holo 431, job 314 H PC, CoV2 Mpro caspase-1 inhibitor SDZ 224015
@@ -2047,8 +2022,8 @@ def parse_args(argv):
     # Saving
     parser.add_argument('--save_oppst',        type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
     parser.add_argument('--save_separate',     type=int,   default=1,     help='0/1: save each chain object in a separate file (default save)')
-    parser.add_argument('--save_session',      type=int,   default=0,     help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
-    parser.add_argument('--multisave',         type=int,   default=0,     help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
+    #parser.add_argument('--save_session',      type=int,   default=0,     help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
+    #parser.add_argument('--multisave',         type=int,   default=0,     help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
 
     return parser.parse_args(argv)
