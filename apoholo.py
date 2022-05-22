@@ -512,7 +512,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     lig_scan_radius = str(lig_scan_radius)      # needs to be str
     intrfc_lig_radius = str(intrfc_lig_radius)  # needs to be str
     hoh_scan_radius = str(hoh_scan_radius)      # needs to be str
-    #cndtlig_scan_radius = lig_scan_radius       # TODO why is this "not used", since it is required later on? -local vrbl
+    #cndtlig_scan_radius = lig_scan_radius      # why is this "not used", since it is required later on? -local vrbl
     #broad_search_mode = False # previously called "reverse_mode"
 
     # Pass settings to a string
@@ -916,7 +916,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('Total structures to be parsed: ', len(apo_candidate_structs), '\n')
 
 
-    # Download candidate structures to specified directory [#TODO this should be replaced by load]
+    # Download candidate structures to specified directory [this should be replaced by load]
     for apo_candidate_structure in apo_candidate_structs:
         try:
             download_mmCIF_gz2(apo_candidate_structure, pathSTRUCTS)
@@ -1064,14 +1064,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         elif ligand_names is None:# and autodetect_lig == 1: 
             search_term = 'hetatm and not solvent and not polymer' # water as ligand should be ignored here without a position
 
-        '''
-        else: # ligands not specified (*/?) 
-            print('\n====== No ligands specified: auto-detecting all ligands ======\n')
-            search_term = 'hetatm and not solvent and not polymer'
-            print('\n*Search term = ', search_term)
-            #print('\n No ligands were specified and user has auto-detect OFF, turning it ON to continue')
-            autodetect_lig = 1 # Force autodetect ON
-        '''
 
     print('\n*Search term = ', search_term)
 
@@ -1106,7 +1098,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if write_results:
                 write_results_apo_csv(apo_holo_dict, path_results)
                 write_results_holo_csv(apo_holo_dict_H, path_results)
-                #write_cndt_ligands_csv(cndt_lig_positions, path_results)
                 write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
 
 
@@ -1264,7 +1255,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('No ligands found in broad search - continuing search')
                 query_chain_states[query_structchain] = 'apo'
         elif ligands_selection == 0 and interface_ligands_selection == 0 and autodetect_lig == 0:
-            print('No ligands found under focused search mode - skipping chain')
+            print('No ligands found in focused search mode - skipping chain')
             continue
         elif ligands_selection > 0 or interface_ligands_selection != 0:
             query_chain_states[query_structchain] = 'holo'
