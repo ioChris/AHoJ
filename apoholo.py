@@ -32,7 +32,7 @@ from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # 
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.4.5'
+VERSION = '0.4.6'
 
 
 _global_lock = threading.Lock()                      # multi-threading
@@ -512,7 +512,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     lig_scan_radius = str(lig_scan_radius)      # needs to be str
     intrfc_lig_radius = str(intrfc_lig_radius)  # needs to be str
     hoh_scan_radius = str(hoh_scan_radius)      # needs to be str
-    cndtlig_scan_radius = lig_scan_radius       # TODO why is this "not used", since it is required later on?
+    #cndtlig_scan_radius = lig_scan_radius       # TODO why is this "not used", since it is required later on? -local vrbl
     #broad_search_mode = False # previously called "reverse_mode"
 
     # Pass settings to a string
@@ -1487,7 +1487,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #candidate_result.bndg_rsd_ratio = bndg_rsd_ratio
             #candidate_result.bndg_rsd_percent = bndg_rsd_percent
 
-
+            cndtlig_scan_radius = lig_scan_radius
 
             # Align candidate to query chain
             print(f'\n{candidate_structchain} -> {query_structchain}')
@@ -1496,13 +1496,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #save_alignment = '/' + candidate_structchain + '_to_' + query_structchain + '.aln'
                 #cmd.save(path_results + save_alignment, 'alnobj')
                 #print(aln_rms)
-                #if min_tmscore != 0:
 
+                #if min_tmscore != 0:
                 aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=1)
+                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
                 #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
                 #print('\nrms_cur', round(rms_cur, 3))
-                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
-
                 #else:
                 #    aln_tm = 0
                 #    aln_tm_i = 0
@@ -1513,40 +1512,29 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 aln_tm_i = round(aln_tm_i, 2)
 
                 print(f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]')
-                #if aln_tm_i > aln_tm:  aln_tm = aln_tm_i
 
-                # TODO(rdk): which alignment is visualized? And what numbers are reported?
+                # TODO(rdk): which alignment is visualized? And what numbers are reported? - Currently TM align
 
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
                 candidate_result.tm_score_i = aln_tm_i
             except Exception as ex:
                 print('\n*Exception: ', ex)
-                discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 print('\nAlignment RMSD/TM score: ERROR')
                 print('*poor alignment (error), discarding chain ', candidate_structchain)
 
+                discarded_chains.append(candidate_structchain + '\t' + 'Alignment error\n')
                 candidate_result.discard_reason = "alignment error"
                 return candidate_result
-            #sys.exit(1)
+
 
             # Discard poor alignments
             if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
-                discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment [RMSD/TM]: ' + str(aln_rms) +'/'+ str(aln_tm) + '\n')
                 print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
 
+                discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment (below threshold) [RMSD/TM/iTM]: ' + str(aln_rms) +'/'+ str(aln_tm) +'/'+ str(aln_tm_i) + '\n')
                 candidate_result.discard_reason = "poor alignment (below threshold)"
                 return candidate_result
-
-            '''# Center of mass candidate
-            cndt_com = cmd.centerofmass(candidate_structchain)
-            print('cndt_centerofmass', cndt_com)
-            cmd.pseudoatom(object='cndt_chain_CoM', pos=cndt_com)
-            for ligand in qBS_centerofmass:
-                cmd.pseudoatom(object='qBS_CoM' + ligand, pos=qBS_centerofmass[ligand])
-                distance_com = cmd.get_distance('qBS_CoM' + ligand, 'cndt_chain_CoM')
-                print(distance_com)
-            '''
 
 
             # Look for ligands in candidate chain
@@ -1581,8 +1569,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
                     if resn == 'HOH':
                         cndtlig_scan_radius = hoh_scan_radius  # Decide whether to switch back to default after scanning once
-                    else:
-                        cndtlig_scan_radius = lig_scan_radius
                     cndt_sele_expression = '(' + candidate_struct + ' and hetatm)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
                     qr_lig_sele_expression = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
                     cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + qr_lig_sele_expression)
@@ -1674,7 +1660,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Find ligands in candidate with broad search
                 cmd.select('cndt_ligands_' + candidate_structchain, candidate_struct + '& chain ' + candidate_chain + '& hetatm & not (polymer or solvent)')
 
-                # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be found # TODO
+                # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be found
+                # Expand selection to include interface HETATMS (according to superposition)! of both detectable ligands and candidate chain selection
+                cndt_sele_expression = '(' + candidate_struct + ' and hetatm and not solvent and not polymer)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
+                qr_chain_sele_expression = '(' + query_struct + ' and chain ' + query_chain + ')'
+                cmd.select(candidate_structchain + '_HET_arnd_' + query_structchain, cndt_sele_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + qr_chain_sele_expression)
+
+                cmd.select('cndt_ligands_' + candidate_structchain, candidate_structchain + '_HET_arnd_' + query_structchain, merge=1)
+                cmd.select(candidate_structchain, candidate_structchain + '_HET_arnd_' + query_structchain, merge=1)
 
                 # Put selected atoms into list
                 myspace_r = {'r_positions': []}
@@ -1702,7 +1695,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         print('*ligand validity: [invalid]\nno query chain residues around candidate ligand superposition, ignoring ligand')
                         continue # skip this ligand
                     else:
-                        print('*ligand validity: [valid]')  # query residues present around candidate ligand superposition
+                        #print('*ligand validity: [valid]')  # query residues present around candidate ligand superposition
 
                         # Register valid ligands
                         r_atom_lig_name = ligand.split()[2]
@@ -1918,7 +1911,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 a zn',    help='main input query') # reverse_search=1, OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 E mg 205',help='main input query') # fail, ligand assigned non-polymer chain
-    parser.add_argument('--query', type=str,   default='1a73 A',       help='main input query') # apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A',       help='main input query') # apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
@@ -1929,7 +1922,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
-    #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # reverse_search=1, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
+    parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query')  # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
@@ -1972,7 +1966,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3i34 X hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     #parser.add_argument('--query', type=str,   default='1pkz A tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
-    #parser.add_argument('--query', type=str,   default='4hxj A,B',         help='main input query')
+    #parser.add_argument('--query', type=str,   default='4hxj A,B',        help='main input query')
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut A tpo',     help='main input query') # OK apo 0, holo 3
@@ -2006,7 +2000,7 @@ def parse_args(argv):
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
 
     # Experimental
-    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too #TODO remove?]
+    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too
     parser.add_argument('--look_in_archive',   type=int,   default=0,     help='0/1: Search if the same query has been processed in the past (can give very fast results)')
 
     # Internal
