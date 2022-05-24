@@ -928,26 +928,48 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Parse (mmCIF) structures to get resolution & method. Apply cut-offs
+    resolution_dict = dict()
+    exp_method_dict = dict()
+    r_free_dict = dict()
     print('Checking resolution and experimental method of candidate structures')
     for apo_candidate_struct in apo_candidate_structs:
         apo_candidate_structPath = download_mmCIF_gz2(apo_candidate_struct, pathSTRUCTS)
         resolution = '?\t'
+        # Check if resolution is already measured:
+        #resolution = resolution_dict.get(apo_candidate_struct)
+        #method = exp_method_dict.get(apo_candidate_struct)
+        #if resolution is not None and method is not None:
+            #resolution = float(resolution)
+        #else:
         with gzip.open (apo_candidate_structPath, 'rt') as mmCIFin:
             for line in mmCIFin:
                 try:
                     if line.split()[0] == '_exptl.method':
                         method = line.split("'")[1]  # capture experimental method #method = ' '.join(line.split()[1:])
+                        exp_method_dict[apo_candidate_struct] = method
                         if method == 'SOLUTION NMR':  # break fast if method is 'NMR'
+                            #exp_method_dict[apo_candidate_struct] = 'NMR'
                             break
                     elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
-                        resolution = round(float(line.split()[1]), 3)  # X-ray highest resolution
+                        resolution = round(float(line.split()[1]), 2)  # X-ray highest resolution
+                        #exp_method_dict[apo_candidate_struct] = 'XRAY'
+                        resolution_dict[apo_candidate_struct] = str(resolution)
+                        #break
+                    elif line.split()[0] == '_refine.ls_R_factor_R_free':# and float(line.split()[1]):
+                        if float(line.split()[1]):
+                            r_free = round(float(line.split()[1]), 3)
+                            r_free_dict[apo_candidate_struct] = str(r_free)
                         break
                     elif line.split()[0] == '_em_3d_reconstruction.resolution' and float(line.split()[1]):
-                        resolution = round(float(line.split()[1]), 3)  # EM resolution
+                        resolution = round(float(line.split()[1]), 2)  # EM resolution
+                        resolution_dict[apo_candidate_struct] = str(resolution)
                         break
                 except Exception:# as ex: # getting weird but harmless exceptions
                     #print('Problem parsing structure: ', apo_candidate_struct)
                     pass  # ignore and hide exceptions from stdout
+
+            #resolution = float(resolution_dict[apo_candidate_struct])
+            #method = exp_method_dict[apo_candidate_struct]
             try:
                 if include_nmr == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
                     print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
@@ -957,6 +979,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             except:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
                 print('*Exception', apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
+
     print('Done\n')
 
 
@@ -1607,7 +1630,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #if found_cndt_bs != 0: # Condition to keep/discard candidate # TODO decide whether to keep or not
 
                 ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                append_expression = candidate_structchain + ' ' + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                add_res = ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
+                append_expression = candidate_structchain + add_res + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
 
                 # Save apo result
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
@@ -1701,11 +1725,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print(f'[UNP seq. overlap] Percentage of overall UniProt sequence overlap with query chain: [{uniprot_overlap_merged[candidate_structchain][0].split()[1]}]')
                 print(f'*found ligands: {found_ligands_r}')
 
-
+                add_res = ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
                 # Save holo result
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
-                    append_expression = candidate_structchain + ' ' + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                    append_expression = candidate_structchain + add_res + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
                     apo_holo_dict_H_instance.setdefault(query_structchain, []).append(append_expression)
                     print('HOLO')
                     if save_separate == 1:
@@ -1716,7 +1740,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Save apo result
                 else:
                     ligands_str = join_ligands(found_ligands_r.union(found_ligands_xtra))
-                    append_expression = candidate_structchain + ' ' + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
+                    append_expression = candidate_structchain + add_res + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
                     apo_holo_dict_instance.setdefault(query_structchain, []).append(append_expression)
                     if len(found_ligands_xtra) > 0:
                         print('APO*')
@@ -1907,14 +1931,14 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
-    #parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
+    parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
-    parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query')  # apo 2, holo 6
+    #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query')  # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
