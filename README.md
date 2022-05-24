@@ -273,7 +273,11 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 ### Advanced
 
-**`--save_separate`** [default = `1`]
+**`--bndgrsds_threshold`** : binding residues threshold [default = `1.0`, min/max = 1/100]
+
+Floating point number that represents a percentage (%) and is applied as a cutoff point upon the % ratio of the total number of binding residues in the query chain out of the number of successfully mapped binding residues in the candidate chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
+
+**`--save_separate`** : [default = `1`]
 
 0 or 1. When set to 1 (ON), the server will save all aligned chains that are in the opposite category from the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will save any apo chains that it will find. In the opposite case when the query structure is apo, it would save all holo chains. If the user wishes to save both apo and holo chains, they can turn on the next parameter, "save_oppst".
 
@@ -281,7 +285,7 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 0 or 1. When set to 1 (ON), the server will not only find, but also save chains that are in the same category with the starting query (apo/holo). In a regular search where the query is a holo-protein (searching for apo from holo), it will also save any holo chains that it will find. In the opposite case when the query structure is apo, it will also save the apo chains that it will find. This setting is dependent on the previous parameter "save_separate" which has to be ON for this parameter to work. This setting does not affect the search process of AHoJ which always includes both apo and holo chains.
 
-**`--overlap_threshold`** sequence overlap threshold [default = `0`, min/max = 0/100]
+**`--overlap_threshold`** : sequence overlap threshold [default = `0`, min/max = 0/100]
 
 Floating point number that represents a percentage (%) and is applied as a cutoff point when comparing the sequence overlap between the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate chains, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it means that the candidate chain has to completely cover the query chain. It can be longer than the query, but not shorter.
 
