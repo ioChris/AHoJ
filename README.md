@@ -313,15 +313,13 @@ Note: a given candidate chain could be a match for more than one query chains, a
 
 ii) 1 or 2 CSV files with the successfully processed candidate chains for apo and holo chains respectively [results_apo.csv, results_holo.csv]. These CSV files contain the following information for each found chain: **`query_chain, apo_chain, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands`**
 
-iii) 1 CSV file with the positions of the relevant ligands that were detected in both query and resulting candidate structures. This file is needed to load ligand selections when loading the results into the PyMOL with the included script.
-
 Note: UniProt overlap refers to the percentage of sequence overlap that each candidate chain has over the query chain (higher is better, max is 100%). The ligands listed in the files refer to the ligands that were detected in the superimposed positions of the specified query ligands, thus they might not include ligands that bind elsewhere in the candidate chains. If the CSV file for apo chains includes ligands (which seems contradicting), it indicates that the user set the parameter **`--lig_free_sites`** to 0 (OFF), and thus any other ligands besides the query ligand were allowed in the superimposed binding sites of candidate structures.
 
-iii) 1 CSV file with information of the ligand positions for both query and candidate structures [ligands.csv]. This file is important for reference purposes and also if the user wants to reconstruct the PyMOL session with annotations locally.
+iii) 1 CSV file with the positions of the relevant ligands that were detected in both query and resulting candidate structures [ligands.csv]. This file is needed to load ligand selections when loading the results into the PyMOL with the included script.
 
 iv) Console log file with information from the standard output [console.log]. This file can be used for reference and for better understanding the mechanism of action of AHoJ.
 
-v) A PyMOL script file for loading the results into a PyMOL session [load_results_into_PyMOL.pml]. This is useful for viewing the results locally on the user's computer. The script has to be opened through PyMOL. The resulting session can then be saved by the user as a PyMOL session (.pse).
+v) A PyMOL script file for loading the results into PyMOL [load_results_into_PyMOL.pml]. This is useful for viewing the results locally. The script has to be opened through PyMOL. The resulting session can then be saved by the user as a PyMOL session (.pse).
 
 #### Visualization
 
