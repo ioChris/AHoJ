@@ -246,7 +246,7 @@ python apoholo.py --query '3fav ZN'
 
 **`--res_threshold`** : resolution threshold [default = `3.8`]
 
-Floating point number that represents angstroms and is applied as a cutoff point when assessing the apo-holo candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. Condition is <=
+Floating point number that represents angstroms and is applied as a cutoff point when assessing candidate structures that are resolved by scattering methods (X-ray crystallography, electron microscopy, neutron diffraction). It applies at the highest resolution value, when this is available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. Condition is <=
 
 **`--include_nmr`** : include NMR structures [default = `1`]
 
