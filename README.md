@@ -189,10 +189,10 @@ The maximum arguments within the single line input are of this form:
 <pdb_id> <chains> <ligand> <position>
 ~~~  
 
-* `pdb_id`: This is the 4-character code of a PDB protein structure. This argument is obligatory and only 1 PDB ID can be input per line. (i.e. “1a73” or “3fav” or “3FAV”). If it is the only argument (because the user does not know the ligand that binds to the structure or is using "reverse search", it will trigger automatic detection of ligands in the structure.
-* `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” or “\*” in the case of all chains (i.e. “A” or “A,C,D” or “ALL” or “\*”). This argument is obligatory if the user intends to provide any argument after that (i.e. ligands or position).
-* `ligand`: A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”) or “\*” for the automatic detection of all ligands in the specified chain(s). Besides specifying the ligand directly by its name (and optionally, its position), the user can also specify a residue that binds the ligand and AHoJ will detect the ligand (as long as it is within 4.5 Angstroms of the residue). This approach can actually be more robust in cases where the ligand is assigned a chain outside of the protein chains, in which case the detection will fail (as AHoJ will discard non-UniProt chains as part of the chain validation). On the contrary, protein residues are assigned a polymer chain and is thus less likely to fail. This argument is non-obligatory, if omitted, the user should activate the automatic detection of the ligands in the structure from the available option, unless the user is starting with an apo structure, in which case they will need to activate the reverse mode (search for holo from apo). Note: if planning to specify the `position` argument, you cannot use more than one ligand per query.
-* `position`: This argument is an integer (i.e. “260” or “1”). It refers to the PDB index of the previously specified ligand or binding residue. This argument can only be specified when there is one ligand or residue specified.
+* `pdb_id`: This is the 4-character code of a PDB protein structure (case-insensitive). This argument is obligatory and only 1 PDB code can be input per line. (i.e. “1a73” or “3fav” or “3FAV”). If it is the only argument (e.g. because the user does not know the ligand that binds to the structure), it will trigger automatic detection of ligands in the structure.
+* `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” or “\*” in the case of all chains (i.e. “A” or “A,C,D” or “ALL” or “\*”). This argument is case-insensitive and it is obligatory if the user intends to provide any argument after that (i.e. ligands or position).
+* `ligand`: This argument is case-insensitive. A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”) or “\*” for the automatic detection of all ligands in the specified chain(s). Besides specifying the ligand directly by its name (and optionally, its position), the user can also specify a residue that binds the ligand (i.e. “HIS”) and AHoJ will detect the ligand (as long as it is within 4.5 Angstroms of the residue). This approach however can lead to the selection of more than one ligands, if they are within this radius from the specified residue. This argument is non-obligatory, if omitted or specified as “\*”, AHoJ will automatically detect the ligands in the structure. If there are no ligands in the query structure, it will be characterised as apo and the search for candidates will continue. Note: when specifying the `position` argument, the user can only specify one ligand per query.
+* `position`: This argument is an integer (i.e. “260” or “1”). It refers to the PDB index of the previously specified ligand, binding residue or water molecule. When this argument is specified, only one ligand or residue can be specified in the previous argument.
                        
 ## Usage examples
 
@@ -202,7 +202,7 @@ Example of an input argument (query):
 python apoholo.py --query '1a73 A ZN 201'
 ~~~
 
-The application will fetch the structure 1a73, get chain A, and look for zinc+2 (ZN) ligand in position 201 of the sequence to verify the input argument. 
+The application will fetch the structure 1a73, get chain A, and look for zinc+2 (ZN) ligand in position 201 of the sequence to validate the input. 
 If ZN is found in chain A and position 201 of 1a73 (1a73A), it will retrieve all other known chains that belong to the same protein with 1a73A, 
 it will align them with 1a73A and look for ZN (and also other ligands) at the superimposed binding site of ZN in 1a73A. If it finds protein chains with ZN, 
 it will list them as HOLO, if the superimposed site is empty of ligands, the chain will be listed as APO. 
@@ -225,13 +225,13 @@ python apoholo.py --query '1a73 A,B ZN'
 # consider ZN ligands in all chains of 1a73
 python apoholo.py --query '1a73 ALL ZN'
 # or
-python apoholo.py --query '1a73 ZN'  # (with ligand auto-detection OFF)
+python apoholo.py --query '1a73 ZN'
 
 # find and consider all ligands in all chains of 1a73
-python apoholo.py --query '1a73'  # (with ligand auto-detection ON or OFF)
+python apoholo.py --query '1a73'
 
 # find and consider all ligands in chain A of 1a73
-python apoholo.py --query '1a73 A'  # (with ligand auto-detection ON)
+python apoholo.py --query '1a73 A'
 
 # consider ZN and MG ligands in chain A of 1a73
 python apoholo.py --query '1a73 A ZN,MG'
