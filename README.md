@@ -301,7 +301,7 @@ Floating point number that is applied as a minimum accepted template-modeling sc
 
 ##  Results
 
-The results can be downloaded as a zip file after a run is completed.
+The results are visualised in the browser through Mol* and they can be downloaded as a zip file after a run has completed.
 
 #### Files
 
@@ -311,7 +311,9 @@ i) PDB structure files (cif.gz format) for the query structure (whole structure)
 
 Note: a given candidate chain could be a match for more than one query chains, and could thus appear more than once, in each case aligned to the respective query chain.
 
-ii) 1 or 2 CSV files with the successfully processed candidate chains for apo and holo chains respectively [results_apo.csv, results_holo.csv]. These CSV files contain the following information for each found chain: **`query_chain, holo_chain, %UniProt_overlap, RMSD, TM_score, ligands`**
+ii) 1 or 2 CSV files with the successfully processed candidate chains for apo and holo chains respectively [results_apo.csv, results_holo.csv]. These CSV files contain the following information for each found chain: **`query_chain, apo_chain, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands`**
+
+iii) 1 CSV file with the positions of the relevant ligands that were detected in both query and resulting candidate structures. This file is needed to load ligand selections when loading the results into the PyMOL with the included script.
 
 Note: UniProt overlap refers to the percentage of sequence overlap that each candidate chain has over the query chain (higher is better, max is 100%). The ligands listed in the files refer to the ligands that were detected in the superimposed positions of the specified query ligands, thus they might not include ligands that bind elsewhere in the candidate chains. If the CSV file for apo chains includes ligands (which seems contradicting), it indicates that the user set the parameter **`--lig_free_sites`** to 0 (OFF), and thus any other ligands besides the query ligand were allowed in the superimposed binding sites of candidate structures.
 
