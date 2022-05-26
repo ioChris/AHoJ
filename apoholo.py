@@ -685,7 +685,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try:
                 print(user_structchain, dict_SIFTS[user_structchain])
             except:
-                #user_structchains.remove(user_structchain)
+                user_structchains.remove(user_structchain)
                 #discarded_chains.append(user_structchain + '\t' + 'Query chain not assigned UniProt ID\n')
                 usr_structchains_unverified.append(user_structchain)
 
@@ -717,7 +717,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if s1n != 0 and s3n != 0:
                 non_protein_lig_chains[unverified_structchain] = cmd.get_chains('around_non-protein_lig' + unverified_structchain)
                 print('found protein binding chains:', non_protein_lig_chains[unverified_structchain])
-                print(f'Replacing non-protein chain [{unverified_structchain}] with chain {non_protein_lig_chains[unverified_structchain]}')
+                print(f'Replacing non-protein chain [{unverified_structchain[4:]}] with binding chain {non_protein_lig_chains[unverified_structchain]}')
                 for found_chain in non_protein_lig_chains[unverified_structchain]:
                     new_structchain = struct + found_chain  # Convert detected chains into structchains
 
@@ -728,13 +728,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     except Exception:
                         print('-remapped chain not found in SIFTS', found_chain)
 
-                user_structchains.remove(unverified_structchain)
-            #else:
-                #print('User specified chain does not exist in UniProt, removing it from input:\t', unverified_structchain)
+                #user_structchains.remove(unverified_structchain) # already removed
+            else:
+                print('User specified chain does not exist in UniProt, removing it from input:\t', unverified_structchain)
+                usr_structchains_unverified.remove(unverified_structchain)
                 #user_chains.remove(unverified_structchain[4:])
                 #user_structchains.remove(unverified_structchain)
-                #discarded_chains.append(unverified_structchain + '\t' + 'No assigned UniProt ID\n')
-                #usr_structchains_unverified.append(unverified_structchain)
+                discarded_chains.append(unverified_structchain + '\t' + 'No assigned UniProt ID\n')
+                usr_structchains_unverified.append(unverified_structchain)
             cmd.delete('not ' + struct)
 
     # Print report of chain verification
@@ -1509,19 +1510,19 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #cmd.save(path_results + save_alignment, 'alnobj')
                 #print(aln_rms)
 
-                #if min_tmscore != 0:
-                aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=1)
-                aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
+                if min_tmscore != 0:
+                    aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=1)
+                    aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
+                    aln_tm = round(aln_tm, 2)
+                    aln_tm_i = round(aln_tm_i, 2)
                 #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
                 #print('\nrms_cur', round(rms_cur, 3))
-                #else:
-                #    aln_tm = 0
-                #    aln_tm_i = 0
+                else:
+                    aln_tm = '-'
+                    aln_tm_i = '-'
 
                 # Round alignment scores before printing/saving
                 aln_rms = round(aln_rms[0], 2)
-                aln_tm = round(aln_tm, 2)
-                aln_tm_i = round(aln_tm_i, 2)
 
                 print(f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]')
 
@@ -1541,12 +1542,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
             # Discard poor alignments
-            if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
-                print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
+            if aln_tm != '-':
 
-                discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment (below threshold) [RMSD/TM/iTM]: ' + str(aln_rms) +'/'+ str(aln_tm) +'/'+ str(aln_tm_i) + '\n')
-                candidate_result.discard_reason = "poor alignment (below threshold)"
-                return candidate_result
+                if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
+                    print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
+    
+                    discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment (below threshold) [RMSD/TM/iTM]: ' + str(aln_rms) +'/'+ str(aln_tm) +'/'+ str(aln_tm_i) + '\n')
+                    candidate_result.discard_reason = "poor alignment (below threshold)"
+                    return candidate_result
 
 
             # Look for ligands in candidate chain
@@ -1929,7 +1932,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
-    parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
+    #parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
@@ -1947,6 +1950,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2hka ALL', help='main input query') #
     #parser.add_argument('--query', type=str,   default='6j19 all atp', help='main input query') # problematic case, 6j19B has wrong UNP mapping in SIFTS 
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
+    #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327',     help='main input query') # ribosome protein binding to nucleic acid only
+    parser.add_argument('--query', type=str,   default='4V51 BA MG 3328',     help='main input query') # ribosome protein binding also protein (ok)
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
@@ -2023,7 +2028,7 @@ def parse_args(argv):
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
     parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
-    parser.add_argument('--intrfc_lig_radius', type=float, default=3.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
+    parser.add_argument('--intrfc_lig_radius', type=float, default=4.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water query ligands only)')
 
     # Saving
