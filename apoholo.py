@@ -1506,23 +1506,30 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f'\n{candidate_structchain} -> {query_structchain}')
             try:
                 aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=0)
+                aln_rms = round(aln_rms[0], 2)
                 #save_alignment = '/' + candidate_structchain + '_to_' + query_structchain + '.aln'
                 #cmd.save(path_results + save_alignment, 'alnobj')
-                #print(aln_rms)
 
                 if min_tmscore != 0:
-                    aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, quiet=1, transform=1)
-                    aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
-                    aln_tm = round(aln_tm, 2)
-                    aln_tm_i = round(aln_tm_i, 2)
-                #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, cycles=1)
-                #print('\nrms_cur', round(rms_cur, 3))
+                    aln_tm_scores = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, transform=1, object='alnobject', quiet=1)
+                    #aln_tmscore = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, exe='TMscore', quiet=1, transform=1)
+                    #aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, args='a', transform=1, quiet=1)
+                    #print(aln_tm_scores)
+                    aln_tm = float(aln_tm_scores[1])
+                    aln_tm_i = float(aln_tm_scores[0])
+
+                    #aln_tmscore_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, exe='TMscore', quiet=1, transform=0)  # Also do inverse TM align
+                    #aln_tmscore_i = round(aln_tmscore_i, 2)
+                    #aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
+
+                    aln_tm = round(aln_tm, 3)
+                    aln_tm_i = round(aln_tm_i, 3)
+
+                    #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobject')
+                    #print('rms_cur', rms_cur)
                 else:
                     aln_tm = '-'
                     aln_tm_i = '-'
-
-                # Round alignment scores before printing/saving
-                aln_rms = round(aln_rms[0], 2)
 
                 print(f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]')
 
@@ -1540,7 +1547,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 candidate_result.discard_reason = "alignment error"
                 return candidate_result
 
-
+            #sys.exit(1)
             # Discard poor alignments
             if aln_tm != '-':
 
@@ -1951,7 +1958,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6j19 all atp', help='main input query') # problematic case, 6j19B has wrong UNP mapping in SIFTS 
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327',     help='main input query') # ribosome protein binding to nucleic acid only
-    parser.add_argument('--query', type=str,   default='4V51 BA MG 3328',     help='main input query') # ribosome protein binding also protein (ok)
+    #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328',     help='main input query') # ribosome protein binding also protein (ok)
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
@@ -1983,7 +1990,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * hoh',      help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 X hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     #parser.add_argument('--query', type=str,   default='1pkz A tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
-    #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
+    parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
     #parser.add_argument('--query', type=str,   default='4hxj A,B',        help='main input query')
 
     # Non standard residues
