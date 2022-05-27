@@ -141,6 +141,7 @@ ARGUMENTS
         os.remove(matrix_filename)
 
     r = None
+    r_list = list()
     re_score = re.compile(r'TM-score\s*=\s*(\d*\.\d*)')
     rowcount = 0
     matrix = []
@@ -166,6 +167,7 @@ ARGUMENTS
             match = re_score.search(line)
             if match is not None:
                 r = float(match.group(1))
+                r_list.append(str(r))
         if not quiet:
             print(line.rstrip())
 
@@ -208,4 +210,4 @@ ARGUMENTS
         if r is not None:
             print('Found in output TM-score = %.4f' % (r))
 
-    return r
+    return r_list
