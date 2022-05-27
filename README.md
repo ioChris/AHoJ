@@ -1,17 +1,20 @@
 # Apo-Holo Juxtaposition
 
-AHoJ is an application for finding structures that belong to the same protein with a user-specified query structure, and annotating them as apo or holo (unbound or bound). It can be used for making a single search and visualizing/downloading the results, or serialized by entering multiple queries to generate a dataset of structures. 
-The user starts the search by providing their ligand of interest - or its binding site, and setting the preferred parameters. The specified ligand defines the search for apo and holo structures.
+AHoJ is a structural bioinformatics tool that allows automated search and alignment of APO and HOLO structures for a given HOLO structure (and vice versa) in the PDB.
+It can be used with single or multiple searches for creating customized Apo-Holo datasets.
 
-### Quick description
-It features multiple modes of search, but its main functionality is ligand-centric, meaning that the user specifies a particular binding site (by entering a binding residue) - or a ligand directly - and AHoJ will find the same binding site in the other structures (by superimposing the two at a time) and interogate it for ligands. 
+In AHoJ the user can define the ligand of interest in a structure and find apo or holo structures according to this/these ligands.
+The ligand can be defined either by selecting a binding residue or the ligand itself. AHoJ will mark the binding site of the ligand(s), find other structures that belong to the same protein and feature the same binding site(s), superimose them, and search for ligands. It will then decide whether each structure is apo or holo.
 
-#### Specifying the ligand or the binding site
-This is done by providing the i)structure, ii)chain, iii)name of ligand or residue (using the PDB 3-character code) and iv)position of ligand or residue in the sequence (PDB residue index is used). Specifying all these four arguments is recommended as it avoids ambiguity in the case that more than one ligand molecules of the same type exist within the same chain. When specifying a residue, it is obligatory to specify the position.
-However, the minimum number of arguments is one - structure. In such case, AHoJ will try to automatically detect chains, ligands and their positions. It can work with ligands that are designated as heteroatoms in the PDB, which means small and medium-sized ligands but not protein subunits.
+### Getting started
+The main mode of search in AHoJ is a "focused search". It is based on a user-specified point of interest (ligand, water molecule, modified residue) and it looks for apo and holo variations (structures) for this chunk of protein, based on the presence or absence of the specified point of interest at the particular binding site. So specifying the point of interest is central to the workflow. Additional parameters can also be tuned in by the user.
 
-Therefore, the main and default search is starting with a holo structure, where the user knows the ligand that will be used as a starting point. This user-specified ligand will then define the search and annotation of the results. Any other ligands in the query structure will not play a role in characterising results as apo or holo. In the case that the user does not know the ligand or the binding site, AHoJ can automatically detect available ligands in the query structures if told to do so.
-If the query structure however does not bind any ligands (apo), the user can still use the "reverse search" mode, where AHoJ will look for structures that belong to the same protein with the query, but it will not focus on a particular binding site. Instead it will list any ligand that it detects in the resulting chains.
+#### Specifying the ligand/point of interest
+This is done by providing a series of arguments in the form of a query: the i)structure, ii)chain(s), iii)name of ligand or residue name (using the PDB 3-character code) and iv)position of ligand or residue in the sequence (PDB residue index is used). Specifying all these four arguments is recommended as it avoids ambiguity in the case that more than one ligand molecules of the same type exist within the same chain. When specifying a binding residue, it is obligatory to specify the position.
+However, the minimum number of arguments is one - the structure. In such case, AHoJ will try to automatically detect the chains, the ligands and their positions. AHoJ can work with ligands that are designated as heteroatoms in the PDB, which means small and medium-sized ligands but not protein subunits.
+
+Therefore, the main search mode starts with a holo structure, where the user knows the ligand that will be used as a starting point. This user-specified ligand will then define the search and annotation of the results. Any other ligands in the query structure will be ignored. In the case that the user does not know the ligand or the binding residues, AHoJ will automatically detect available ligands in the query structure.
+If the query structure however does not bind any ligands (apo), AHoJ will still look for structures that belong to the same protein with the query, but it will not focus on a particular binding site. Instead it will report any ligands that it detects in the candidate structures.
 
 
 ##  Objective
@@ -26,7 +29,7 @@ If the query structure however does not bind any ligands (apo), the user can sti
 3. **align both apo- and holo-proteins** to the query apo protein
 
 Note: ligands are confined to chemical components that are not part of the protein according to the PDB 
-(however phosphorylated amino acids (and also water molecules) can also be considered and specified as ligands). 
+(however modified amino acids (e.g. phosphorylated), and water molecules can also be specified and considered as ligands). 
 Ligands are named and defined according to their (up to) 3-character code from PDB (i.e. ATP, HEM, ZN).
 
 ##  Methodology
@@ -196,7 +199,7 @@ The maximum arguments within the single line input are of this form:
                        
 ## Usage examples
 
-Example of an input argument (query):
+Example of a user query:
 ~~~sh
 # consider ZN ligand in position 201 in chain A of 1a73 
 python apoholo.py --query '1a73 A ZN 201'
@@ -275,7 +278,7 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 **`--bndgrsds_threshold`** : binding residues threshold [default = `1.0`, min/max = 1/100]
 
-Floating point number that represents a percentage (%) and is applied as a cutoff point upon the % ratio of the total number of binding residues in the query chain out of the number of successfully mapped binding residues in the candidate chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
+Floating point number that represents a percentage (%) and is applied as a cut-off upon the percentage of total number of binding residues in the query chain out of the number of successfully mapped binding residues in the candidate chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
 
 **`--save_separate`** : [default = `1`]
 
@@ -323,7 +326,7 @@ v) A PyMOL script file for loading the results into PyMOL [load_results_into_PyM
 
 #### Visualization
 
-i) The web application allows the visualization of the results in the browser with the molstar (Mol*) viewer. Web application: https://github.com/rdk/AHoJ-webapp
+The web application allows the visualization of the results in the browser with the molstar (Mol*) viewer. Web application: https://github.com/rdk/AHoJ-webapp
 
-ii) The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [load_results_into_PyMOL.pml]. The script has to be loaded from within the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session and open the .pml file through it. A PyMOL installation is needed for this to work (Incentive or Open-Source).
+The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [load_results_into_PyMOL.pml]. The script has to be loaded from within the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session and open the .pml file through it. A PyMOL installation is needed for this to work (Incentive or Open-Source).
 
