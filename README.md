@@ -302,6 +302,17 @@ Floating point number that represents angstroms and is applied as a scanning rad
 
 Floating point number that is applied as a minimum accepted template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.
 
+**`--water_as_ligand`** : [default = `0`]
+
+0 or 1. When set to 1 (ON), allows the detection of water molecules (i.e., 'HOH') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one water molecule is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a water molecule is defined in the user query, this setting is automatically enabled.
+
+**`--nonstd_rsds_as_lig`** : non-standard residues as ligands [default = `0`]
+
+0 or 1. When set to 1 (ON), allows the detection of non-standard -or modified- residues (e.g., 'TPO', 'SEP') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one modified residue is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a modified residue is defined in the user query, this setting is automatically enabled.
+
+Note: The current list of non-standard residues includes the following residue names: 'SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA'.
+
+
 ##  Results
 
 The results are visualised in the browser through Mol* and they can be downloaded as a zip file after a run has completed.
