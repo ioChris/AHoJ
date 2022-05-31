@@ -1505,35 +1505,38 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Align candidate to query chain
             print(f'\n{candidate_structchain} -> {query_structchain}')
             try:
-                aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=0)
-                aln_rms = round(aln_rms[0], 2)
-                #save_alignment = '/' + candidate_structchain + '_to_' + query_structchain + '.aln'
-                #cmd.save(path_results + save_alignment, 'alnobj')
+                #aln_rms = cmd.align(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobj', cycles=0)
+                #aln_rms = round(aln_rms[0], 2)
 
-                if min_tmscore != 0:
-                    aln_tm_scores = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, transform=1, object='alnobject', quiet=1)
-                    #aln_tmscore = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, exe='TMscore', quiet=1, transform=1)
-                    #aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, args='a', transform=1, quiet=1)
-                    #print(aln_tm_scores)
-                    aln_tm = float(aln_tm_scores[1])
-                    aln_tm_i = float(aln_tm_scores[0])
+                #if min_tmscore != 0:
+                aln_tm_scores = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, transform=1, quiet=1)
+                #aln_tmscore = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, exe='TMscore', quiet=1, transform=1)
+                #aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, args='a', transform=1, quiet=1)
 
-                    #aln_tmscore_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, exe='TMscore', quiet=1, transform=0)  # Also do inverse TM align
-                    #aln_tmscore_i = round(aln_tmscore_i, 2)
-                    #aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
+                aln_tm = float(aln_tm_scores[1])
+                aln_tm_i = float(aln_tm_scores[0])
+                aln_rms = float(aln_tm_scores[2])  # rms_cur from TM-align
 
-                    aln_tm = round(aln_tm, 3)
-                    aln_tm_i = round(aln_tm_i, 3)
+                #aln_tmscore_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, exe='TMscore', quiet=1, transform=0)  # Also do inverse TM align
+                #aln_tmscore_i = round(aln_tmscore_i, 2)
+                #aln_tm_i = tmalign2(cmd, query_struct + '& chain ' + query_chain, candidate_struct + '& chain ' + candidate_chain, quiet=1, transform=0)  # Also do inverse TM align
 
-                    #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobject')
-                    #print('rms_cur', rms_cur)
-                else:
-                    aln_tm = '-'
-                    aln_tm_i = '-'
+                aln_tm = round(aln_tm, 3)
+                aln_tm_i = round(aln_tm_i, 3)
+                aln_rms = round(aln_rms, 2)
+
+                #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobject')
+                #print('rms_cur', rms_cur)
+                #else:
+                    #aln_tm = '-'
+                    #aln_tm_i = '-'
 
                 print(f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]')
+                #print('aln_tm_scores:', aln_tm_scores)
+                #print('rms cur:', aln_tm_rms)
+                #sys.exit(1)
 
-                # TODO(rdk): which alignment is visualized? And what numbers are reported? - Currently TM align
+                # TODO(rdk): which alignment is visualized? And what numbers are reported? - TM-align visualized, TM-scores & RMSD reported from the same TM alignment
 
                 candidate_result.rmsd = aln_rms
                 candidate_result.tm_score = aln_tm
@@ -2033,7 +2036,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=4.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water query ligands only)')
