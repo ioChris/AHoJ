@@ -197,10 +197,11 @@ ARGUMENTS
             if aa == '-':
                 target_idx.insert(i, None)
         if (len(mobile_idx) == len(target_idx) == len(alignment[2])):
-            cmd.rms_cur(
+            rmsd = cmd.rms_cur(
                 ' '.join(idx for (idx, m) in zip(mobile_idx, alignment[1]) if m in ':.'),
                 ' '.join(idx for (idx, m) in zip(target_idx, alignment[1]) if m in ':.'),
                 cycles=0, matchmaker=4, object=object)
+            r_list.append(str(rmsd))
         else:
             print('Could not load alignment object')
 
