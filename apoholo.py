@@ -1511,7 +1511,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #aln_tm = tmalign2(cmd, candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, args='a', transform=1, quiet=1) # return average TM-score
                 #rms_cur = cmd.rms_cur(candidate_struct + '& chain ' + candidate_chain, query_struct + '& chain ' + query_chain, cutoff=2.0, object='alnobject')
                 #print('rms_cur', rms_cur)
-                
+
                 # Parse alignment scores from TM-align
                 if len(aln_tm_scores) == 3:
                     aln_tm = float(aln_tm_scores[1])
