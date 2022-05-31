@@ -278,7 +278,7 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 **`--bndgrsds_threshold`** : binding residues threshold [default = `1.0`, min/max = 1/100]
 
-Floating point number that represents a percentage (%) and is applied as a cut-off upon the percentage of the number of successfully mapped binding residues in the candidate chain out of the total number of binding residues in the query chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
+Floating point number that represents a percentage (%) and is applied as a minimum cut-off upon the percentage of the number of successfully mapped binding residues in the candidate chain out of the total number of binding residues in the query chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
 
 **`--save_separate`** : [default = `1`]
 
