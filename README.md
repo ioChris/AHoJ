@@ -189,10 +189,10 @@ and currently needs a single line input (= query) from the user to run.
 
 The maximum arguments within the single line input are of this form:
 ~~~
-<pdb_id> <chains> <ligand_name> <ligand_position>
+<pdb_code> <chains> <ligand_name> <ligand_position>
 ~~~  
 
-* `pdb_id`: This is the 4-character code of a PDB protein structure (case-insensitive). This argument is obligatory and only 1 PDB code can be input per line. (i.e. “1a73” or “3fav” or “3FAV”). If it is the only argument (e.g. because the user does not know the ligand that binds to the structure), it will trigger automatic detection of ligands in the structure.
+* `pdb_code`: This is the 4-character code of a PDB protein structure (case-insensitive). This argument is obligatory and only 1 PDB code can be input per line. (i.e. “1a73” or “3fav” or “3FAV”). If it is the only argument (e.g. because the user does not know the ligand that binds to the structure), it will trigger automatic detection of ligands in the structure.
 * `chains`: A single chain or multiple chains separated by commas (without whitespace), or “ALL” or “\*” in the case of all chains (i.e. “A” or “A,C,D” or “ALL” or “\*”). This argument is case-insensitive and it is obligatory if the user intends to provide any argument after that (i.e. ligands or position).
 * `ligand_name`: This argument is case-insensitive. A single ligand, multiple ligands separated by commas (without whitespace), or no ligands can be input per line (i.e. “HEM” or “hem” or “ATP” or “ZN” or “HEM,ATP,ZN”) or “\*” for the automatic detection of all ligands in the specified chain(s). Besides specifying the ligand directly by its name (and optionally, its position), the user can also specify a residue that binds the ligand by its position (i.e. “HIS 260”) and AHoJ will detect the ligand (as long as it is within 4.5 Angstroms of the residue). This approach however can lead to the selection of more than one ligands, if they are within this radius from the specified residue. This argument is non-obligatory, if omitted or specified as “\*”, AHoJ will automatically detect the ligands in the structure. If there are no ligands in the query structure, it will be characterised as apo and the search for candidates will continue in a non-binding-site-specific manner. A water molecule can also be specified as a ligand (i.e. “HOH”) but in such cases, its position must be specified as well. Note: when specifying the `position` argument, the user can only specify one ligand per query.
 * `ligand_position`: This argument is an integer (i.e. “260” or “1”). It refers to the PDB index of the previously specified ligand, binding residue or water molecule. When this argument is specified, only one ligand or residue can be specified in the previous argument.
@@ -278,7 +278,7 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 **`--bndgrsds_threshold`** : binding residues threshold [default = `1.0`, min/max = 1/100]
 
-Floating point number that represents a percentage (%) and is applied as a cut-off upon the percentage of total number of binding residues in the query chain out of the number of successfully mapped binding residues in the candidate chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
+Floating point number that represents a percentage (%) and is applied as a cut-off upon the percentage of the number of successfully mapped binding residues in the candidate chain out of the total number of binding residues in the query chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo.
 
 **`--save_separate`** : [default = `1`]
 
@@ -301,6 +301,17 @@ Floating point number that represents angstroms and is applied as a scanning rad
 **`--min_tmscore`** : minimum TM-score [default = `0.5`, min/max = 0/1]
 
 Floating point number that is applied as a minimum accepted template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH.
+
+**`--water_as_ligand`** : [default = `0`]
+
+0 or 1. When set to 1 (ON), allows the detection of water molecules (i.e., 'HOH') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one water molecule is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a water molecule is defined in the user query, this setting is automatically enabled.
+
+**`--nonstd_rsds_as_lig`** : non-standard residues as ligands [default = `0`]
+
+0 or 1. When set to 1 (ON), allows the detection of non-standard -or modified- residues (e.g., 'TPO', 'SEP') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one modified residue is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a modified residue is defined in the user query, this setting is automatically enabled.
+
+Note: The current list of non-standard residues includes the following residue names: 'SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA'.
+
 
 ##  Results
 
