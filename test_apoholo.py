@@ -105,6 +105,10 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '1fmk A HOH 1011' ", expect_apo=25, expect_holo=3)  # (hard target) Water molecule in the interface of two domains that undergo extensive conformational changes upon ligand binding
         self.tst_query("--query '1aro P HG 904' ",   expect_apo=19, expect_holo=0)  # fragmented UniProt candidates, to use for testing UNP overlap calculation
 
+    def test_advanced_queries_B(self):
+        self.tst_query("--query '1a37 P sep 259' ",     expect_apo=6,  expect_holo=4)  # Phosphoserine on non-uniprot chain (hard target)
+        self.tst_query("--query '1a37 P sep' ",         expect_apo=6,  expect_holo=4)  # same without specifying position
+
     def test_broad_search(self):
         self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
         self.tst_query("--query '2v0v A,B' ", expect_apo=4, expect_holo=12)
@@ -117,8 +121,9 @@ class T02_Apoholo(unittest.TestCase):
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")
         self.tst_main_fail("--query 'INVALID_QUERY X X X' ")
-        self.tst_main_fail("--query 'XXXX' ")  # XXXX is not in the PDB
-        self.tst_main_fail("--query '1a73 \n XXXX' ")  # should fail if at least one is not valid
+        self.tst_main_fail("--query 'XXXX' ")                # XXXX is not in the PDB
+        self.tst_main_fail("--query '1a73 \n XXXX' ")        # should fail if at least one is not valid
+        self.tst_main_fail("--query '1apm E sep,ser' ")      # standard residue without positional argument, should fail
         # TODO add more tests cases
 
 

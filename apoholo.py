@@ -197,7 +197,9 @@ class Query:
     ligands: str          # maybe even change to list
     position: str
     autodetect_lig: bool
-    water_as_ligand: bool
+    water_as_ligand_auto: bool
+    nonstd_rsds_as_lig_auto: bool
+    d_aa_as_lig_auto: bool
 
 
 @dataclass
@@ -264,7 +266,7 @@ def verify_ligands(ligand_names, pathLIGS):
             #print('Error verifying ligand:\t', lig_id)
 
 
-def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool = False) -> Query:
+def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: bool = False, nonstd_rsds_as_lig_auto: bool = False, d_aa_as_lig_auto: bool = False) -> Query: #
 
     # Parse single line input (line by line mode, 1 structure per line)
     # if no chains specified, consider all chains
@@ -279,10 +281,10 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
 
     # Define non-ligands (3-letter names of amino acids and h2o)
     std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
-    #nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA ".split() # don't use as no-lig rsds
-    d_rsds_hoh = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA HOH".split()
-    nolig_resn = list()
-    nolig_resn.extend(std_rsds + d_rsds_hoh)
+    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA".split() # don't use as no-lig rsds
+    d_rsds = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
+    #nolig_resn = list()
+    #nolig_resn.extend(std_rsds + d_rsds_hoh)
 
 
     if len(struct) != 4:
@@ -317,6 +319,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
         chains = 'ALL'
     elif not all(chain.isalnum() for chain in chains.split(',')):  # check that chains are alphanumeric characters
         raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains")
+    '''
     if ligands == '*':
         ligands = None
         autodetect_lig = 1
@@ -325,19 +328,45 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand: bool 
     if ligands is not None:
         if "*" in ligands and len(ligands) > 1:
             raise ValueError(f"Invalid query '{query}': '*' should be used alone to detect all available ligands")
-
+    '''
 
     # If ligand is HOH or std residue or non-std residue,  make sure that:
     # i) there is just one specified (handled earlier)
     # ii) there is a fourth argument (position)
-    if ligands == 'HOH' and position is not None:
-        water_as_ligand = 1
+    '''if ligands == 'HOH' and position is not None:
+        water_as_ligand_auto = 1
+    elif ligands == 'HOH' and position is None:
+        raise ValueError(f"Invalid query '{query}': specify index position of HOH")'''
 
-    for i in nolig_resn:
+    #for i in nolig_resn:
+    '''for i in std_rsds:
         if ligands == i and position is None:
-            raise ValueError(f"Invalid query '{query}': specify index position of HOH or residue") 
+            raise ValueError(f"Invalid query '{query}': specify index position of residue")'''
+    if ligands is not None:
+        for ligand in ligands.split(','):
+            if ligand in std_rsds and position is None:
+                raise ValueError(f"Invalid query '{query}': specify index position of residue")
+            elif ligand == 'HOH' and position is not None:
+                water_as_ligand_auto = 1
+            elif ligand == 'HOH' and position is None:
+                raise ValueError(f"Invalid query '{query}': specify index position of HOH")
+            elif ligand in nonstd_rsds:
+                nonstd_rsds_as_lig_auto = 1
+            elif ligand in d_rsds:
+                d_aa_as_lig_auto = 1
+            elif ligand == '*':  # overide any other ligands in input and replace with autodetect all ligands
+                ligands = None
+                autodetect_lig = 1
+                break
 
-    return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand=water_as_ligand)
+    '''
+    if ligands in nonstd_rsds:
+        nonstd_rsds_as_lig_auto = 1
+    elif ligands in d_rsds:
+        d_aa_as_lig_auto = 1
+    '''
+
+    return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand_auto=water_as_ligand_auto, nonstd_rsds_as_lig_auto=nonstd_rsds_as_lig_auto, d_aa_as_lig_auto=d_aa_as_lig_auto)
 
 
 def load_precompiled_data_txt(workdir) -> PrecompiledData:
@@ -478,15 +507,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     lig_free_sites = args.lig_free_sites
     #autodetect_lig = args.autodetect_lig
     #reverse_search = args.reverse_search # should be renamed to "start with apo" or "broad search"
-    water_as_ligand = args.water_as_ligand
+    water_as_ligand_usr = args.water_as_ligand
 
     # Advanced
     overlap_threshold = args.overlap_threshold
     bndgrsds_threshold = args.bndgrsds_threshold
     lig_scan_radius = args.lig_scan_radius
     min_tmscore = args.min_tmscore
-    nonstd_rsds_as_lig = args.nonstd_rsds_as_lig
-    d_aa_as_lig = args.d_aa_as_lig
+    nonstd_rsds_as_lig_usr = args.nonstd_rsds_as_lig
+    d_aa_as_lig_usr = args.d_aa_as_lig
 
     # Experimental
     #beyond_hetatm = args.beyond_hetatm
@@ -513,23 +542,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #cndtlig_scan_radius = lig_scan_radius      # why is this "not used", since it is required later on? -local vrbl
     #broad_search_mode = False # previously called "reverse_mode"
 
-    # Pass settings to a string
-    settings_str = 'res' + str(res_threshold) + '_NMR' + str(include_nmr) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
 
-
-    # Define non-ligands (3-letter names of amino acids and h2o)
-    nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
-    std_rsds = list(nolig_resn)
-    if water_as_ligand == 0:
-        nolig_resn.append('HOH')
-    # Non-standard residues
-    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA".split()
-    if nonstd_rsds_as_lig == 0:
-        nolig_resn.extend(nonstd_rsds)
-    # D-amino acids
-    d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
-    if d_aa_as_lig == 0:
-        nolig_resn.extend(d_aminoacids)
 
     # Set directories, create job_id
     path_root = workdir
@@ -597,7 +610,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('Parsing input')
 
     try:
-        q = parse_query(query, autodetect_lig, water_as_ligand)
+        #q = parse_query(query, autodetect_lig, water_as_ligand_auto, nonstd_rsds_as_lig_auto, d_aa_as_lig_auto)
+        q = parse_query(query, autodetect_lig) # don't define, use function defaults
     except ValueError as e:
         print(e)
         wrong_input_error()
@@ -607,7 +621,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     ligand_names = q.ligands
     position = q.position
     autodetect_lig = q.autodetect_lig
-    water_as_ligand = q.water_as_ligand
+    water_as_ligand_auto = q.water_as_ligand_auto
+    nonstd_rsds_as_lig_auto = q.nonstd_rsds_as_lig_auto
+    d_aa_as_lig_auto = q.d_aa_as_lig_auto
+
+
 
     # Parse chains
     if not user_chains == 'ALL':
@@ -633,7 +651,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if autodetect_lig == 0 or ligand_names is not None:
         try:
             verify_ligands(ligand_names.split(','), pathLIGS)
-        except:
+        except Exception as ex:
+            print(ex)
             raise ValueError(f"Invalid ligands in query '{query}': use PDB ligand names")
 
     # Parse ligands
@@ -659,6 +678,45 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Input position:\t\t', position)
     print('Done\n')
 
+
+    # Finished parsing query and configuring settings, store final settings and define non-ligands here
+    
+    # Merge user settings and automatic settings from parse query here
+    if water_as_ligand_auto == 1 or water_as_ligand_usr == 1:
+        water_as_ligand = 1
+    else:
+        water_as_ligand = 0
+    if nonstd_rsds_as_lig_auto == 1 or nonstd_rsds_as_lig_usr == 1:
+        nonstd_rsds_as_lig = 1
+    else:
+        nonstd_rsds_as_lig = 0
+    if d_aa_as_lig_auto == 1 or d_aa_as_lig_usr == 1:
+        d_aa_as_lig = 1
+    else:
+        d_aa_as_lig = 0
+
+    # Define non-ligands (3-letter names of amino acids and h2o)
+    nolig_resn = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
+    std_rsds = list(nolig_resn)
+    if water_as_ligand == 0:
+        nolig_resn.append('HOH')
+    # Non-standard residues
+    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA".split()
+    if nonstd_rsds_as_lig == 0:
+        nolig_resn.extend(nonstd_rsds)
+    # D-amino acids
+    d_aminoacids = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
+    if d_aa_as_lig == 0:
+        nolig_resn.extend(d_aminoacids)
+
+    # Pass final settings to a string
+    settings_str = 'res' + str(res_threshold) + '_NMR' + str(include_nmr) + '_xrayonly' + str(xray_only) + '_ligfree' + str(lig_free_sites) + '_autodtctlig' + str(autodetect_lig) + '_h2olig' + str(water_as_ligand) + '_overlap' + str(overlap_threshold) + '_ligrad' + str(lig_scan_radius) + '_tmscore' + str(min_tmscore) + '_nonstdaas' + str(nonstd_rsds_as_lig) + '_daas' + str(d_aa_as_lig)
+
+    '''# Test print
+    print('\nuser chains, struct, ligand names, position, autodetect lig, water as ligand, nonstd rsds, d_aa_as_lig:\n', 
+          user_chains, struct, ligand_names, position, autodetect_lig, water_as_ligand, nonstd_rsds_as_lig, d_aa_as_lig)
+    print('\nnolig resis:', nolig_resn)
+    #sys.exit(1)'''
 
 
     ## Find Apo candidates (rSIFTS)
@@ -1871,6 +1929,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Print argparse arguments
     #print('\n', args)
     #print(vars(args))
+    # Print no lig list
+    #print('\nNo lig list:', nolig_resn)
 
     pm.stop()
 
@@ -1926,7 +1986,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73')
-    #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 a zn',    help='main input query') # reverse_search=1, OK apo 0, holo 16
@@ -1983,20 +2043,25 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7krn A adp',     help='main input query')
 
     # Water
-    #parser.add_argument('--query', type=str,   default='1a73 B hoh 509',  help='main input query') # OK apo 9, holo 7
+    #parser.add_argument('--query', type=str,   default='1a73 B hoh 509',  help='main input query') # OK apo 6, holo 10 (previous apo 9, holo 7)
     #parser.add_argument('--query', type=str,   default='1a73 * hoh 509',  help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh',      help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 X hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
     #parser.add_argument('--query', type=str,   default='1pkz A tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
     #parser.add_argument('--query', type=str,   default='4hxj A,B',        help='main input query')
+    #parser.add_argument('--query', type=str,   default='2v7d B hoh 2026',   help='main input query')
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut A tpo',     help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut A',         help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut A tpo 285', help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='6sut A tpo,*',   help='main input query') # OK apo 0, holo 3
-    parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a37 P sep 259', help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1]
+    #parser.add_argument('--query', type=str,   default='1a37 P sep',     help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1], without now also works
+    #parser.add_argument('--query', type=str,   default='1apm E sep',     help='main input query') # OK apo 5, holo 76
+    #parser.add_argument('--query', type=str,   default='1apm E sep,tpo', help='main input query') # OK apo 2, holo 79
+    #parser.add_argument('--query', type=str,   default='1apm E sep,ser', help='main input query') # wrong query, should get error
 
     # Long queries
     #parser.add_argument('--query', type=str,   default='1cim A', help='main input query')
@@ -2005,7 +2070,7 @@ def parse_args(argv):
     
     # D amino acids
     #parser.add_argument('--query', type=str,   default='148l S DAL 170', help='main input query') # not working, not registered as a ligand, chain S is non-UniProt, no other UniProt chains around
-    #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # does not seem to pick up DAL as ligand even with setting turned on
+    #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
 
 
     # Basic
@@ -2024,7 +2089,7 @@ def parse_args(argv):
 
     parser.add_argument('--min_tmscore',       type=float, default=0.5,   help='Minimum acceptable TM score for apo-holo alignments (condition is ">")')
     parser.add_argument('--nonstd_rsds_as_lig',type=int,   default=0,     help='0/1: Ignore/consider non-standard residues as ligands')
-    parser.add_argument('--d_aa_as_lig',       type=int,   default=1,     help='0/1: Ignore/consider D-amino acids as ligands')
+    parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
 
     # Experimental
     #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too
