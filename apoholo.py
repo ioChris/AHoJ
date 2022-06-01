@@ -936,7 +936,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
     #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
-    sys.exit(1)
+    #sys.exit(1)
 
     # Get apo candidates for rsd mapping set (larger subset)
     #dictApoCandidates_b = dict()
