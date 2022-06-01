@@ -108,6 +108,7 @@ class T02_Apoholo(unittest.TestCase):
     def test_advanced_queries_B(self):
         self.tst_query("--query '1a37 P sep 259' ",     expect_apo=6,  expect_holo=4)  # Phosphoserine on non-uniprot chain (hard target)
         self.tst_query("--query '1a37 P sep' ",         expect_apo=6,  expect_holo=4)  # same without specifying position
+        self.tst_query("--query '1gb1' ",               expect_apo=20, expect_holo=16) # apo NMR structure with solid state NMR candidates, also threw error in previous versions
 
     def test_broad_search(self):
         self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)

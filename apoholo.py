@@ -1003,14 +1003,29 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #resolution = float(resolution)
         #else:
         with gzip.open (apo_candidate_structPath, 'rt') as mmCIFin:
+            method = '?' # reset method/res/r free
+            resolution = '-'
+            r_free = '-'
             for line in mmCIFin:
                 try:
-                    if line.split()[0] == '_exptl.method':
-                        method = line.split("'")[1]  # capture experimental method #method = ' '.join(line.split()[1:])
-                        exp_method_dict[apo_candidate_struct] = method
-                        if method == 'SOLUTION NMR':  # break fast if method is 'NMR'
-                            #exp_method_dict[apo_candidate_struct] = 'NMR'
-                            break
+                    if method == '?':
+                        if line.split()[0] == '_exptl.method' and line.split("'")[1] is not None:
+                            method = line.split("'")[1]  # capture experimental method #method = ' '.join(line.split()[1:])
+                            exp_method_dict[apo_candidate_struct] = method
+                            if method == 'SOLUTION NMR':  # break fast if method is 'NMR'
+                                method = '\t ' + method + '\t\t'
+                                break
+                            elif method == 'SOLID-STATE NMR':
+                                method = '\t ' + method + '\t'
+                                break
+                            continue
+                        if method == '?' and line.split()[0] == '_refine.pdbx_refine_id': # second attempt to get method [+EPR]
+                            method = line.split("'")[1] + '*'
+                            exp_method_dict[apo_candidate_struct] = method
+                        if method == '?' and line.split()[0] == '_refine_hist.pdbx_refine_id': # third attempt to get method [+neutron diffraction]
+                            method = line.split("'")[1] + '**'
+                            exp_method_dict[apo_candidate_struct] = method
+
                     elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
                         resolution = round(float(line.split()[1]), 2)  # X-ray highest resolution
                         #exp_method_dict[apo_candidate_struct] = 'XRAY'
@@ -1035,14 +1050,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #resolution = float(resolution_dict[apo_candidate_struct])
             #method = exp_method_dict[apo_candidate_struct]
             try:
-                if include_nmr == 1 and method == 'SOLUTION NMR' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
-                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tPASS')  # Xray/EM
+                if include_nmr == 1 and method == '\t SOLUTION NMR\t\t' or method == '\t SOLID-STATE NMR\t' and xray_only == 0 or xray_only == 1 and method == 'X-RAY DIFFRACTION' and resolution <= res_threshold or xray_only == 0 and resolution <= res_threshold:
+                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, ' \tPASS')  # Xray/EM
                 else:
                     discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\tFAIL')  # Xray/EM
-            except:
+                    print(apo_candidate_struct, ' resolution:\t', resolution, '\t', method, ' \tFAIL')  # Xray/EM
+            except Exception as ex:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
-                print('*Exception', apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
+                print('*Exception', ex, '\n', apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
+            #method = '?' # reset method
 
     print('Done\n')
 
@@ -1084,7 +1100,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #print(dictApoCandidates_1)  # helper print
     print(f'\nCandidate chains* (UNP residue mapping) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chainsb1}')
     #print(dictApoCandidates_b1) # This dict is uncleaved, meaning that the number of chains showing is the number of uniprot mappings (could be more than the actual chains)
-
+    #print_dict_readable(exp_method_dict, '\exp_method_dict')
+    sys.exit(1)
 
     # Make dict with query struct:chains
     dictQueryChains = dict()
@@ -2025,6 +2042,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327',     help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328',     help='main input query') # ribosome protein binding also protein (ok)
+    parser.add_argument('--query', type=str,   default='1GB1',          help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
@@ -2078,7 +2096,7 @@ def parse_args(argv):
     
     # D amino acids
     #parser.add_argument('--query', type=str,   default='148l S DAL 170', help='main input query') # not working, not registered as a ligand, chain S is non-UniProt, no other UniProt chains around
-    parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
+    #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
     #parser.add_argument('--query', type=str,   default='1cfa', help='main input query') # works and gives results
     #parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
 
