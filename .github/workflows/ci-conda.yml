@@ -1,6 +1,15 @@
 name: Conda via conda-incubator/setup-miniconda@v2
 
-on: [push, pull_request, pull_request_target]
+on:
+  push:
+    paths-ignore:
+        - '**/README.md'
+  pull_request:
+    paths-ignore:
+        - '**/README.md'
+  pull_request_target:
+    paths-ignore:
+        - '**/README.md'
 
 jobs:
   test-conda:
