@@ -344,6 +344,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
             raise ValueError(f"Invalid query '{query}': specify index position of residue")'''
     if ligands is not None:
         for ligand in ligands.split(','):
+            ligand = ligand.upper()
             if ligand in std_rsds and position is None:
                 raise ValueError(f"Invalid query '{query}': specify index position of residue")
             elif ligand == 'HOH' and position is not None:
@@ -800,7 +801,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('\nInput chains verified:\t\t', user_structchains)#, user_chains)
     print('Input chains unverified:\t', usr_structchains_unverified)
     if len(non_protein_lig_chains) > 0:
-        print('*Remapped chains:\t\t\t', non_protein_lig_chains)
+        print('*Remapped chains:\t\t\t', non_protein_lig_chains)  # TODO unverified chains are not discarded
 
 
     # Capture the full query expression - for query indexing and searching previous jobs
@@ -918,7 +919,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         #print(dict_rSIFTS[uniprot_id], own_chains)
 
         if len(dict_rSIFTS[uniprot_id]) > len(own_chains):
-            print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
+            try:
+                print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
+            except Exception as ex:
+                print('\nException:', ex)
         else:
             print('No other UniProt chains found')
             #sys.exit(2) # don't exit script, continue for other UniProt chains within same struct or multi-query
@@ -932,7 +936,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
     #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
-    #sys.exit(1)
+    sys.exit(1)
 
     # Get apo candidates for rsd mapping set (larger subset)
     #dictApoCandidates_b = dict()
@@ -1986,7 +1990,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73')
-    parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 a zn',    help='main input query') # reverse_search=1, OK apo 0, holo 16
@@ -2071,6 +2075,8 @@ def parse_args(argv):
     # D amino acids
     #parser.add_argument('--query', type=str,   default='148l S DAL 170', help='main input query') # not working, not registered as a ligand, chain S is non-UniProt, no other UniProt chains around
     #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
+    #parser.add_argument('--query', type=str,   default='1cfa', help='main input query') # works and gives results
+    parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
 
 
     # Basic
