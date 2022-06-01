@@ -1101,7 +1101,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print(f'\nCandidate chains* (UNP residue mapping) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chainsb1}')
     #print(dictApoCandidates_b1) # This dict is uncleaved, meaning that the number of chains showing is the number of uniprot mappings (could be more than the actual chains)
     #print_dict_readable(exp_method_dict, '\exp_method_dict')
-    sys.exit(1)
+    #sys.exit(1)
 
     # Make dict with query struct:chains
     dictQueryChains = dict()
@@ -2010,7 +2010,7 @@ def parse_args(argv):
 
     # Main user query
     # Ligand
-    #parser.add_argument('--query', type=str,   default='1a73')
+    parser.add_argument('--query', type=str,   default='1a73')
     #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
@@ -2042,7 +2042,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327',     help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328',     help='main input query') # ribosome protein binding also protein (ok)
-    parser.add_argument('--query', type=str,   default='1GB1',          help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    #parser.add_argument('--query', type=str,   default='1GB1',          help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
