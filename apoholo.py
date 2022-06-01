@@ -1016,6 +1016,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         #exp_method_dict[apo_candidate_struct] = 'XRAY'
                         resolution_dict[apo_candidate_struct] = str(resolution)
                         #break
+                    elif line.split()[0] == '_refine_hist.d_res_high' and float(line.split()[1]): # X-ray res in neutron scattering methods
+                        resolution = round(float(line.split()[1]), 2)  # X-ray highest resolution in neutron diffraction
+                        resolution_dict[apo_candidate_struct] = str(resolution)
                     elif line.split()[0] == '_refine.ls_R_factor_R_free':# and float(line.split()[1]):
                         if float(line.split()[1]):
                             r_free = round(float(line.split()[1]), 3)
@@ -1078,9 +1081,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     eligible_chainsb1 = sum([len(dictApoCandidates_b1[x]) for x in dictApoCandidates_b1 if isinstance(dictApoCandidates_b1[x], list)])
 
     print(f'\nCandidate chains (UNP overlap) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains1}')
-    print(dictApoCandidates_1)  # helper print
+    #print(dictApoCandidates_1)  # helper print
     print(f'\nCandidate chains* (UNP residue mapping) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chainsb1}')
-    print(dictApoCandidates_b1) # This dict is uncleaved, meaning that the number of chains showing is the number of uniprot mappings (could be more than the actual chains)
+    #print(dictApoCandidates_b1) # This dict is uncleaved, meaning that the number of chains showing is the number of uniprot mappings (could be more than the actual chains)
+
 
     # Make dict with query struct:chains
     dictQueryChains = dict()
@@ -2074,9 +2078,9 @@ def parse_args(argv):
     
     # D amino acids
     #parser.add_argument('--query', type=str,   default='148l S DAL 170', help='main input query') # not working, not registered as a ligand, chain S is non-UniProt, no other UniProt chains around
-    #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
+    parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
     #parser.add_argument('--query', type=str,   default='1cfa', help='main input query') # works and gives results
-    parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
+    #parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
 
 
     # Basic
