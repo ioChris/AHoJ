@@ -312,11 +312,11 @@ Floating point number that is applied as a minimum accepted template-modeling sc
 
 Note: The current list of non-standard residues includes the following residue names: 'SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA'.
 
-[//]: # (**`--d_aa_as_lig`** : D-amino acids as ligands [default = `0`])
+**`--d_aa_as_lig`** : D-amino acids as ligands [default = `0`]
 
-[//]: # (0 or 1. When set to 1 (ON\), allows the detection of D-residues (e.g., 'DAL', 'DSN'\) as ligands in the superposition of the query ligand(s\) in the candidate chains. If this setting is enabled and at least one D-residue is detected within the scanning radius, that would warrant a holo classification for the candidate chain.)
+0 or 1. When set to 1 (ON\), allows the detection of D-residues (e.g., 'DAL', 'DSN'\) as ligands in the superposition of the query ligand(s\) in the candidate chains. If this setting is enabled and at least one D-residue is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a D-residue is defined in the user query, this setting is automatically enabled.
 
-[//]: # (Note: The current list of D-residues includes the following residue names: 'DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA'.)
+Note: The current list of D-residues includes the following residue names: 'DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA'.
 
 
 ##  Results
