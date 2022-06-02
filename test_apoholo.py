@@ -84,10 +84,10 @@ class T02_Apoholo(unittest.TestCase):
             exit_code = apoholo.main(argv)
 
     def test_parse_query(self):
-        assert parse_query('1a73',           autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
-        assert parse_query('1a73 A,B ZN',    autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='A,B', ligands='ZN',   position=None, autodetect_lig=0, water_as_ligand=0)
-        assert parse_query('1a73 ALL ZN,MG', autodetect_lig=False, water_as_ligand=False) == Query(struct='1a73', chains='ALL', ligands='ZN,MG',position=None, autodetect_lig=0, water_as_ligand=0)
-        assert parse_query('1a73 A',         autodetect_lig=True,  water_as_ligand=False) == Query(struct='1a73', chains='A',   ligands=None,   position=None, autodetect_lig=1, water_as_ligand=0)
+        assert parse_query('1a73',           autodetect_lig=True,  water_as_ligand_auto=False, nonstd_rsds_as_lig_auto=False, d_aa_as_lig_auto=False) == Query(struct='1a73', chains='ALL', ligands=None,   position=None, autodetect_lig=1, water_as_ligand_auto=0, nonstd_rsds_as_lig_auto=0, d_aa_as_lig_auto=0)
+        assert parse_query('1a73 A,B ZN',    autodetect_lig=False, water_as_ligand_auto=False, nonstd_rsds_as_lig_auto=False, d_aa_as_lig_auto=False) == Query(struct='1a73', chains='A,B', ligands='ZN',   position=None, autodetect_lig=0, water_as_ligand_auto=0, nonstd_rsds_as_lig_auto=0, d_aa_as_lig_auto=0)
+        assert parse_query('1a73 ALL ZN,MG', autodetect_lig=False, water_as_ligand_auto=False, nonstd_rsds_as_lig_auto=False, d_aa_as_lig_auto=False) == Query(struct='1a73', chains='ALL', ligands='ZN,MG',position=None, autodetect_lig=0, water_as_ligand_auto=0, nonstd_rsds_as_lig_auto=0, d_aa_as_lig_auto=0)
+        assert parse_query('1a73 A',         autodetect_lig=True,  water_as_ligand_auto=False, nonstd_rsds_as_lig_auto=False, d_aa_as_lig_auto=False) == Query(struct='1a73', chains='A',   ligands=None,   position=None, autodetect_lig=1, water_as_ligand_auto=0, nonstd_rsds_as_lig_auto=0, d_aa_as_lig_auto=0)
 
     def test_simple_queries(self):
         self.tst_query("--query '1a73 A,B ZN' ",  expect_apo=0, expect_holo=32)
