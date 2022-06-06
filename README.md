@@ -1,6 +1,5 @@
 # Apo-Holo Juxtaposition
 
-![example event parameter](https://github.com/ioChris/AHoJ/actions/workflows/ci-conda.yml/badge.svg?event=push)
 ![example workflow](https://github.com/ioChris/AHoJ/actions/workflows/ci-conda.yml/badge.svg)
 
 
