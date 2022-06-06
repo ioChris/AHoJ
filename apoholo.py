@@ -847,7 +847,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     user_structchains_unp = dict()
 
     for user_structchain in user_structchains:
-        print('\nLooking for longest UniProt mapping for query chain', user_structchain)
+        print('\nLooking for UniProt mappings for query chain', user_structchain)
         query_uniprot_lengths = list()
         query_uniprot_lengths_dict = dict()
 
