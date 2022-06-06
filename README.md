@@ -1,6 +1,6 @@
 # Apo-Holo Juxtaposition
 
-![example event parameter](https://github.com/ioChris/AHoJ/actions/workflows/conda-env.yml/badge.svg?event=push)
+[example event parameter](https://github.com/ioChris/AHoJ/actions/workflows/conda-env.yml/badge.svg?event=push)
 
 AHoJ is a structural bioinformatics tool that allows automated search and alignment of APO and HOLO structures for a given HOLO structure (and vice versa) in the PDB.
 It can be used with single or multiple searches for creating customized Apo-Holo datasets.
