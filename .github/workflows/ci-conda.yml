@@ -1,4 +1,5 @@
-name: Conda via conda-incubator/setup-miniconda@v2
+name: Workflow status
+# name: Conda via conda-incubator/setup-miniconda@v2
 
 on:
   push:
