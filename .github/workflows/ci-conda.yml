@@ -1,4 +1,4 @@
-name: Workflow status
+name: Workflow tests
 # name: Conda via conda-incubator/setup-miniconda@v2
 
 on:
