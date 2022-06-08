@@ -1,13 +1,10 @@
 # -*- coding: utf-8 -*-
-"""
-@author: Christos
-"""
 
 ''' This script loads the results into a PyMOL session by
     i) loading the structures in the results folder (*.cif.gz)
     ii) annotating the ligand selections (by parsing the ligands.csv file in the results)
 
-    Note: the script should be loaded from the root directory of the files through PyMOL. A PyMOL installation in the user's computer is required.
+    Note: The script should be loaded from the default root directory of the result files through PyMOL. A PyMOL installation is required.
 '''
 
 import glob
