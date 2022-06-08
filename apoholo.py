@@ -3,6 +3,22 @@
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
+
+'''
+Given a protein structure (PDB code), with optionally specified chain(s), ligand(s) and their position,
+find its equivalent apo and holo forms, for each chain separately.
+When no ligand(s) are specified, the program will detect and consider all ligands in the query.
+
+The user can specify the following input arguments
+i) When looking for apo from holo:
+-Min arguments: PDB code
+-Max arguments: PDB code, chain(s), ligand(s), position
+
+When position is specified, only one ligand can be defined.
+'''
+
+VERSION = '0.4.6'
+
 import copy
 import pathlib
 
@@ -32,26 +48,11 @@ from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # 
 
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
-VERSION = '0.4.6'
-
 
 _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()     # multi-processing (must be moved to main)
 
-'''
-Given an experimental protein structure (PDB code), with optionally specified chain(s), ligand(s) and position, find its equivalent apo and holo forms.
-The program will look for both apo and holo forms of the query structure. Structures are processed chain by chain.
-
-The user can specify the following input arguments depending on the mode of search
-i) When looking for apo from holo:
--Min arguments: PDB code
--Max arguments: PDB code, chain(s), ligand(s), position
-ii) When looking for holo from apo:
--Min arguments: PDB code
--Max arguments: PDB code, chain(s)
-'''
-
-# TODO add smart synching with PDB
+# TODO add sync with PDB
 
 ##########################################################################################################
 # Define functions
@@ -165,14 +166,11 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
         return 0
 
 
-def wrong_input_error():  # arg_job_id, arg_pathRSLTS):
+def wrong_input_error():
     print('\n=== ERROR: Wrong input format ===')
     print('-use a whitespace character to separate input arguments\n-chains are case-sensitive')
     print('\nInput format structure:\n<pdb_id> <chain> <ligand/residue> <position> or\n<pdb_id> <chains> <ligands> or\n<pdb_id> <chains> or\n<pdb_id> <ligands> or\n<pdb_id>')
     print('\nInput examples:\n"3fav A ZN 101"\n"3fav A,B ZN"\n"3fav * ZN"\n"3fav ALL ZN"\n"3fav"\n')
-    #print('Exiting & deleting new results folder:', path_job_results)
-    #if os.path.isdir(path_job_results):
-    #    os.rmdir(path_job_results)
     sys.exit(1)  # exit with error
 
 
@@ -218,7 +216,6 @@ class QueryResult:
 class CandidateChainResult:
     """ Result of candidate chain evaluation """
     # TODO remodel, include/remove attributes
-    #query_structchain: str
     query_struct: str
     query_chain: str
     candidate_struct: str
@@ -248,8 +245,7 @@ class PrecompiledData:
 
 
 def verify_ligands(ligand_names, pathLIGS):
-    #if autodetect_lig == 0 or ligand_names is not None:
-    #print('Verifying ligands:\t', ligand_names)
+
     for lig_id in ligand_names:
         #try:
         lig_path = download_mmCIF_lig(lig_id, pathLIGS)
@@ -262,14 +258,14 @@ def verify_ligands(ligand_names, pathLIGS):
                     #print('>', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
                     print('Verifying ligand:\t', ligand_names, '> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
                     break
-        #except:
-            #print('Error verifying ligand:\t', lig_id)
+        #except Exception as ex:
+            #print('Error verifying ligand:\t', lig_id, ex)
 
 
 def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: bool = False, nonstd_rsds_as_lig_auto: bool = False, d_aa_as_lig_auto: bool = False) -> Query: #
 
     # Parse single line input (line by line mode, 1 structure per line)
-    # if no chains specified, consider all chains
+    # If no chains specified, consider all chains
     print(f"Parsing query '{query}'")
     query = query.strip()
     parts = query.split()
@@ -281,10 +277,9 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
 
     # Define non-ligands (3-letter names of amino acids and h2o)
     std_rsds = "ALA CYS ASP GLU PHE GLY HIS ILE LYS LEU MET ASN PRO GLN ARG SER THR VAL TRP TYR".split()
-    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA".split() # don't use as no-lig rsds
+    nonstd_rsds = "SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA".split()
     d_rsds = "DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA".split()
-    #nolig_resn = list()
-    #nolig_resn.extend(std_rsds + d_rsds_hoh)
+    #nolig_resn = list()    #nolig_resn.extend(std_rsds + nonstd_rsds + d_rsds_hoh)
 
 
     if len(struct) != 4:
@@ -292,25 +287,23 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
 
     if len(parts) == 1:
         autodetect_lig = 1  # overrides cmd line param
-    elif len(parts) == 2:  # and autodetect_lig == 1:
-        chains = parts[1]#.upper()
+    elif len(parts) == 2:
+        chains = parts[1]
         autodetect_lig = 1
-    #elif len(parts) == 2 and autodetect_lig == 0:  # this triggers "ALL" chains mode
-        #ligands = parts[1].upper()
     elif len(parts) == 3:
-        chains = parts[1]#.upper()        # adjust case, chains = upper
+        chains = parts[1]
         ligands = parts[2].upper()       # adjust case, ligands = upper
 
     # When position is specified, there has to be a single ligand/residue specified
     elif len(parts) == 4 and len(parts[2]) < 4 and len(parts[2].split(',')) == 1:# and int(parts[3]):
         try:
-            chains = parts[1]#.upper()
+            chains = parts[1]
             ligands = parts[2].upper()
             position = str(int(parts[3]))   # test if int
             #if ligands in std_rsds:
                 #autodetect_lig = 1 # not needed
                 #print('\nLigand is standard residue')
-        except:
+        except Exception:
             raise ValueError(f"Invalid query '{query}': wrong number of parts")
     else:
         raise ValueError(f"Invalid query '{query}': wrong number of parts")
@@ -319,29 +312,12 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
         chains = 'ALL'
     elif not all(chain.isalnum() for chain in chains.split(',')):  # check that chains are alphanumeric characters
         raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains")
-    '''
-    if ligands == '*':
-        ligands = None
-        autodetect_lig = 1
 
-    # Remove star from ligands str
-    if ligands is not None:
-        if "*" in ligands and len(ligands) > 1:
-            raise ValueError(f"Invalid query '{query}': '*' should be used alone to detect all available ligands")
-    '''
 
     # If ligand is HOH or std residue or non-std residue,  make sure that:
     # i) there is just one specified (handled earlier)
     # ii) there is a fourth argument (position)
-    '''if ligands == 'HOH' and position is not None:
-        water_as_ligand_auto = 1
-    elif ligands == 'HOH' and position is None:
-        raise ValueError(f"Invalid query '{query}': specify index position of HOH")'''
 
-    #for i in nolig_resn:
-    '''for i in std_rsds:
-        if ligands == i and position is None:
-            raise ValueError(f"Invalid query '{query}': specify index position of residue")'''
     if ligands is not None:
         for ligand in ligands.split(','):
             ligand = ligand.upper()
@@ -359,13 +335,6 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
                 ligands = None
                 autodetect_lig = 1
                 break
-
-    '''
-    if ligands in nonstd_rsds:
-        nonstd_rsds_as_lig_auto = 1
-    elif ligands in d_rsds:
-        d_aa_as_lig_auto = 1
-    '''
 
     return Query(struct=struct, chains=chains, ligands=ligands, position=position, autodetect_lig=autodetect_lig, water_as_ligand_auto=water_as_ligand_auto, nonstd_rsds_as_lig_auto=nonstd_rsds_as_lig_auto, d_aa_as_lig_auto=d_aa_as_lig_auto)
 
@@ -426,6 +395,7 @@ def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results):  #
             for idx, item in enumerate(values):  # replace " " with "_"
                 values[idx] = item.replace(" ", "_")
             csv_out.write("%s,%s\n" % (key, '-'.join(values)))
+
         # Write (holo or apo) candidate ligands
         for key, values in cndt_lig_positions.items():
             for idx, item in enumerate(values):  # replace " " with "_"
@@ -542,7 +512,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     hoh_scan_radius = str(hoh_scan_radius)      # needs to be str
     #cndtlig_scan_radius = lig_scan_radius      # why is this "not used", since it is required later on? -local vrbl
     #broad_search_mode = False # previously called "reverse_mode"
-
 
 
     # Set directories, create job_id
@@ -682,7 +651,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Finished parsing query and configuring settings, store final settings and define non-ligands here
     
-    # Merge user settings and automatic settings from parse query here
+    # Merge user settings and auto settings from parse query here
     if water_as_ligand_auto == 1 or water_as_ligand_usr == 1:
         water_as_ligand = 1
     else:
@@ -900,7 +869,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                 # Build dict with calculated overlap
                 uniprot_overlap_all.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent)) # this keeps all calculated overlaps (from candidate to all query chains)
-                
+
                 # Build candidate dict for rsd mapping set (larger subset, all mappings - not just longest!)
                 dict_key = user_structchain + ' ' + y1 + ' ' + y2
                 dictApoCandidates_b.setdefault(dict_key.split()[0], []).append(candidate) # same dict without query UNP coverage or candidate percentage
@@ -925,18 +894,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print('\nException:', ex)
         else:
             print('No other UniProt chains found')
-            #sys.exit(2) # don't exit script, continue for other UniProt chains within same struct or multi-query
 
     total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
     print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
-
 
     # Merge calculated UniProt overlap percentages of same chains into a single percentage
     uniprot_overlap_merged = merge_fragmented_unp_overlaps(uniprot_overlap_all)
 
     #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
     #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
-    #sys.exit(1)
 
     # Get apo candidates for rsd mapping set (larger subset)
     #dictApoCandidates_b = dict()
@@ -946,7 +912,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     #print(dictApoCandidates)
     #print(dictApoCandidates_b)
-
 
     # End script if there are 0 total candidate chains
     if total_chains == 0:
@@ -1028,9 +993,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
                         resolution = round(float(line.split()[1]), 2)  # X-ray highest resolution
-                        #exp_method_dict[apo_candidate_struct] = 'XRAY'
                         resolution_dict[apo_candidate_struct] = str(resolution)
-                        #break
                     elif line.split()[0] == '_refine_hist.d_res_high' and float(line.split()[1]): # X-ray res in neutron scattering methods
                         resolution = round(float(line.split()[1]), 2)  # X-ray highest resolution in neutron diffraction
                         resolution_dict[apo_candidate_struct] = str(resolution)
@@ -1045,7 +1008,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         break
                 except Exception:# as ex: # getting weird but harmless exceptions
                     #print('Problem parsing structure: ', apo_candidate_struct)
-                    pass  # ignore and hide exceptions from stdout
+                    pass
 
             #resolution = float(resolution_dict[apo_candidate_struct])
             #method = exp_method_dict[apo_candidate_struct]
@@ -1058,7 +1021,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             except Exception as ex:
                 discarded_chains.append(apo_candidate_struct + '\t' + 'Resolution/exp. method\t[' + str(resolution) + ' ' + method + ']\n')
                 print('*Exception', ex, '\n', apo_candidate_struct, ' resolution:\t', resolution, '\t', method, '\t\tFAIL')  # NMR
-            #method = '?' # reset method
 
     print('Done\n')
 
@@ -1125,9 +1087,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     if position is not None: # (4 args) assumes that everything is specified (chains(taken care of), 1 ligand, position) ignore_autodetect_lig
         
-        if ligand_names[0] == 'HOH': # mark selection & change lig scan radius (unless user has set it to lower than 3)
-            #if float(lig_scan_radius) > 3:
-                #lig_scan_radius = '3'
+        if ligand_names[0] == 'HOH': # mark selection & change lig scan radius -handled later
             search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
 
         elif ligand_names[0] in nonstd_rsds: # find ligands
