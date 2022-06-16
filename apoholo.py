@@ -913,7 +913,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #print(dictApoCandidates)
     #print(dictApoCandidates_b)
 
-    # End script if there are 0 total candidate chains
+    # End script if there are 0 candidate chains OR no UniProt is assigned to the query structure
     if total_chains == 0:
         print('=== Ending program ===')
         sys.exit(1)
@@ -1970,7 +1970,7 @@ def parse_args(argv):
 
     # Main user query
     # Ligand
-    parser.add_argument('--query', type=str,   default='1a73')
+    #parser.add_argument('--query', type=str,   default='1a73')
     #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
@@ -2053,13 +2053,16 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1cim A', help='main input query')
     #parser.add_argument('--query', type=str,   default='1h1p A', help='main input query')
     #parser.add_argument('--query', type=str,   default='1k1j A', help='main input query')
-    
+
     # D amino acids
     #parser.add_argument('--query', type=str,   default='148l S DAL 170', help='main input query') # not working, not registered as a ligand, chain S is non-UniProt, no other UniProt chains around
     #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
     #parser.add_argument('--query', type=str,   default='1cfa', help='main input query') # works and gives results
     #parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
 
+    # Non-UniProt query structure (7MJB)
+    #parser.add_argument('--query', type=str,   default='7mjb', help='main input query')
+    parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
