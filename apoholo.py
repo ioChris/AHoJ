@@ -547,7 +547,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # log_file_dnld = script_name + '_downloadErrors.log' #log_file_dnld = job_id + '_' + script_name + '_downloadErrors' + '.log'
     # log_file_dnld = path_root + '/download_errors.log'
 
-    print('PyMOL version: ', cmd.get_version())
+
+    print('PyMOL version: ', cmd.get_version()[0:3])
 
     # Create directories if they don't exist
     print('Setting up directories')
@@ -1347,18 +1348,31 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Name query ligands as seperate selections per "residue"/position. Put real (detected) ligand names into set
             query_lig_names = set()
-            for ligand in query_lig_positions[query_structchain]:
+            '''
+            for ligand in query_lig_positions[query_structchain]: # try merge this loop function with the one below
                 resi = ligand.split()[0]
                 chain = ligand.split()[1]
                 resn = ligand.split()[2]
                 ligand_ = ligand.replace(' ', '_')
                 query_lig_names.add(resn)
                 cmd.select('holo_' + ligand_, query_struct + '& resi ' + resi + '& chain ' + chain + '& resn ' + resn) # s1
+            '''
+            #print_dict_readable(query_lig_positions, '\nQuery lig positions dict')
 
-            # Find binding site residues (protein only)
+            # Find binding residues (protein only) for all query chains
             binding_res_dict = dict()
+
             for structchain_i, ligands in query_lig_positions.items():
                 for ligand in ligands:
+
+                    resi = ligand.split()[0]
+                    chain = ligand.split()[1]
+                    resn = ligand.split()[2]
+
+                    # Put real (detected) ligand names into set
+                    if structchain_i == query_structchain:
+                        query_lig_names.add(resn)
+
                     ligand = ligand.replace(' ', '_')
 
                     # Find ligand
@@ -1369,7 +1383,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     s2 = ligand + '_' + struct
                     cmd.select('arnd_' + ligand, s1 + ' near_to ' + lig_scan_radius + ' of ' + s2)
 
-                    # Iterate and identify residues
+                    # Iterate and identify binding residues
                     myspace_positions = {'binding_resis': []}
                     cmd.iterate('arnd_' + ligand, 'binding_resis.append(segi+"_"+chain+"_"+resn+"_"+resi)', space=myspace_positions)
 
@@ -1385,7 +1399,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Pass auto-detected ligands as user ligands
             if autodetect_lig == 1 and ligand_names is None:
-                ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands, when no ligands specified, they might be undefined
+                ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands. When no ligands specified, they might be undefined
 
 
         # Print universal ligand report for query chain
@@ -1405,8 +1419,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print('\nQuery binding site information')
             #print(f'Parsing query structure [{struct}]')
             #print('Detecting binding residues of query chain (segment, chain, pdb residue number)')
-            print(f'Binding residues clustered per binding site:\n{binding_res_dict}')
-            print(f'Unique binding residues (segment, chain, pdb residue number):\n{binding_res_unpacked}')
+            print(f'Binding residues clustered per ligand:\n{binding_res_dict}')
+            print(f'Bulk unique binding residues [segment, chain, residue, position]:\n{binding_res_unpacked}')
             print(f'Total/unique binding residues: [{total1}]/[{total2}]')
 
 
@@ -1417,7 +1431,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try:
                 pdb_xml = download_sifts_xml_gz(query_struct, pathXML)
             except Exception:
-                print('SIFTS server unavailable')  # Handle exception
+                print('SIFTS server unavailable')  # Handle exception (this should not happen, consider exiting w error)
                 #sys.exit(0)
 
             # Map PDB (binding) residues of query to UniProt residue numbers
@@ -1480,7 +1494,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
 
-
         def try_candidate_chain(cmd, query_structchain: str, candidate_structchain: str) -> CandidateChainResult:
             # TODO(chris): collect/move all function side effects to returned CandidateChainResult
             # TODO(rdk): make independent of nonlocal/global variables
@@ -1490,7 +1503,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #apo_holo_dict_H: dict() # updated
             #query_lig_positions: dict() # used
             #cndt_lig_positions: dict() # updated
-
 
             apo_holo_dict_instance = dict()
             apo_holo_dict_H_instance = dict()
@@ -1997,12 +2009,14 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1ksw a NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # first chain is apo, it was ignored before now works
-    #parser.add_argument('--query', type=str,   default='2hka ALL', help='main input query') #
+    #parser.add_argument('--query', type=str,   default='2hka ALL',     help='main input query') #
     #parser.add_argument('--query', type=str,   default='6j19 all atp', help='main input query') # problematic case, 6j19B has wrong UNP mapping in SIFTS 
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
-    #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327',     help='main input query') # ribosome protein binding to nucleic acid only
-    #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328',     help='main input query') # ribosome protein binding also protein (ok)
-    #parser.add_argument('--query', type=str,   default='1GB1',          help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
+    #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
+    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
+    #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
@@ -2011,7 +2025,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6XBY b pov')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
-    #parser.add_argument('--query', type=str,   default='1a73 a mg,zn')
+    parser.add_argument('--query', type=str,   default='1a73 A mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg')
 
@@ -2062,7 +2076,7 @@ def parse_args(argv):
 
     # Non-UniProt query structure (7MJB)
     #parser.add_argument('--query', type=str,   default='7mjb', help='main input query')
-    parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
+    #parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
@@ -2108,6 +2122,8 @@ def parse_args(argv):
 
 def main(argv):
     print(f'APO-HOLO JUXTAPOSITION (v{VERSION})')
+    time_local = time.strftime("%Y-%m-%d %H:%M:%S", time.gmtime())
+    print(time_local)  # print(f'Local time [{time_local}]')
     args = parse_args(argv)
 
     workdir = get_workdir(args)
