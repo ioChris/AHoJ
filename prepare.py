@@ -196,7 +196,9 @@ def download_n_modify_sifts(workdir, pdb_uniprot_url):
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--work_dir',        type=str, default=None, help='global root working directory for pre-computed and intermediary data')
-    parser.add_argument('--pdb_uniprot_url', type=str, default='http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz')
+    #parser.add_argument('--pdb_uniprot_url', type=str, default='http://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/pdb_chain_uniprot.tsv.gz')
+    parser.add_argument('--pdb_uniprot_url', type=str, default='ftp://ftp.ebi.ac.uk/pub/databases/msd/sifts/flatfiles/tsv/uniprot_segments_observed.tsv.gz')  # Observed residues only
+
     args = parser.parse_args(argv)
 
     workdir = get_workdir(args)

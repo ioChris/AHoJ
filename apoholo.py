@@ -17,7 +17,7 @@ i) When looking for apo from holo:
 When position is specified, only one ligand can be defined.
 '''
 
-VERSION = '0.4.6'
+VERSION = '0.4.7'
 
 import copy
 import pathlib
@@ -359,8 +359,12 @@ def load_precompiled_data_txt(workdir) -> PrecompiledData:
 
 def load_precompiled_data_bin(workdir) -> PrecompiledData:
     pathSIFTS = workdir + '/SIFTS'
-    fileSIFTSdict = pathSIFTS + '/pdb_chain_uniprot_dict.bin'
-    fileRSIFTS = pathSIFTS + '/pdb_chain_uniprot_REVERSE_SPnum.bin'
+    #fileSIFTSdict = pathSIFTS + '/pdb_chain_uniprot_dict.bin'
+    #fileRSIFTS = pathSIFTS + '/pdb_chain_uniprot_REVERSE_SPnum.bin'
+
+    # Observed residues only
+    fileSIFTSdict = pathSIFTS + '/uniprot_segments_observed_dict.bin'
+    fileRSIFTS = pathSIFTS + '/uniprot_segments_observed_REVERSE_SPnum.bin'
 
     print('Loading SIFTS dictionary')
     dict_SIFTS = load_dict_binary(fileSIFTSdict)
@@ -818,14 +822,95 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     for user_structchain in user_structchains:
         print('\nLooking for UniProt mappings for query chain', user_structchain)
+        query_chain_total_unp_length = 0 # reset total length
         query_uniprot_lengths = list()
         query_uniprot_lengths_dict = dict()
 
-        # Get UniProt IDs of query chains to build rsd mappings dict
-        usr_uniprot_id = dict_SIFTS[user_structchain]
-        user_structchains_unp[user_structchain] = usr_uniprot_id
+        query_chain_segments = list()
+        cndt_chains_segments = dict()
+        own_chains = list() # the structchains that belong to the same UniProt ID and same structure with query
+
+        # Get UniProt ID of query chain to build rsd mappings dict
+        usr_uniprot_id = dict_SIFTS[user_structchain]  # Get primary UniProt AC
+        user_structchains_unp[user_structchain] = usr_uniprot_id  # Pass it as value to query structchain
         #print(user_structchain, usr_uniprot_id)
 
+        # Reconstruct logic
+
+
+
+
+
+
+        
+        # Get all chains with their segments for given UNP AC (they are a list of values)
+        all_segments_for_UNP_AC = dict_rSIFTS[usr_uniprot_id]  # list
+        #print('\nall_segments_for_UNP_AC', all_segments_for_UNP_AC)
+
+        # Put all query segments together and all candidate segments together
+        for segment_overlap in all_segments_for_UNP_AC:
+            if segment_overlap.split()[0] == user_structchain:
+                #query_chain_segments.append(segment_overlap.split()[1:3])  # append query chain segment start/end
+                query_chain_segments.append(segment_overlap.split()[1] + ' ' + segment_overlap.split()[2])  # append query chain segment start/end
+            elif segment_overlap.split()[0][:4] == user_structchain[:4] and segment_overlap.split()[0] != user_structchain:
+                own_chains.append(segment_overlap.split()[0])
+            else:
+                cndt_chains_segments.setdefault(segment_overlap.split()[0], []).append(segment_overlap.split()[1] + ' ' + segment_overlap.split()[2])
+        
+        print('\nquery_chain_segments\n', query_chain_segments)
+        #print(type(query_chain_segments))
+        print_dict_readable(cndt_chains_segments, '\ncndt_chains_segments dict')
+        
+        # Calculate total length of query chain segments
+        for query_chain_segment in query_chain_segments:
+            seg_start = query_chain_segment.split()[0]
+            seg_end = query_chain_segment.split()[1]
+            seg_l = int(seg_end) - int(seg_start)
+            query_chain_total_unp_length += seg_l
+        print('\ntotal query chain segment length:', query_chain_total_unp_length, '\n')
+        #sys.exit(1)
+        
+        # Calculate percentage of coverage of cndt chains (segments) on total query unp length
+        for cndt_chain, cndt_segments in cndt_chains_segments.items():
+            #cndt_total_unp_legnth = 0
+            cndt_seg_prcnt = 0
+            for cndt_segment in cndt_segments:
+                cndt_unp_legnth = 0
+                cndt_seg_start = cndt_segment.split()[0]
+                cndt_seg_end = cndt_segment.split()[1]
+                
+                cndt_unp_legnth = int(cndt_seg_end) - int(cndt_seg_start)
+                
+                for query_chain_segment in query_chain_segments:
+                    seg_start = query_chain_segment.split()[0]
+                    seg_end = query_chain_segment.split()[1]
+                    
+                    # Calculate overlap and % of overlap on query (x1,x2)
+                    result =  min(int(seg_end), int(cndt_seg_end)) - max(int(seg_start), int(cndt_seg_start))
+                    
+                    if result > 0: # ignore neg overlap
+                        cndt_seg_prcnt += result / query_chain_total_unp_length * 100
+                        percent = result / query_chain_total_unp_length * 100
+                        percent = round(percent, 1)
+                    else:
+                        percent = 0
+                    #print(cndt_chain, cndt_segment, '->', user_structchain, query_chain_segment, '[overlap length, seg_percent, total_prcnt]:', result, round(percent), round(cndt_seg_prcnt, 2))
+                    dictApoCandidates.setdefault(user_structchain+' '+query_chain_segment, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth)+' '+str(result)+' '+str(percent))
+                    dictApoCandidates_b.setdefault(user_structchain, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth))
+
+                    # Build dict with calculated overlap
+                    uniprot_overlap_all.setdefault(cndt_chain, []).append(user_structchain + ' ' + str(percent)) # this keeps all calculated overlaps (from candidate to all query chains)
+        #sys.exit(1)
+        uniprot_id = usr_uniprot_id
+        # Remove duplicate values from dictApoCandidates_b
+        for key, value in dictApoCandidates_b.items():
+            dictApoCandidates_b[key] = list(dictApoCandidates_b.fromkeys(value))   # preserves the order of values
+
+
+
+
+
+        '''
         # Iterate through UniProt IDs and their structchains
         for key, values in dict_rSIFTS.items():  # key = UniProt accession, values = structchains + SP_BEG + SP_END
             # Iterate through each structchain
@@ -842,7 +927,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     query_uniprot_lengths_dict[xlength] = uniprot_id + ' ' + structchain_s + ' ' + x1s + ' ' + x2s
                     query_uniprot_lengths.append(int(xlength))
 
-        # Find longest mapping
+        # Find longest mapping [this function is now obsolete]
         top_xlength = max(query_uniprot_lengths)
         top_mapping = query_uniprot_lengths_dict[str(top_xlength)]
         uniprot_id = top_mapping.split()[0]
@@ -851,7 +936,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         x2 = top_mapping.split()[3]
 
         print(query_uniprot_lengths_dict)
-        print('->', query_uniprot_lengths_dict[str(top_xlength)], top_xlength)
+        #print('->', query_uniprot_lengths_dict[str(top_xlength)], top_xlength)
 
         # Find candidates overlap for longest mapping
         print('Calculating apo/holo candidate overlap for mapping:', uniprot_id, user_structchain, x1, x2, top_xlength)
@@ -883,6 +968,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     #uniprot_overlap.setdefault(candidate.split()[0], []).append(user_structchain + ' ' + str(percent)) # this keeps only successful overlaps
             else:
                 own_chains.append(candidate)
+        '''
 
         #print(f'Total chains for {uniprot_id}: {len(dict_rSIFTS[uniprot_id])}')
         print(f'Total chains for {uniprot_id} (including/excluding query structure): [{len(dict_rSIFTS[uniprot_id])}]/[{len(dict_rSIFTS[uniprot_id]) - len(own_chains)}]')
@@ -890,7 +976,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
         if len(dict_rSIFTS[uniprot_id]) > len(own_chains):
             try:
-                print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
+                #print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
+                print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates_b[user_structchain])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
             except Exception as ex:
                 print('\nException:', ex)
         else:
@@ -902,8 +989,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Merge calculated UniProt overlap percentages of same chains into a single percentage
     uniprot_overlap_merged = merge_fragmented_unp_overlaps(uniprot_overlap_all)
 
-    #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
-    #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
+    print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
+    print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
 
     # Get apo candidates for rsd mapping set (larger subset)
     #dictApoCandidates_b = dict()
@@ -919,6 +1006,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('=== Ending program ===')
         sys.exit(1)
 
+    #print_dict_readable(uniprot_overlap_all, '\nuniprot_overlap_all')
+    #print_dict_readable(dictApoCandidates, '\ndictApoCandidates')
+    print_dict_readable(dictApoCandidates_b, '\ndictApoCandidates_b')
+    #print_dict_readable(user_structchains_unp, '\nuser_structchains_unp')
+    #sys.exit(1)
 
 
     ## Candidate structure evaluation
@@ -1491,6 +1583,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('')
         print(f'=== Processing final candidates for query chain {query_structchain} ===')
         #continue
+        if final_candidates[query_structchain] is None: # TODO this has to be skipped upstream to save runtime
+            print('chain has not candidates, skipping..')
+            continue
 
 
 
@@ -2014,7 +2109,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
-    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
 
@@ -2025,7 +2120,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6XBY b pov')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
     #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
-    parser.add_argument('--query', type=str,   default='1a73 A mg,zn')
+    #parser.add_argument('--query', type=str,   default='1a73 A mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg')
 
@@ -2075,8 +2170,12 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
 
     # Non-UniProt query structure (7MJB)
-    #parser.add_argument('--query', type=str,   default='7mjb', help='main input query')
+    #parser.add_argument('--query', type=str,   default='7mjb',       help='main input query')
     #parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
+
+    # Test new UNP overlap computation
+    #parser.add_argument('--query', type=str,   default='7khr B')  # apo 30, holo 4
+    #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
