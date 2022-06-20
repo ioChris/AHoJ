@@ -701,6 +701,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print(f'\nFinding & verifying query chains {user_chains} by UniProt ID')
     discarded_chains = list()   # Discarded chains (format: structchain + '\t' + discard_msg)
     usr_structchains_unverified = list()
+    qr_uniprot_ids = dict()
 
     # Traceback "ALL" / "*" chains from SIFTS file
     if user_chains == 'ALL':
@@ -713,10 +714,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 user_chains.append(key[4:])
                 user_structchains.append(key)
                 print(key, dict_SIFTS[key])
+                qr_uniprot_ids[key] = dict_SIFTS[key]
     else:
         for user_structchain in user_structchains:
             try:
                 print(user_structchain, dict_SIFTS[user_structchain])
+                qr_uniprot_ids[user_structchain] = dict_SIFTS[user_structchain]
             except:
                 user_structchains.remove(user_structchain)
                 #discarded_chains.append(user_structchain + '\t' + 'Query chain not assigned UniProt ID\n')
@@ -814,52 +817,51 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Get apo candidates from rSIFTS dict, calculate sequence overlap
     # Look for longest UniProt mapping of query chains
-    dictApoCandidates = dict()
-    dictApoCandidates_b = dict()
+    dictApoCandidates = dict()      # candidate structchains over user-threshold UNP overlap
+    dictApoCandidates_b = dict()    # candidate structchains with non-zero UNP overlap (more)
     uniprot_overlap_all = dict()    # overlap of all UniProt chains
+    uniprot_overlap_invrs = dict()  # same but keys are query chains for easier manipulation
     #uniprot_overlap = dict()       # overlap of successful hits over user threshold
+    uniprot_segments_dict = dict()  # the segments of the observed residues in chains of interest only
     user_structchains_unp = dict()
+    own_chains = dict()
+    print('')
 
     for user_structchain in user_structchains:
-        print('\nLooking for UniProt mappings for query chain', user_structchain)
+        print('Looking for UniProt mappings for query chain', user_structchain)
         query_chain_total_unp_length = 0 # reset total length
-        query_uniprot_lengths = list()
-        query_uniprot_lengths_dict = dict()
+        #query_uniprot_lengths = list()
+        #query_uniprot_lengths_dict = dict()
 
         query_chain_segments = list()
         cndt_chains_segments = dict()
-        own_chains = list() # the structchains that belong to the same UniProt ID and same structure with query
 
         # Get UniProt ID of query chain to build rsd mappings dict
-        usr_uniprot_id = dict_SIFTS[user_structchain]  # Get primary UniProt AC
-        user_structchains_unp[user_structchain] = usr_uniprot_id  # Pass it as value to query structchain
-        #print(user_structchain, usr_uniprot_id)
+        uniprot_id = dict_SIFTS[user_structchain]  # Get primary UniProt AC
+        user_structchains_unp[user_structchain] = uniprot_id  # Pass it as value to query structchain
+        #print(user_structchain, uniprot_id)
 
-        # Reconstruct logic
-
-
-
-
-
-
-        
-        # Get all chains with their segments for given UNP AC (they are a list of values)
-        all_segments_for_UNP_AC = dict_rSIFTS[usr_uniprot_id]  # list
-        #print('\nall_segments_for_UNP_AC', all_segments_for_UNP_AC)
+        # Get all chains with their segments for given UNP AC (i.e., list of values)
+        all_segments_for_UNP_AC = dict_rSIFTS[uniprot_id]  # list
+        #print('\nall_segments_for_UNP_AC\n', all_segments_for_UNP_AC)
 
         # Put all query segments together and all candidate segments together
         for segment_overlap in all_segments_for_UNP_AC:
-            if segment_overlap.split()[0] == user_structchain:
-                #query_chain_segments.append(segment_overlap.split()[1:3])  # append query chain segment start/end
-                query_chain_segments.append(segment_overlap.split()[1] + ' ' + segment_overlap.split()[2])  # append query chain segment start/end
-            elif segment_overlap.split()[0][:4] == user_structchain[:4] and segment_overlap.split()[0] != user_structchain:
-                own_chains.append(segment_overlap.split()[0])
+            #current_struct = segment_overlap.split()[0][:4]
+            #print(current_struct, user_structchain[:4])
+            if segment_overlap.split()[0][:4] == user_structchain[:4]: # same struct
+                if segment_overlap.split()[0] == user_structchain: # same structchain
+                    #query_chain_segments.append(segment_overlap.split()[1:3])  # append query chain segment start/end
+                    query_chain_segments.append(segment_overlap.split()[1] + ' ' + segment_overlap.split()[2])  # append query chain segment start/end
+                else: # same struct, different chain ("own_chain") #if segment_overlap.split()[0][:4] == user_structchain[:4] and segment_overlap.split()[0] != user_structchain:
+                    #own_chains.append(segment_overlap.split()[0]) # for list
+                    own_chains.setdefault(user_structchain, []).append(segment_overlap.split()[0])
             else:
                 cndt_chains_segments.setdefault(segment_overlap.split()[0], []).append(segment_overlap.split()[1] + ' ' + segment_overlap.split()[2])
         
-        print('\nquery_chain_segments\n', query_chain_segments)
-        #print(type(query_chain_segments))
-        print_dict_readable(cndt_chains_segments, '\ncndt_chains_segments dict')
+        #print('\nquery_chain_segments\n', query_chain_segments)
+        #print_dict_readable(cndt_chains_segments, '\ncndt_chains_segments dict')
+        #sys.exit(1)
         
         # Calculate total length of query chain segments
         for query_chain_segment in query_chain_segments:
@@ -867,7 +869,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             seg_end = query_chain_segment.split()[1]
             seg_l = int(seg_end) - int(seg_start)
             query_chain_total_unp_length += seg_l
-        print('\ntotal query chain segment length:', query_chain_total_unp_length, '\n')
+        #print('\ntotal query chain segment length:', query_chain_total_unp_length, '\n')
         #sys.exit(1)
         
         # Calculate percentage of coverage of cndt chains (segments) on total query unp length
@@ -878,16 +880,15 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 cndt_unp_legnth = 0
                 cndt_seg_start = cndt_segment.split()[0]
                 cndt_seg_end = cndt_segment.split()[1]
-                
                 cndt_unp_legnth = int(cndt_seg_end) - int(cndt_seg_start)
-                
+
                 for query_chain_segment in query_chain_segments:
                     seg_start = query_chain_segment.split()[0]
                     seg_end = query_chain_segment.split()[1]
-                    
+
                     # Calculate overlap and % of overlap on query (x1,x2)
                     result =  min(int(seg_end), int(cndt_seg_end)) - max(int(seg_start), int(cndt_seg_start))
-                    
+
                     if result > 0: # ignore neg overlap
                         cndt_seg_prcnt += result / query_chain_total_unp_length * 100
                         percent = result / query_chain_total_unp_length * 100
@@ -895,19 +896,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     else:
                         percent = 0
                     #print(cndt_chain, cndt_segment, '->', user_structchain, query_chain_segment, '[overlap length, seg_percent, total_prcnt]:', result, round(percent), round(cndt_seg_prcnt, 2))
-                    dictApoCandidates.setdefault(user_structchain+' '+query_chain_segment, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth)+' '+str(result)+' '+str(percent))
-                    dictApoCandidates_b.setdefault(user_structchain, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth))
+                    #dictApoCandidates.setdefault(user_structchain+' '+query_chain_segment, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth)+' '+str(result)+' '+str(percent))
+
+                    #dictApoCandidates.setdefault(user_structchain, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth))
+                    #dictApoCandidates_b.setdefault(user_structchain, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth))
+                    uniprot_segments_dict.setdefault(user_structchain, []).append(cndt_chain+' '+cndt_segment+' '+str(cndt_unp_legnth))
 
                     # Build dict with calculated overlap
                     uniprot_overlap_all.setdefault(cndt_chain, []).append(user_structchain + ' ' + str(percent)) # this keeps all calculated overlaps (from candidate to all query chains)
+                    uniprot_overlap_invrs.setdefault(user_structchain,  []).append(cndt_chain + ' ' + str(percent))  # arranged by query structchains
         #sys.exit(1)
-        uniprot_id = usr_uniprot_id
-        # Remove duplicate values from dictApoCandidates_b
-        for key, value in dictApoCandidates_b.items():
-            dictApoCandidates_b[key] = list(dictApoCandidates_b.fromkeys(value))   # preserves the order of values
-
-
-
 
 
         '''
@@ -970,47 +968,90 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 own_chains.append(candidate)
         '''
 
-        #print(f'Total chains for {uniprot_id}: {len(dict_rSIFTS[uniprot_id])}')
-        print(f'Total chains for {uniprot_id} (including/excluding query structure): [{len(dict_rSIFTS[uniprot_id])}]/[{len(dict_rSIFTS[uniprot_id]) - len(own_chains)}]')
-        #print(dict_rSIFTS[uniprot_id], own_chains)
+        
 
-        if len(dict_rSIFTS[uniprot_id]) > len(own_chains):
-            try:
-                #print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates[dict_key])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
-                print(f'Candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{len(dictApoCandidates_b[user_structchain])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
-            except Exception as ex:
-                print('\nException:', ex)
-        else:
-            print('No other UniProt chains found')
-
-    total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
-    print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
     # Merge calculated UniProt overlap percentages of same chains into a single percentage
     uniprot_overlap_merged = merge_fragmented_unp_overlaps(uniprot_overlap_all)
+    uniprot_overlap_invrs_merged = merge_fragmented_unp_overlaps(uniprot_overlap_invrs)
+
+    print_dict_readable(uniprot_segments_dict, '\nUniprot_segments_dict')
 
     print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
     print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
 
-    # Get apo candidates for rsd mapping set (larger subset)
-    #dictApoCandidates_b = dict()
-    #for key, value in user_structchains_unp.items():
-    #    candidates = dict_rSIFTS[value]
-    #    dictApoCandidates_b[key] = candidates
+    print_dict_readable(uniprot_overlap_invrs, '\nUniprot overlap Inverse')
+    print_dict_readable(uniprot_overlap_invrs_merged, '\nUniprot overlap Inverse merged')
 
-    #print(dictApoCandidates)
-    #print(dictApoCandidates_b)
+
+    # Remove query chains with no candidates (or candidates with zero overlap [in Uniprot overlap merged])
+    # Build candidate dicts here
+    # Discard: i)candidates with zero overlap, ii)candidates below overlap threshold (not completely) iii)query chains with no candidates
+    #if overlap_threshold != 0 and percent >= overlap_threshold or overlap_threshold == 0 and percent > 0:
+
+    for qr_structchain, cndt_structchains_w_overlaps in uniprot_overlap_invrs_merged.items():
+        for cndt_structchain_w_overlap in cndt_structchains_w_overlaps:
+            cndt_structchain = cndt_structchain_w_overlap.split()[0]
+            cndt_overlap = cndt_structchain_w_overlap.split()[1]
+            if float(cndt_overlap) > 0: # keep any positive candidate (also removes query chains without candidates)
+                dictApoCandidates_b.setdefault(qr_structchain, []).append(cndt_structchain_w_overlap)
+
+                if float(cndt_overlap) >= overlap_threshold: # only candidates above user threshold [used for apo query chains]
+                    dictApoCandidates.setdefault(qr_structchain, []).append(cndt_structchain_w_overlap)
+
+            else:  # Discard
+                discarded_chains.append(cndt_structchain + '\t' + '"0" UNP overlap in observed residues\n')
+
+    print_dict_readable(qr_uniprot_ids, '\nqr_uniprot_ids')
+    
+    #print_dict_readable(uniprot_overlap_all, '\nuniprot_overlap_all')
+    print_dict_readable(dictApoCandidates, '\ndictApoCandidates')
+    print_dict_readable(dictApoCandidates_b, '\ndictApoCandidates_b')
+    print_dict_readable(own_chains, '\nown_chains dict')
+    #print_dict_readable(user_structchains_unp, '\nuser_structchains_unp')
+    #sys.exit(1)
+
+    # Print info for detected candidate chains
+    for qr_structchain, cndt_structchains_w_overlaps in dictApoCandidates_b.items():
+
+        #if own_chains.get(qr_structchain) is not None:
+            #print(f'\nTotal chains for {qr_structchain}:{qr_uniprot_ids[qr_structchain]} (including/excluding query structure): [{len(dict_rSIFTS[qr_uniprot_ids[qr_structchain]])}]/[{len(dict_rSIFTS[uniprot_id]) - len(own_chains[qr_structchain])}]')
+            #print(f'\nMax candidate chains for {qr_structchain}:{qr_uniprot_ids[qr_structchain]} (excluding/including query structure): [{len(dictApoCandidates_b[qr_structchain])}]/[{len(dictApoCandidates_b[qr_structchain]) + len(own_chains[qr_structchain])}]')
+        #else:
+            #print(f'\nMax candidate chains for {qr_structchain}:{qr_uniprot_ids[qr_structchain]} (excluding/including query structure): [{len(dictApoCandidates_b[qr_structchain])}]/[{len(dictApoCandidates_b[qr_structchain]) + 0}]')
+
+        try:
+            print(f'Candidate chains over [0%] overlap threshold:\t{len(dictApoCandidates_b[qr_structchain])}')
+        except Exception as ex:
+            print(f'Candidate chains over [0%] overlap threshold:\t{dictApoCandidates_b.get(qr_structchain)},\t{ex}')
+        try:
+            print(f'Candidate chains over [{overlap_threshold}%] overlap threshold:\t{len(dictApoCandidates[qr_structchain])}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
+        except Exception as ex:
+            print(f'Candidate chains over [{overlap_threshold}%] overlap threshold:\t{dictApoCandidates.get(qr_structchain)},\t{ex}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
+
+
+
+    # Calculate num of total candidate chains for all query chains (use larger dict (dictApoCandidates_b))
+    total_chains = sum([len(dictApoCandidates_b[x]) for x in dictApoCandidates_b if isinstance(dictApoCandidates_b[x], list)])
+    #total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
+    print(f'\nTotal candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n')
 
     # End script if there are 0 candidate chains OR no UniProt is assigned to the query structure
     if total_chains == 0:
         print('=== Ending program ===')
         sys.exit(1)
 
-    #print_dict_readable(uniprot_overlap_all, '\nuniprot_overlap_all')
-    #print_dict_readable(dictApoCandidates, '\ndictApoCandidates')
-    print_dict_readable(dictApoCandidates_b, '\ndictApoCandidates_b')
-    #print_dict_readable(user_structchains_unp, '\nuser_structchains_unp')
-    #sys.exit(1)
+    '''
+    # Remove duplicate values from dictApoCandidates & dictApoCandidates_b
+    for key, values in dictApoCandidates.items():
+        dictApoCandidates[key] = list(dictApoCandidates.fromkeys(values))   # preserves the order of values
+
+    for key, values in dictApoCandidates_b.items():
+        dictApoCandidates_b[key] = list(dictApoCandidates_b.fromkeys(values))   # preserves the order of values
+    '''
+
+
+    
 
 
     ## Candidate structure evaluation
@@ -1144,8 +1185,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         return dict_out
 
     # Discard candidate structures below threshold(s). Put remainder into new dict
-    dictApoCandidates_1 = remove_low_res_structs(dictApoCandidates, discard_structs, cleave=1) # cleave this dict (discard UniProt numbering)
+    dictApoCandidates_1 = remove_low_res_structs(dictApoCandidates, discard_structs, cleave=1) # cleave dict (discard UniProt numbering)
     dictApoCandidates_b1 = remove_low_res_structs(dictApoCandidates_b, discard_structs)
+
+    #print_dict_readable(dictApoCandidates_1, '\ndictApoCandidates_1')
+    #print_dict_readable(dictApoCandidates_b1, '\ndictApoCandidates_b1')
+    #sys.exit(1)
 
 
     eligible_chains1 = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
@@ -1241,6 +1286,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     apo_holo_dict_H = dict()
     dict_rsd_map_candidates = dict()
     bad_candidates_rsd_map = dict()
+    penultimate_candidates = dict()
     final_candidates = dict()
     candidate_scores = dict()
 
@@ -1536,7 +1582,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f'Binding residues [UNP] grouped by query structure chain:\n{bndgres_pdb_to_unp_chains}')
 
             # Find whether mapped binding residues are present in each candidate chain
-            candidate_hits = examine_cndt_mapped_bs_res(bndgres_pdb_to_unp_chains, query_structchain, dictApoCandidates_b1)# candidates_unp_dict) 
+            candidate_hits = examine_cndt_mapped_bs_res(bndgres_pdb_to_unp_chains, query_structchain, uniprot_segments_dict)# dictApoCandidates_b1)# candidates_unp_dict) 
 
             # Intermediate step to remove negative score when positive is present for the same position
             candidate_metahits = remove_negative_duplicate_cndt_bs_res_pos(candidate_hits)
@@ -1554,6 +1600,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #bad_candidates_rsd_map[query_structchain] = bad_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold)[query_structchain]
             bad_candidates_rsd_map[query_structchain] = bad_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold).get(query_structchain)
             #print(bad_candidates_from_residue_mapping(candidate_scores, bndgrsds_threshold))
+            
+            # Put bad candidates to discarded chains list
+            if bad_candidates_rsd_map.get(query_structchain) is not None:
+                for bad_cndt in bad_candidates_rsd_map[query_structchain]:
+                    discarded_chains.append(bad_cndt + '\tBelow mapped binding residue threshold ['+ str(bndgrsds_threshold) + '%]\n')
 
             #print_dict_readable(candidate_hits,'candidate_hits')
             #print_dict_readable(candidate_metahits, 'candidate_metahits')
@@ -1572,19 +1623,29 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #print_dict_readable(query_chain_states, 'query_chain_states')
     for key, value in query_chain_states.items():
         if value == 'holo':
-            final_candidates[key] = dict_rsd_map_candidates[key]
+            penultimate_candidates[key] = dict_rsd_map_candidates[key]
         elif value == 'apo':
-            final_candidates[key] = dictApoCandidates_1[key]
+            #final_candidates[key] = dictApoCandidates_1[key]
+            penultimate_candidates[key] = sorted(list(dict.fromkeys(dictApoCandidates_1[key]))) # remove duplicates, reorder
 
-    print_dict_readable(final_candidates,'final_candidates')
+
+    # Remove query chains with no candidates here (#TODO move this upstream)
+    for qr_chain in penultimate_candidates:
+        if penultimate_candidates.get(qr_chain) is not None:
+            final_candidates[qr_chain] = penultimate_candidates[qr_chain]
+
+    print_dict_readable(penultimate_candidates,'\nPenultimate candidates')
+    print_dict_readable(dict_rsd_map_candidates,'\ndict_rsd_map_candidates')
+    print_dict_readable(final_candidates,'\nFinal candidates')
     #sys.exit(0)
+
 
     for query_structchain, candidates_structchains in final_candidates.items():
         print('')
         print(f'=== Processing final candidates for query chain {query_structchain} ===')
         #continue
-        if final_candidates[query_structchain] is None: # TODO this has to be skipped upstream to save runtime
-            print('chain has not candidates, skipping..')
+        if final_candidates[query_structchain] is None: # this has to be skipped upstream to save runtime (also avoid possible error in tests)
+            print('chain has no candidates, skipping..')
             continue
 
 
@@ -2090,16 +2151,17 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
+    parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
     #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
-    #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query')  # apo 2, holo 6
+    #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
+    #parser.add_argument('--query', type=str,   default='3CQV A hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='2npq A bog',   help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw a NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
@@ -2109,7 +2171,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
-    parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
 
@@ -2174,7 +2236,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
 
     # Test new UNP overlap computation
-    #parser.add_argument('--query', type=str,   default='7khr B')  # apo 30, holo 4
+    #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
 
     # Basic
@@ -2204,7 +2266,7 @@ def parse_args(argv):
     parser.add_argument('--work_dir',          type=str,   default=None,  help='global root working directory for pre-computed and intermediary data')
     parser.add_argument('--out_dir',           type=str,   default=None,  help='explicitly specified output directory')
     parser.add_argument('--threads',           type=int,   default=4,     help='number of concurrent threads for processing multiple queries')
-    parser.add_argument('--query_parallelism', type=int,   default=2,     help='number of concurrent threads for processing single query')
+    parser.add_argument('--query_parallelism', type=int,   default=1,     help='number of concurrent threads for processing single query')
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=4.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water query ligands only)')

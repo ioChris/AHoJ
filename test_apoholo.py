@@ -102,17 +102,17 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '3fav all zn' ",     expect_apo=2,  expect_holo=0)
         self.tst_query("--query '2hka all c3s' ",    expect_apo=2,  expect_holo=0)  # bovine NPC2 complex with cholesterol sulfate
         self.tst_query("--query '2v57 A,C prl' ",    expect_apo=4,  expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
-        self.tst_query("--query '1fmk A HOH 1011' ", expect_apo=25, expect_holo=3)  # (hard target) Water molecule in the interface of two domains that undergo extensive conformational changes upon ligand binding
-        self.tst_query("--query '1aro P HG 904' ",   expect_apo=19, expect_holo=0)  # fragmented UniProt candidates, to use for testing UNP overlap calculation
+        self.tst_query("--query '1fmk A HOH 1011' ", expect_apo=18, expect_holo=3)  # (hard target) Water molecule in the interface of two domains that undergo extensive conformational changes upon ligand binding (v0.4.6 apo 25)
+        self.tst_query("--query '1aro P HG 904' ",   expect_apo=21, expect_holo=0)  # (previously apo 19) fragmented UniProt candidates, to use for testing UNP overlap calculation
 
     def test_advanced_queries_B(self):
         self.tst_query("--query '1a37 P sep 259' ",     expect_apo=6,  expect_holo=4)  # Phosphoserine on non-uniprot chain (hard target)
         self.tst_query("--query '1a37 P sep' ",         expect_apo=6,  expect_holo=4)  # same without specifying position
-        self.tst_query("--query '1gb1' ",               expect_apo=20, expect_holo=16) # apo NMR structure with solid state NMR candidates, also threw error in previous versions
+        self.tst_query("--query '1gb1' ",               expect_apo=20, expect_holo=16) # v0.4.6 apo 20, holo 16. Apo NMR structure with solid state NMR candidates (threw error in previous versions)
 
     def test_broad_search(self):
-        self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)   # test for reverse search (this is a fully apo structure)
-        self.tst_query("--query '2v0v A,B' ", expect_apo=4, expect_holo=12)
+        self.tst_query("--query '2v0v' ",     expect_apo=8, expect_holo=24)    # test for reverse search (this is a fully apo structure)
+        self.tst_query("--query '2v0v A,B' ", expect_apo=4, expect_holo=12)    #
 
     def test_interface_ligands_search(self):
         self.tst_query("--query '1a73 E mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
