@@ -41,10 +41,14 @@ class T01_Prepare(unittest.TestCase):
     def test_prepare_script(self):
         exit_code = prepare.main([])
         self.assertEqual(0, exit_code)
-        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.txt'))
-        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.txt'))
-        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.bin'))
-        self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.bin'))
+        #self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.txt'))
+        #self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.txt'))
+        #self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_dict.bin'))
+        #self.assertTrue(exists_not_empty(workdir + '/SIFTS/pdb_chain_uniprot_REVERSE_SPnum.bin'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/uniprot_segments_observed_dict.txt'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/uniprot_segments_observed_REVERSE_SPnum.txt'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/uniprot_segments_observed_dict.bin'))
+        self.assertTrue(exists_not_empty(workdir + '/SIFTS/uniprot_segments_observed_REVERSE_SPnum.bin'))
 
 
 class T02_Apoholo(unittest.TestCase):
