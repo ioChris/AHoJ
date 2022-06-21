@@ -3,6 +3,7 @@
 @author: ChrisX
 """
 # Apo-Holo Juxtaposition - AHoJ
+import shutil
 
 '''
 Given a protein structure (PDB code), with optionally specified chain(s), ligand(s) and their position,
@@ -429,6 +430,13 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
         for key, values in apo_holo_dict_H.items():
             for value in values:
                 csv_out.write("%s,%s\n" % (key, ','.join(value.split())))
+
+
+def write_pymol_script(path_results):
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    pymol_file = "load_results_into_PyMOL.pml"
+    # copyfile() should be fast and does not copy permissions and metadata which is what we want
+    shutil.copyfile(f"{script_dir}/{pymol_file}", f"{path_results}/{pymol_file}")
 
 
 def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryResult:
@@ -2035,6 +2043,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     track_progress()
     # end for
+
+    write_pymol_script(path_results)
 
     print('')
 
