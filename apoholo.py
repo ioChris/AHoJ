@@ -1293,6 +1293,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #qBS_centerofmass = dict()
     #qBS_coords = dict()
 
+    # TODO: check if next line is correct and if "progress_processed_candidates += 1" is called everywhere is should
     progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
     progress_processed_candidates = 0
 
