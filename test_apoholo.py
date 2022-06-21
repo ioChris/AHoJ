@@ -140,7 +140,7 @@ class T02_Apoholo(unittest.TestCase):
         res = self.tst_query("--query '3CQV A HEM' --track_progress 1", expect_apo=6, expect_holo=5)
         self.assert_progress(res, expected_content="11/11")
         res = self.tst_query("--query '3fav all zn' --track_progress 1",  expect_apo=2, expect_holo=0)
-        self.assert_progress(res, expected_content="4/4")
+        self.assert_progress(res, expected_content="2/2")  # change expected content from "4/4")
 
 
 if __name__ == '__main__':

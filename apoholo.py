@@ -1293,9 +1293,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #qBS_centerofmass = dict()
     #qBS_coords = dict()
 
-    # TODO: check if next line is correct and if "progress_processed_candidates += 1" is called everywhere is should
-    progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
-    progress_processed_candidates = 0
+    # TODO: check if next line is correct and if "progress_processed_candidates += 1" is called everywhere is should (moved)
+    #progress_total_candidates = sum([len(lst) for lst in dictApoCandidates_1.values()])
+    #progress_total_candidates = sum([len(lst) for lst in final_candidates.values()])
+    #progress_processed_candidates = 0
 
     def track_progress(write_results: bool = False):
         if args.track_progress:
@@ -1634,12 +1635,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for qr_chain in penultimate_candidates:
         if penultimate_candidates.get(qr_chain) is not None:
             final_candidates[qr_chain] = penultimate_candidates[qr_chain]
-
+    
+    #print_dict_readable(dictApoCandidates_1,'\ndictApoCandidates_1')
     print_dict_readable(penultimate_candidates,'\nPenultimate candidates')
     print_dict_readable(dict_rsd_map_candidates,'\ndict_rsd_map_candidates')
     print_dict_readable(final_candidates,'\nFinal candidates')
     #sys.exit(0)
 
+    # Move total progress calculation here
+    progress_total_candidates = sum([len(lst) for lst in final_candidates.values()])
+    progress_processed_candidates = 0
 
     for query_structchain, candidates_structchains in final_candidates.items():
         print('')
@@ -2152,7 +2157,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
+    #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
@@ -2172,7 +2177,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
-    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
 
