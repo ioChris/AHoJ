@@ -866,11 +866,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     own_chains.setdefault(user_structchain, []).append(segment_overlap.split()[0])
             else:
                 cndt_chains_segments.setdefault(segment_overlap.split()[0], []).append(segment_overlap.split()[1] + ' ' + segment_overlap.split()[2])
-        
+
         #print('\nquery_chain_segments\n', query_chain_segments)
         #print_dict_readable(cndt_chains_segments, '\ncndt_chains_segments dict')
         #sys.exit(1)
-        
+
         # Calculate total length of query chain segments
         for query_chain_segment in query_chain_segments:
             seg_start = query_chain_segment.split()[0]
@@ -879,7 +879,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             query_chain_total_unp_length += seg_l
         #print('\ntotal query chain segment length:', query_chain_total_unp_length, '\n')
         #sys.exit(1)
-        
+
         # Calculate percentage of coverage of cndt chains (segments) on total query unp length
         for cndt_chain, cndt_segments in cndt_chains_segments.items():
             #cndt_total_unp_legnth = 0
@@ -983,13 +983,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     uniprot_overlap_merged = merge_fragmented_unp_overlaps(uniprot_overlap_all)
     uniprot_overlap_invrs_merged = merge_fragmented_unp_overlaps(uniprot_overlap_invrs)
 
-    print_dict_readable(uniprot_segments_dict, '\nUniprot_segments_dict')
-
-    print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
-    print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
-
-    print_dict_readable(uniprot_overlap_invrs, '\nUniprot overlap Inverse')
-    print_dict_readable(uniprot_overlap_invrs_merged, '\nUniprot overlap Inverse merged')
+    
 
 
     # Remove query chains with no candidates (or candidates with zero overlap [in Uniprot overlap merged])
@@ -1010,13 +1004,17 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             else:  # Discard
                 discarded_chains.append(cndt_structchain + '\t' + '"0" UNP overlap in observed residues\n')
 
+    #print_dict_readable(uniprot_segments_dict, '\nUniprot_segments_dict')
+    #print_dict_readable(uniprot_overlap_merged, '\nUniprot overlap merged')
+    #print_dict_readable(uniprot_overlap_invrs, '\nUniprot overlap Inverse')
+    #print_dict_readable(uniprot_overlap_invrs_merged, '\nUniprot overlap Inverse merged')
+    #print_dict_readable(uniprot_overlap_all, '\nUniprot overlap all')
+    #print_dict_readable(user_structchains_unp, '\nuser_structchains_unp')
+
     print_dict_readable(qr_uniprot_ids, '\nqr_uniprot_ids')
-    
-    #print_dict_readable(uniprot_overlap_all, '\nuniprot_overlap_all')
     print_dict_readable(dictApoCandidates, '\ndictApoCandidates')
     print_dict_readable(dictApoCandidates_b, '\ndictApoCandidates_b')
     print_dict_readable(own_chains, '\nown_chains dict')
-    #print_dict_readable(user_structchains_unp, '\nuser_structchains_unp')
     #sys.exit(1)
 
     # Print info for detected candidate chains
@@ -1057,9 +1055,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for key, values in dictApoCandidates_b.items():
         dictApoCandidates_b[key] = list(dictApoCandidates_b.fromkeys(values))   # preserves the order of values
     '''
-
-
-    
 
 
     ## Candidate structure evaluation
@@ -1645,9 +1640,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             final_candidates[qr_chain] = penultimate_candidates[qr_chain]
     
     #print_dict_readable(dictApoCandidates_1,'\ndictApoCandidates_1')
-    print_dict_readable(penultimate_candidates,'\nPenultimate candidates')
-    print_dict_readable(dict_rsd_map_candidates,'\ndict_rsd_map_candidates')
-    print_dict_readable(final_candidates,'\nFinal candidates')
+    #print_dict_readable(penultimate_candidates,'\nPenultimate candidates')
+    #print_dict_readable(dict_rsd_map_candidates,'\ndict_rsd_map_candidates')
+    #print_dict_readable(final_candidates,'\nFinal candidates')
     #sys.exit(0)
 
     # Move total progress calculation here
