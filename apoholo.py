@@ -266,7 +266,7 @@ def verify_ligands(ligand_names, pathLIGS):
 def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: bool = False, nonstd_rsds_as_lig_auto: bool = False, d_aa_as_lig_auto: bool = False) -> Query: #
 
     # Parse single line input (line by line mode, 1 structure per line)
-    # If no chains specified, consider all chains
+    # If only first argument specified (structure but no chains), consider all chains
     print(f"Parsing query '{query}'")
     query = query.strip()
     parts = query.split()
@@ -311,6 +311,8 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
 
     if chains == '*' or chains == 'all':
         chains = 'ALL'
+    elif chains == '!' and ligands is not None: # this will only process chain(s) that include query ligand(s)
+        pass
     elif not all(chain.isalnum() for chain in chains.split(',')):  # check that chains are alphanumeric characters
         raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains")
 
@@ -611,7 +613,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Parse chains
-    if not user_chains == 'ALL':
+    if user_chains != 'ALL' and user_chains != '!':
         user_chains = ''.join(user_chains)
         user_chains = user_chains.split(',')
         #user_chains_bundle = '+'.join(user_chains)
@@ -648,8 +650,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Print input info
     print('')
     print('Input structure:\t', struct)
-    print('Input chains:\t\t', user_chains)
-    if not user_chains == 'ALL':
+    if user_chains == "!":
+        print('Input chains:\t\t', 'LIG-ONLY')
+    else:
+        print('Input chains:\t\t', user_chains)
+    if user_chains != 'ALL' and user_chains != '!':
         print('Input structchains:\t', user_structchains)
     if autodetect_lig == 1 and ligand_names is None:
         print('Input ligands:\t\t', 'auto-detect')
@@ -661,9 +666,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Input position:\t\t', position)
     print('Done\n')
 
+    # Toggle "!" chain switch on = examine only chains with defined ligands
+    only_lig_chains = 0
+    if user_chains == "!":
+        only_lig_chains = 1
+
 
     # Finished parsing query and configuring settings, store final settings and define non-ligands here
-    
+
     # Merge user settings and auto settings from parse query here
     if water_as_ligand_auto == 1 or water_as_ligand_usr == 1:
         water_as_ligand = 1
@@ -706,13 +716,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we cannot process them)
     # allow non-UniProt chains, because ligands can be assigned to non-protein chains
-    print(f'\nFinding & verifying query chains {user_chains} by UniProt ID')
+    print(f'\nFinding & verifying query chains [{user_chains}] by UniProt ID')
     discarded_chains = list()   # Discarded chains (format: structchain + '\t' + discard_msg)
     usr_structchains_unverified = list()
     qr_uniprot_ids = dict()
 
-    # Traceback "ALL" / "*" chains from SIFTS file
-    if user_chains == 'ALL':
+
+    # Traceback "ALL" / "*" / "!" chains from SIFTS file
+    if user_chains == 'ALL' or user_chains == "!":
         user_chains = list()
         user_structchains = list()
 
@@ -782,13 +793,112 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 usr_structchains_unverified.append(unverified_structchain)
             cmd.delete('not ' + struct)
 
+
+    # Discard non-ligand query chains (if chains = "!")
+    if only_lig_chains == 1 and ligand_names is not None:
+        print('\nFinding & removing non ligand (assigned or binding) query chains')
+
+        #lig_assigned_chains = dict()
+        #lig_binding_chains = dict()        
+        qr_lig_positions = list()
+
+        assigned_chains = set()
+        binding_chains = set()
+
+        if struct in cmd.get_object_list('all'):  # object names
+            cmd.delete('not ' + struct)
+        else:
+            cmd.reinitialize('everything')
+            cmd.load(struct_path)
+
+        # Select defined ligands in whole structure
+        all_struct_ligs_expr = struct + ' and resn ' + ligand_names_bundle
+        s1lc_as = cmd.select('all_ligs_' + ligand_names_bundle, all_struct_ligs_expr)
+
+        if s1lc_as > 0:
+            myspace_qr_lig_positions = {'qr_ligs': []}
+            cmd.iterate('all_ligs_' + ligand_names_bundle, 'qr_ligs.append(chain+"_"+resn+"_"+resi)', space=myspace_qr_lig_positions)
+
+            # Remove duplicate values from query_lig_positions & Transfer binding sites to global dictionary
+            for key, values in myspace_qr_lig_positions.items():
+                qr_lig_positions = list(myspace_qr_lig_positions.fromkeys(values))
+
+            # Build dict with ligands' assigned chains
+            for lig_position in qr_lig_positions:
+                qr_lig_chain = lig_position.split('_')[0]
+                qr_lig_name = lig_position.split('_')[1]
+                qr_lig_pos = lig_position.split('_')[2]
+                #lig_assigned_chains[lig_position] = qr_lig_chain
+                assigned_chains.add(qr_lig_chain)
+
+                # Find binding chains and build dict
+                lig_sele_expr = struct + ' and chain ' + qr_lig_chain + ' and resn ' + qr_lig_name + ' and resi ' + qr_lig_pos
+                s1lc_b = cmd.select('around_lig_' + lig_position, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + lig_sele_expr)
+                if s1lc_b > 0:
+                    #lig_binding_chains[lig_position] = cmd.get_chains('around_lig_' + lig_position)
+                    binding_chains.update(cmd.get_chains('around_lig_' + lig_position))
+
+            #print('All query lig positions')
+            #print(qr_lig_positions)
+            #print_dict_readable(lig_assigned_chains, '\nlig_assigned_chains')
+            #print_dict_readable(lig_binding_chains, '\nlig_binding_chains')
+            #print(lig_assigned_chains)
+            #print(lig_binding_chains)
+
+            #print('All assigned chains:', sorted(assigned_chains))
+            #print('All binding chains (protein only):', sorted(binding_chains))
+
+            # Check which user structchains are binding the ligand, discard the rest 
+            # Note: if ligand binds multiple protein chains, and assigned chain is among them, keep only assigned chain -else keep any valid UNP chain
+            for user_structchain in user_structchains:
+                usr_chain = user_structchain[4:]
+                if usr_chain not in assigned_chains:
+                    if usr_chain not in binding_chains:
+                        user_structchains.remove(user_structchain)
+                        discarded_chains.append(user_structchain + '\t' + 'Query chain: Non ligand-binding chain ("!")\n')
+                        print(f'[{usr_chain}] not in assigned chains[{assigned_chains}] or binding chains[{binding_chains}]. Removing..')
+
+        '''
+        for ligand, assigned_chain in lig_assigned_chains.items():
+            if assigned_chain in validated_user_chains:
+                good_query_chains.append(assigned_chain)
+            else:
+                for binding_chain in lig_assigned_chains[ligand]:
+                    if binding_chain in validated
+        
+        # Build dict with ligands' binding chains
+        #s1lc = cmd.select('around_all_ligs_' + ligand_names_bundle, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + all_struct_ligs_expr)
+
+        #if s1lc != 0:
+        #all_struct_ligs_atoms = cmd.identify('around_all_ligs_' + ligand_names_bundle)
+        #all_struct_ligs_atoms = '+'.join(str(i) for i in non_protein_lig_atoms)
+        #s1lc_atoms = 'ID ' + all_struct_ligs_atoms
+
+        #s2lc = cmd.select('around_all_ligs_' + ligand_names_bundle, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s1lc_atoms)
+        if s1lc != 0:
+            all_lig_chains = cmd.get_chains('around_all_ligs_' + ligand_names_bundle) # list with all chains of all ligands' surrounding (protein) atoms
+            print('\nAll ligand-binding chains (polymer.protein):', all_lig_chains)
+
+            # Check which user structchains are binding the ligand, discard the rest 
+            # Note: if ligand binds multiple protein chains, and assigned chain is among them, keep only assigned chain
+            for user_structchain in user_structchains:
+                usr_chain = user_structchain[4:]
+                print(f'Checking if {usr_chain} is in {all_lig_chains}')
+                if usr_chain not in all_lig_chains: # this is a non-ligand chain and should be removed
+                    user_structchains.remove(user_structchain)
+                    discarded_chains.append(user_structchain + '\t' + 'Query chain: Non ligand-binding chain ("!")\n')
+                    print(f'[{usr_chain}] not in {all_lig_chains}. Removing chain..')
+        '''
+
+
+
     # Print report of chain verification
     print('\nInput chains verified:\t\t', user_structchains)#, user_chains)
     print('Input chains unverified:\t', usr_structchains_unverified)
     if len(non_protein_lig_chains) > 0:
         print('*Remapped chains:\t\t\t', non_protein_lig_chains)  # TODO unverified chains are not discarded
 
-
+    #sys.exit(1)
     # Capture the full query expression - for query indexing and searching previous jobs
     if autodetect_lig == 0:
         user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
@@ -2153,11 +2263,14 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
-    #parser.add_argument('--query', type=str,   default='1a73 a zn',    help='main input query') # reverse_search=1, OK apo 0, holo 16
-    #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # reverse_search=1, OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 E mg 205',help='main input query') # fail, ligand assigned non-polymer chain
     #parser.add_argument('--query', type=str,   default='1a73 A',       help='main input query') # apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
+    #parser.add_argument('--query', type=str,   default='1a73 * mg',    help='main input query') # one MG is on non-protein chain
+    #parser.add_argument('--query', type=str,   default='1a73 ! mg',    help='main input query') # one MG is on non-protein chain
+    #parser.add_argument('--query', type=str,   default='3vro ! ptr',    help='main input query') # 1 PTR between 2 chains
+    #parser.add_argument('--query', type=str,   default='5aep ! ptr',    help='main input query') # 2 PTRs in same chain non-interface
+    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # 
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2182,7 +2295,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
-    parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    #parser.add_argument('--query', type=str,   default='4V51 ! MG', help='main input query') # too slow for "!"
+    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
 
@@ -2209,6 +2323,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2amq A his 164', help='main input query') # apo 41 (43*), holo 66, job 318 H, Crystal Structure Of SARS_CoV Mpro in Complex with an Inhibitor N3
     #parser.add_argument('--query', type=str,   default='6lu7 A R8H',     help='main input query')
     #parser.add_argument('--query', type=str,   default='7krn A adp',     help='main input query')
+    parser.add_argument('--query', type=str,   default='7krn ! adp',     help='main input query')
 
     # Water
     #parser.add_argument('--query', type=str,   default='1a73 B hoh 509',  help='main input query') # OK apo 6, holo 10 (previous apo 9, holo 7)
