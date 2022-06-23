@@ -15,7 +15,7 @@ i) When looking for apo from holo:
 -Min arguments: PDB code
 -Max arguments: PDB code, chain(s), ligand(s), position
 
-When position is specified, only one ligand can be defined.
+*When position is specified, only one ligand can be defined.
 '''
 
 VERSION = '0.4.7'
