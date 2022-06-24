@@ -76,7 +76,7 @@ class T02_Apoholo(unittest.TestCase):
 
         # Test produced structure files
         if expect_apo + expect_holo > 0:
-            assert count_files(res.result_dir, '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
+            assert count_files(res.result_dir + '/structure_files', '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
 
         return res
 
