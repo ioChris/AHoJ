@@ -582,7 +582,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('Setting up directories')
 
     if os.path.isdir(pathSTRUCTS):
-        print('Structure directory:\t', pathSTRUCTS)
+        print('Structure directory:', pathSTRUCTS)
     else:
         print('Creating structure directory:\t', pathSTRUCTS)
         os.makedirs(pathSTRUCTS)
@@ -887,7 +887,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     #print(f'[{usr_chain}] not in assigned chains[{assigned_chains}] or binding chains[{binding_chains}]. Removing..')
 
             cmd.delete('not ' + struct)
-            print(f'Approved binding chains:\n{good_qr_chains}\nDone')
+            print(f'Approved binding chains:\t{good_qr_chains}')
 
 
     # Print report of chain verification
@@ -1059,9 +1059,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     #print_dict_readable(qr_uniprot_ids, '\nqr_uniprot_ids')
     #print_dict_readable(dictApoCandidates, '\ndictApoCandidates')
-    print_dict_readable(dictApoCandidates_b, 'dictApoCandidates_b (>0% overlap)')
+    #print_dict_readable(dictApoCandidates_b, 'dictApoCandidates_b (>0% overlap)') # Test print
     #print_dict_readable(own_chains, '\nOwn chains dict')
-    #sys.exit(1)
+
 
     # Print info for detected candidate chains
     for qr_structchain, cndt_structchains_w_overlaps in dictApoCandidates_b.items():
@@ -1252,7 +1252,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     eligible_chainsb1 = sum([len(dictApoCandidates_b1[x]) for x in dictApoCandidates_b1 if isinstance(dictApoCandidates_b1[x], list)])
 
     print(f'Candidate chains (over 0% UNP overlap - for UNP residue mapping) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chainsb1}')
-    print(f'Candidate chains (over user-specified [{overlap_threshold}%] UNP overlap - for apo query chains) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains1}')
+    if overlap_threshold != 0: # otherwise no need to re-print
+        print(f'Candidate chains (over user-specified [{overlap_threshold}%] UNP overlap - for apo query chains) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains1}')
     #print_dict_readable(exp_method_dict, '\nexp_method_dict')
     #sys.exit(1)
 
@@ -1615,7 +1616,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #print('Detecting binding residues of query chain (segment, chain, pdb residue number)')
             print(f'Binding residues clustered per ligand:\n{binding_res_dict}')
             #print(f'Bulk unique binding residues [segment, chain, residue, position]:\n{binding_res_unpacked}')
-            print(f'Total/unique binding residues: [{total1}]/[{total2}]')
+            print(f'Total/unique binding residues: [{total1}]/[{total2}]') # TODO these seem to be cummulative binding residues for all previous chains, check it
 
 
 
@@ -1629,7 +1630,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #sys.exit(0)
 
             # Map PDB (binding) residues of query to UniProt residue numbers
-            print('\nMapping query chain binding residues from PDB to UniProt numbering')
+            print('Mapping query chain binding residues from PDB to UniProt numbering')
             bndgres_pdb_to_unp =  map_pdb_resnum_to_uniprot(binding_res_unpacked, pdb_xml)
             #print(bndgres_pdb_to_unp)
 
