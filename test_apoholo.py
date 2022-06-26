@@ -76,7 +76,7 @@ class T02_Apoholo(unittest.TestCase):
 
         # Test produced structure files
         if expect_apo + expect_holo > 0:
-            assert count_files(res.result_dir, '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
+            assert count_files(res.result_dir + '/structure_files', '.cif.gz') >= 1 + expect_apo + expect_holo, "Failed to produce right number of .cif.gz files"
 
         return res
 
@@ -122,6 +122,12 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '1a73 E mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
         self.tst_query("--query '1a73 A mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
         self.tst_query("--query '6XBY A adp,mg' ", expect_apo=7, expect_holo=2)  # ADP is an interface ligand on non-query chain
+
+    def test_lig_bndng_chains_parsing(self):
+        self.tst_query("--query '1a73 ! MG' ",    expect_apo=8, expect_holo=24) # "!" means that only query chains that bind the ligand(s) will be considered for the search
+        self.tst_query("--query '3vro ! PTR' ",   expect_apo=7, expect_holo=0)
+        self.tst_query("--query '3n7y ! PTR' ",   expect_apo=21, expect_holo=270)
+        self.tst_query("--query '1a73 ! MG,ZN' ", expect_apo=0, expect_holo=32)
 
     def test_expected_failures(self):
         self.tst_main_fail("--invalid_param ")

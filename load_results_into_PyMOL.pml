@@ -19,7 +19,7 @@ ligands_file = 'ligands.csv'
 # Find query file & struct
 query_file = None
 try:
-    for filename in glob.glob('query_*'):
+    for filename in glob.glob('structure_files/query_*'):
         query_file = filename
         query_object = query_file[:10]
         query_struct = query_file[6:10]
@@ -37,7 +37,7 @@ else:
     print('Ligands file [ligands.csv] not found')
 
 # Get all structure filenames in the results folder
-all_files = glob.glob('*.cif.gz')
+all_files = glob.glob('structure_files/*.cif.gz')
 
 # Put ligands into dict (struct:positions)
 if ligands_list:
@@ -70,7 +70,7 @@ elif os.path.exists(ligands_file) and not ligands_list:
 # Load all structures into PyMOL session
 for file in all_files:
     cmd.load(file)
-    object_name = file[:-7]
+    object_name = file[:-7].split('\\')[1]
     lig_positions = None
 
     if ligands_list: # If ligands file was found and was not empty
