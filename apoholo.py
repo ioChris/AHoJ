@@ -1104,7 +1104,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # End script if there are 0 candidate chains OR no UniProt is assigned to the query structure
     if total_chains == 0:
         print('\n=== Ending program ===')
-        sys.exit(1)
+        sys.exit(0)  # Exit without error. Search was successful but there are no candidates
 
     '''
     # Remove duplicate values from dictApoCandidates & dictApoCandidates_b
@@ -2238,7 +2238,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',    help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',    help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',    help='main input query') 
-    parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
+    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2337,6 +2337,7 @@ def parse_args(argv):
     # Test new UNP overlap computation
     #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
+    parser.add_argument('--query', type=str,   default='1cc7 ! PTR',  help='main input query')
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
