@@ -820,7 +820,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # If "!" operator used and ligand is defined but not detected, exit
     # If "!" and no ligands defined, detect and consider only chains with ligands #TODO
     if only_lig_chains == 1 and ligand_names is not None:# and len(user_structchains) > 1: 
-        # Run this even for 1 chain and exit if ligand(s) not there
+        # Run this even for 1 chain and exit if defined ligand(s) not present
         print('\nFinding & removing non ligand-binding query chains')
 
         #if len(user_structchains) == 1:    print('Only UniProt chain is available, skipping process..\nDone')
@@ -2302,7 +2302,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1pkz A tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
     #parser.add_argument('--query', type=str,   default='4hxj A,B',        help='main input query')
-    #parser.add_argument('--query', type=str,   default='2v7d B hoh 2026',   help='main input query')
+    #parser.add_argument('--query', type=str,   default='2v7d B hoh 2026', help='main input query')
 
     # Non standard residues
     #parser.add_argument('--query', type=str,   default='6sut A tpo',     help='main input query') # OK apo 0, holo 3
