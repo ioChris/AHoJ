@@ -171,7 +171,7 @@ def wrong_input_error():
     print('\n=== ERROR: Wrong input format ===')
     print('-use a whitespace character to separate input arguments\n-chains are case-sensitive')
     print('\nInput format structure:\n<pdb_id> <chain> <ligand/residue> <position> or\n<pdb_id> <chains> <ligands> or\n<pdb_id> <chains> or\n<pdb_id> <ligands> or\n<pdb_id>')
-    print('\nInput examples:\n"3fav A ZN 101"\n"3fav A,B ZN"\n"3fav * ZN"\n"3fav ALL ZN"\n"3fav"\n')
+    print('\nInput examples:\n"3fav A ZN 101"\n"3fav A,B ZN"\n"3fav ! ZN"\n"3fav * ZN"\n"3fav ALL ZN"\n"3fav"\n')
     sys.exit(1)  # exit with error
 
 
@@ -314,7 +314,7 @@ def parse_query(query: str, autodetect_lig: bool = False, water_as_ligand_auto: 
     elif chains == '!' and ligands is not None: # this will only process chain(s) that include query ligand(s)
         pass
     elif not all(chain.isalnum() for chain in chains.split(',')):  # check that chains are alphanumeric characters
-        raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains")
+        raise ValueError(f"Invalid query '{query}': only alphanumeric characters allowed as chains or '!/*'")
 
 
     # If ligand is HOH or std residue or non-std residue,  make sure that:
@@ -816,8 +816,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             cmd.delete('not ' + struct)
 
 
-    # Discard non-ligand query chains (if chains = "!")
-    if only_lig_chains == 1 and ligand_names is not None and len(user_structchains) > 1:
+    ## Handle"!" chain operator: Detect ligand chains and discard non-ligand query chains
+    # If "!" operator used and ligand is defined but not detected, exit
+    # If "!" and no ligands defined, detect and consider only chains with ligands #TODO
+    if only_lig_chains == 1 and ligand_names is not None:# and len(user_structchains) > 1: 
+        # Run this even for 1 chain and exit if ligand(s) not there
         print('\nFinding & removing non ligand-binding query chains')
 
         #if len(user_structchains) == 1:    print('Only UniProt chain is available, skipping process..\nDone')
@@ -857,6 +860,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     lig_bndng_prot_chains[lig_position] = cmd.get_chains('around_lig_' + lig_position)
                     #binding_chains.update(cmd.get_chains('around_lig_' + lig_position))
 
+            # If none of the query ligands have (protein) binding residues, exit
+            if len(lig_bndng_prot_chains) == 0:
+                print(f'\nProtein binding residues not detected for query ligand(s) {ligand_names} on any query chain. Exiting..')
+                sys.exit(1)
+
             #print(f'All query lig positions\n{qr_lig_positions}')
             #print_dict_readable(lig_bndng_prot_chains, 'Ligand assigned (left, one per ligand) and binding protein chains (right, may be multiple)')
 
@@ -888,6 +896,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             cmd.delete('not ' + struct)
             print(f'Approved binding chains:\t{good_qr_chains}')
+
+        else: # Query ligand not detected (exit?)
+            print(f'\nQuery ligand(s) {ligand_names} not detected on any query chain. Exiting..')
+            sys.exit(1)
 
 
     # Print report of chain verification
@@ -2109,6 +2121,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Universal results
+    
+    # Remove duplicate discard msgs from dict "discarded_chains" 
+    for key, value in discarded_chains.items():
+        discarded_chains[key] = list(discarded_chains.fromkeys(value))
     write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
     write_discarded_chains(discarded_chains, path_results)
 
@@ -2221,7 +2237,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 ! mg,zn',    help='main input query') # apo
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',    help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',    help='main input query') # 2 PTRs in same chain non-interface
-    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
+    #parser.add_argument('--query', type=str,   default='5aep ! hem',    help='main input query') 
+    parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2237,6 +2254,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='3CQV A hem', help='main input query') # OK apo 6, holo 5
+    #parser.add_argument('--query', type=str,   default='3CQV ! hem', help='main input query') #
     #parser.add_argument('--query', type=str,   default='2npq A bog',   help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw A NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
@@ -2293,7 +2311,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut A tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a37 P sep 259', help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1]
-    parser.add_argument('--query', type=str,   default='1a37 ! sep', help='main input query') #
+    #parser.add_argument('--query', type=str,   default='1a37 ! sep', help='main input query') #
+    #parser.add_argument('--query', type=str,   default='1a37 + sep', help='main input query') # Wrong input format
     #parser.add_argument('--query', type=str,   default='1a37 P sep',     help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1], without now also works
     #parser.add_argument('--query', type=str,   default='1apm E sep',     help='main input query') # OK apo 5, holo 76
     #parser.add_argument('--query', type=str,   default='1apm E sep,tpo', help='main input query') # OK apo 2, holo 79
