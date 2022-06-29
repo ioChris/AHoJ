@@ -2332,12 +2332,12 @@ def parse_args(argv):
     # Non-UniProt query structure (7MJB)
     #parser.add_argument('--query', type=str,   default='7mjb',       help='main input query')
     #parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
-    #parser.add_argument('--query', type=str,   default='5IBO ! DKA', help='main input query')  # 
+    parser.add_argument('--query', type=str,   default='5IBO ! DKA', help='main input query')  # 
 
     # Test new UNP overlap computation
     #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
-    parser.add_argument('--query', type=str,   default='1cc7 ! PTR',  help='main input query')
+    #parser.add_argument('--query', type=str,   default='1cc7 ! PTR',  help='main input query')
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
