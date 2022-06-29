@@ -414,7 +414,7 @@ def write_results_apo_csv(apo_holo_dict, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_apo.csv'
-    header = "#query_chain, apo_chain, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
+    header = "#query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         for key, values in apo_holo_dict.items():
@@ -426,7 +426,7 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_holo.csv'
-    header = "#query_chain, apo_chain, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
+    header = "#query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         for key, values in apo_holo_dict_H.items():
@@ -1174,7 +1174,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if method == '?':
                         if line.split()[0] == '_exptl.method' and line.split("'")[1] is not None:
                             method = line.split("'")[1]  # capture experimental method #method = ' '.join(line.split()[1:])
-                            exp_method_dict[apo_candidate_struct] = method
+                            exp_method_dict[apo_candidate_struct] = method.replace(' ', '_') # delete whitespace
                             if method == 'SOLUTION NMR':  # break fast if method is 'NMR'
                                 method = '\t ' + method + '\t\t'
                                 break
@@ -1184,10 +1184,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             continue
                         if method == '?' and line.split()[0] == '_refine.pdbx_refine_id': # second attempt to get method [+EPR]
                             method = line.split("'")[1] + '*'
-                            exp_method_dict[apo_candidate_struct] = method
+                            exp_method_dict[apo_candidate_struct] = method.replace(' ', '_') # delete whitespace
                         if method == '?' and line.split()[0] == '_refine_hist.pdbx_refine_id': # third attempt to get method [+neutron diffraction]
                             method = line.split("'")[1] + '**'
-                            exp_method_dict[apo_candidate_struct] = method
+                            exp_method_dict[apo_candidate_struct] = method.replace(' ', '_') # delete whitespace
 
                     elif line.split()[0] == '_refine.ls_d_res_high' and float(line.split()[1]):
                         resolution = round(float(line.split()[1]), 2)  # X-ray highest resolution
@@ -1927,7 +1927,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #if found_cndt_bs != 0: # Condition to keep/discard candidate # TODO decide whether to keep or not
 
                 ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
-                add_res = ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
+                add_res = ' ' + exp_method_dict.get(candidate_struct, '-') + ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
                 append_expression = candidate_structchain + add_res + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
 
                 # Save apo result
@@ -2022,7 +2022,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 print(f'[UNP seq. overlap] Percentage of overall UniProt sequence overlap with query chain: [{uniprot_overlap_merged[candidate_structchain][0].split()[1]}]')
                 print(f'*found ligands: {found_ligands_r}')
 
-                add_res = ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
+                add_res = ' ' + exp_method_dict.get(candidate_struct, '-') + ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
                 # Save holo result
                 if len(found_ligands_r) > 0:
                     ligands_str = join_ligands(found_ligands_r)
@@ -2238,7 +2238,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',    help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',    help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',    help='main input query') 
-    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
+    parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2332,7 +2332,7 @@ def parse_args(argv):
     # Non-UniProt query structure (7MJB)
     #parser.add_argument('--query', type=str,   default='7mjb',       help='main input query')
     #parser.add_argument('--query', type=str,   default='5IBO * DKA', help='main input query')  # This is in UniProt, same sequence to previous one (we don't find it)
-    parser.add_argument('--query', type=str,   default='5IBO ! DKA', help='main input query')  # 
+    #parser.add_argument('--query', type=str,   default='5IBO ! DKA', help='main input query')  # 
 
     # Test new UNP overlap computation
     #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)

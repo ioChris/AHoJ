@@ -126,7 +126,7 @@ class T02_Apoholo(unittest.TestCase):
     def test_lig_bndng_chains_parsing(self):
         self.tst_query("--query '1a73 ! MG' ",    expect_apo=8, expect_holo=24)     # "!" means that only query chains that bind the ligand(s) will be considered for the search
         self.tst_query("--query '3vro ! PTR' ",   expect_apo=7, expect_holo=0)
-        self.tst_query("--query '3n7y ! PTR' ",   expect_apo=21, expect_holo=270)   # local-only error (python 3.8.8): total number of cif files is less than total apo + holo results
+        self.tst_query("--query '3n7y ! PTR' ",   expect_apo=21, expect_holo=270)   # local-only error (python 3.9.9): total number of cif files is less than total apo + holo results
         self.tst_query("--query '1a73 ! MG,ZN' ", expect_apo=0, expect_holo=32)
 
     def test_expected_failures(self):
