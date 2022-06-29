@@ -231,7 +231,7 @@ python apoholo.py --query '1a73 A,B ZN'
 # consider ZN ligands in all chains of 1a73
 python apoholo.py --query '1a73 * ZN'
 # or
-python apoholo.py --query '1a73 ! ZN'   # "!" is preferred to "*" as it will only process ligand-binding query chain(s)
+python apoholo.py --query '1a73 ! ZN'   # "!" is preferred to "*" as it only processes ligand-binding query chain(s)
 
 # find and consider all ligands in all chains of 1a73
 python apoholo.py --query '1a73'
