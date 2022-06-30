@@ -414,7 +414,7 @@ def write_results_apo_csv(apo_holo_dict, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_apo.csv'
-    header = "#query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
+    header = "query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         for key, values in apo_holo_dict.items():
@@ -426,7 +426,7 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_holo.csv'
-    header = "#query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
+    header = "query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         for key, values in apo_holo_dict_H.items():
