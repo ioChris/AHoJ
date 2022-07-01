@@ -730,7 +730,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Find & VERIFY input chains by UniProt ID (if they don't exist in uniprot, we cannot process them)
     # allow non-UniProt chains, because ligands can be assigned to non-protein chains
-    print(f'\nFinding & verifying query chains ["{user_chains}"] by UniProt ID')
+    print(f'\nFinding & verifying query chains "{user_chains}" by UniProt ID')
     discarded_chains = dict()   # Discarded chains (format: structchain + '\t' + discard_msg)
     usr_structchains_unverified = list()
     qr_uniprot_ids = dict()
@@ -1738,6 +1738,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             apo_holo_dict_instance = dict()
             apo_holo_dict_H_instance = dict()
             cndt_lig_positions_instance = dict()
+            chain_stdout = list()
 
             nonlocal progress_processed_candidates
             progress_processed_candidates += 1
@@ -1814,9 +1815,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     aln_tm_i = round(aln_tm_i, 3)
 
                 # Print alignment scores from TM-align
-                print(f'\n{candidate_structchain} -> {query_structchain}')
-                print(f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]')
-                #print('aln_tm_scores:', aln_tm_scores)
+                #print(f'\n{candidate_structchain} -> {query_structchain}')
+                #print(f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]')
+                # Pass stdout to list
+                so1 = f'\n{candidate_structchain} -> {query_structchain}'
+                so2 = f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]'
+                chain_stdout.append(so1 + '\n' + so2)
+                #print('\n'.join(chain_stdout))
+                #sys.exit(0)
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported? - TM-align visualized, TM-scores & RMSD reported from the same TM alignment
                 candidate_result.rmsd = aln_rms
@@ -1824,10 +1830,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 candidate_result.tm_score_i = aln_tm_i
 
             except Exception as ex:
-                print(f'\n{candidate_structchain} -> {query_structchain}')
-                print('*Exception: ', ex)
-                print('Alignment RMSD/TM score: ERROR')
-                print('*poor alignment (error), discarding chain ', candidate_structchain)
+                #print(f'\n{candidate_structchain} -> {query_structchain}')
+                #print('*Exception: ', ex)
+                #print('Alignment RMSD/TM score: ERROR')
+                #print('*poor alignment (error), discarding chain ', candidate_structchain)
+                soe1 = f'\n{candidate_structchain} -> {query_structchain}'
+                soe2 = '*Exception: ', ex
+                soe3 = 'Alignment RMSD/TM score: ERROR'
+                soe4 = '*poor alignment (error), discarding chain ', candidate_structchain
+                chain_stdout.append(soe1 + '\n' + soe2 + '\n' + soe3 + '\n' + soe4)
+                print('\n'.join(chain_stdout))
 
                 discard_msg = 'Alignment error'
                 discarded_chains.setdefault(candidate_structchain, []).append(discard_msg)
@@ -1839,7 +1851,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if aln_tm != '-':
 
                 if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
-                    print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
+                    #print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
+                    so3 = '*poor alignment (below threshold), discarding chain ', candidate_structchain
+                    chain_stdout.append(so3)
+                    print('\n'.join(chain_stdout))
 
                     #discarded_chains.append(candidate_structchain + '\t' + 'Poor alignment (below threshold) [RMSD/TM/iTM]: ' + str(aln_rms) +'/'+ str(aln_tm) +'/'+ str(aln_tm_i) + '\n')
                     discard_msg = 'Poor alignment (below threshold) [RMSD/TM/iTM]: ' + str(aln_rms) +'/'+ str(aln_tm) +'/'+ str(aln_tm_i)
@@ -1896,8 +1911,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     for key, value in myspace_cndt.items():
                         myspace_cndt[key] = list(myspace_cndt.fromkeys(value))   # preserves the order of values - better than set()
 
-                    #print('scanning ligand:', ligand)
-                    print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
+                    ##print('scanning ligand:', ligand)
+                    #print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
+                    so4 = f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}'
+                    chain_stdout.append(so4)
 
                     # Find which ligands are present in query by matching their names (without set)
                     for cndt_position in myspace_cndt['cndt_positions']:
@@ -1918,13 +1935,19 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
                 # Print verdict for chain & save as ".cif.gz"
-                print('\t\t\t\t\t\t\t\t*** Chain evaluation ***')
-                print(f'[UNP res. mapping]\tQuery chain binding residues mapped to candidate chain\t[{bndg_rsd_scores}]')
-                print(f'[UNP seq. overlap]\tOverall UniProt sequence overlap with query chain\t\t\t[{uniprot_overlap_merged[candidate_structchain][0].split()[1]}%]')
-                print(f'[Superposition]\t\tQuery binding sites occupied by candidate residues\t\t[{found_cndt_bs}/{len(query_lig_positions[query_structchain])} {found_cndt_bs_ratio}%]')
-                print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t verified query ligands: {query_lig_names}\t found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
+                #print('\t\t\t\t\t\t\t\t*** Chain evaluation ***')
+                #print(f'[Rsd. mapping]\t\tQuery chain binding residues mapped to candidate chain\t[{bndg_rsd_scores}]')
+                #print(f'[Seq. overlap]\t\tOverall UniProt sequence overlap with query chain\t\t\t[{uniprot_overlap_merged[candidate_structchain][0].split()[1]}%]')
+                #print(f'[Superposition]\t\tQuery binding sites occupied by candidate residues\t\t[{found_cndt_bs}/{len(query_lig_positions[query_structchain])} {found_cndt_bs_ratio}%]')
+                #print(f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t verified query ligands: {query_lig_names}\n*found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}')
+                so5 = '\t\t\t\t\t\t\t\t*** Chain evaluation ***'
+                so6 = f'[Rsd. mapping]\t\tQuery chain binding residues mapped to candidate chain\t[{bndg_rsd_scores}]'
+                so7 = f'[Seq. overlap]\t\tOverall UniProt sequence overlap with query chain\t\t\t[{uniprot_overlap_merged[candidate_structchain][0].split()[1]}%]'
+                so8 = f'[Superposition]\t\tQuery binding sites occupied by candidate residues\t\t[{found_cndt_bs}/{len(query_lig_positions[query_structchain])} {found_cndt_bs_ratio}%]'
+                so9 = f'*specified query ligand(s)/position: {ligand_names}/[{position}]\t verified query ligands: {query_lig_names}\n*found query ligands: {found_ligands}\t found non-query ligands: {found_ligands_xtra}'
+                chain_stdout.append(so5 + '\n' + so6 + '\n' + so7 + '\n' + so8 + '\n' + so9)
+                #print('\n'.join(chain_stdout))
 
-                #if found_cndt_bs != 0: # Condition to keep/discard candidate # TODO decide whether to keep or not
 
                 ligands_str = join_ligands(found_ligands.union(found_ligands_xtra))
                 add_res = ' ' + exp_method_dict.get(candidate_struct, '-') + ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
@@ -1934,9 +1957,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 if lig_free_sites == 1 and len(found_ligands_xtra) == 0 and len(found_ligands) == 0 or lig_free_sites == 0 and len(found_ligands) == 0:
                     apo_holo_dict_instance.setdefault(query_structchain, []).append(append_expression)
                     if len(found_ligands_xtra) > 0:
-                        print('APO*')
+                        #print('APO*')
+                        so10 = 'APO*'
+                        chain_stdout.append(so10)
                     else:
-                        print('APO')
+                        #print('APO')
+                        so10 = 'APO'
+                        chain_stdout.append(so10)
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
@@ -1946,9 +1973,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 else:
                     apo_holo_dict_H_instance.setdefault(query_structchain, []).append(append_expression)
                     if len(found_ligands) > 0:
-                        print('HOLO')
+                        #print('HOLO')
+                        so10 = 'HOLO'
+                        chain_stdout.append(so10)
                     else:
-                        print('HOLO*')
+                        #print('HOLO*')
+                        so10 = 'HOLO*'
+                        chain_stdout.append(so10)
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
@@ -1959,7 +1990,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     #discarded_chains.append(candidate_structchain + '\t' + 'no overlapping binding sites' + '\n')
                     #candidate_result.discard_reason = "no overlapping binding sites"
                     #return candidate_result
-
 
 
             # Apo query
@@ -1988,7 +2018,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 # Remove duplicate values from myspace_r
                 for key, value in myspace_r.items():
                     myspace_r[key] = list(myspace_r.fromkeys(value))   # preserves the order of values
-                print(f'-candidate ligands found: {myspace_r["r_positions"]}') # use set to remove redundant positions
+                #print(f'-candidate ligands found: {myspace_r["r_positions"]}') # use set to remove redundant positions
+                so11 = f'-candidate ligands found: {myspace_r["r_positions"]}'
+                chain_stdout.append(so11)
 
                 # check if binding sites of cndt ligands exist in query
                 for ligand in myspace_r['r_positions']:
@@ -2004,7 +2036,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     cndt_bs = cmd.select('clig_on_qbs_' + ligand_, s1qchain + ' near_to ' + lig_scan_radius + ' of ' + s2cndtlig)
 
                     if cndt_bs == 0:
-                        print('*ligand validity: [invalid]\nno query chain residues around candidate ligand superposition, ignoring ligand')
+                        #print('*ligand validity: [invalid]\nno query chain residues around candidate ligand superposition, ignoring ligand')
+                        so12 = '*ligand validity: [invalid]\nno query chain residues around candidate ligand superposition, ignoring ligand'
+                        chain_stdout.append(so12)
                         continue # skip this ligand
                     else:
                         #print('*ligand validity: [valid]')  # query residues present around candidate ligand superposition
@@ -2018,9 +2052,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
                 # Print verdict for chain & save it as ".cif.gz"
-                print('\t\t\t\t\t\t\t\t*** Chain evaluation ***')
-                print(f'[UNP seq. overlap] Percentage of overall UniProt sequence overlap with query chain: [{uniprot_overlap_merged[candidate_structchain][0].split()[1]}]')
-                print(f'*found ligands: {found_ligands_r}')
+                #print('\t\t\t\t\t\t\t\t*** Chain evaluation ***')
+                #print(f'[Seq. overlap]\t\tPercentage of overall UniProt sequence overlap with query chain: [{uniprot_overlap_merged[candidate_structchain][0].split()[1]}]')
+                #print(f'*found ligands: {found_ligands_r}')
+                so13 = '\t\t\t\t\t\t\t\t*** Chain evaluation ***'
+                so14 = f'[Seq. overlap]\t\tOverall UniProt sequence overlap with query chain\t\t\t[{uniprot_overlap_merged[candidate_structchain][0].split()[1]}%]'
+                so15 = f'*found ligands: {found_ligands_r}'
+                chain_stdout.append(so13 + '\n' + so14 + '\n' + so15)
 
                 add_res = ' ' + exp_method_dict.get(candidate_struct, '-') + ' ' + resolution_dict.get(candidate_struct, '-') + ' ' + r_free_dict.get(candidate_struct, '-') + ' '
                 # Save holo result
@@ -2028,7 +2066,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     ligands_str = join_ligands(found_ligands_r)
                     append_expression = candidate_structchain + add_res + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
                     apo_holo_dict_H_instance.setdefault(query_structchain, []).append(append_expression)
-                    print('HOLO')
+                    #print('HOLO')
+                    so16 = 'HOLO'
+                    chain_stdout.append(so16)
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
@@ -2040,15 +2080,20 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     append_expression = candidate_structchain + add_res + uniprot_overlap_merged[candidate_structchain][0].split()[1] + ' ' + bndg_rsd_ratio + ' ' + bndg_rsd_percent + ' ' + str(aln_rms) + ' ' + str(aln_tm) + ' ' + str(aln_tm_i) + ' ' + ligands_str
                     apo_holo_dict_instance.setdefault(query_structchain, []).append(append_expression)
                     if len(found_ligands_xtra) > 0:
-                        print('APO*')
+                        #print('APO*')
+                        so16 = 'APO*'
+                        chain_stdout.append(so16)
                     else:
-                        print('APO')
+                        #print('APO')
+                        so16 = 'APO'
+                        chain_stdout.append(so16)
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct)  # save query structure
                         cmd.save(path_results_structs + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
 
             # end apo/holo candidate verdict
+            print('\n'.join(chain_stdout))
 
 
             candidate_result.apo_holo_dict_instance = apo_holo_dict_instance
@@ -2234,11 +2279,11 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * mg',    help='main input query') # one MG is on non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 ! mg',    help='main input query') # apo 8, holo 24. one MG is on non-protein chain
-    #parser.add_argument('--query', type=str,   default='1a73 ! mg,zn',    help='main input query') # apo
-    #parser.add_argument('--query', type=str,   default='3vro ! ptr',    help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
-    #parser.add_argument('--query', type=str,   default='5aep ! ptr',    help='main input query') # 2 PTRs in same chain non-interface
-    #parser.add_argument('--query', type=str,   default='5aep ! hem',    help='main input query') 
-    parser.add_argument('--query', type=str,   default='3n7y ! ptr',    help='main input query') # apo 21, holo 270. good test for "!"
+    #parser.add_argument('--query', type=str,   default='1a73 ! mg,zn', help='main input query') # apo
+    #parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
+    #parser.add_argument('--query', type=str,   default='5aep ! ptr',   help='main input query') # 2 PTRs in same chain non-interface
+    #parser.add_argument('--query', type=str,   default='5aep ! hem',   help='main input query') 
+    parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
