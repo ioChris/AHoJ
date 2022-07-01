@@ -582,24 +582,24 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print('Setting up directories')
 
     if os.path.isdir(pathSTRUCTS):
-        print('Structure directory:', pathSTRUCTS)
+        print(f'Structure directory:\t{pathSTRUCTS}')
     else:
-        print('Creating structure directory:\t', pathSTRUCTS)
+        print(f'Creating structure directory:\t{pathSTRUCTS}')
         os.makedirs(pathSTRUCTS)
     if os.path.isdir(pathLIGS):
-        print('Ligands directory:\t', pathLIGS)
+        print(f'Ligands directory:\t\t{pathLIGS}')
     else:
-        print('Creating ligands directory:\t', pathLIGS)
+        print(f'Creating ligands directory:\t\t{pathLIGS}')
         os.makedirs(pathLIGS)
     if os.path.isdir(pathQRS):
-        print('Queries directory:\t', pathQRS)
+        print(f'Queries directory:\t\t{pathQRS}')
     else:
-        print('Creating queries directory:\t', pathQRS)
+        print(f'Creating queries directory:\t\t{pathQRS}')
         os.makedirs(pathQRS)
     if os.path.isdir(pathXML):
-        print('XML file directory:\t', pathXML)
+        print(f'XML file directory:\t\t{pathXML}')
     else:
-        print('Creating XML file directory:\t', pathXML)
+        print(f'Creating XML file directory:\t\t{pathXML}')
         os.makedirs(pathXML)
     print('Done\n')
 
@@ -1821,8 +1821,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 so1 = f'\n{candidate_structchain} -> {query_structchain}'
                 so2 = f'Alignment scores (RMSD/TM-score/inverse TM-score): [{aln_rms} / {aln_tm} / {aln_tm_i}]'
                 chain_stdout.append(so1 + '\n' + so2)
-                #print('\n'.join(chain_stdout))
-                #sys.exit(0)
+
 
                 # TODO(rdk): which alignment is visualized? And what numbers are reported? - TM-align visualized, TM-scores & RMSD reported from the same TM alignment
                 candidate_result.rmsd = aln_rms
@@ -1835,9 +1834,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 #print('Alignment RMSD/TM score: ERROR')
                 #print('*poor alignment (error), discarding chain ', candidate_structchain)
                 soe1 = f'\n{candidate_structchain} -> {query_structchain}'
-                soe2 = '*Exception: ', ex
+                soe2 = f'*Exception: {ex}'
                 soe3 = 'Alignment RMSD/TM score: ERROR'
-                soe4 = '*poor alignment (error), discarding chain ', candidate_structchain
+                soe4 = f'*poor alignment (error), discarding chain {candidate_structchain}'
                 chain_stdout.append(soe1 + '\n' + soe2 + '\n' + soe3 + '\n' + soe4)
                 print('\n'.join(chain_stdout))
 
@@ -1852,7 +1851,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                 if aln_tm < min_tmscore and aln_tm_i < min_tmscore:
                     #print('*poor alignment (below threshold), discarding chain ', candidate_structchain)
-                    so3 = f'*poor alignment (below threshold), discarding chain\t{candidate_structchain}'
+                    so3 = f'*poor alignment (below threshold), discarding chain {candidate_structchain}'
                     chain_stdout.append(so3)
                     print('\n'.join(chain_stdout))
 
@@ -1959,11 +1958,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if len(found_ligands_xtra) > 0:
                         #print('APO*')
                         so10 = 'APO*'
-                        chain_stdout.append(so10)
                     else:
                         #print('APO')
                         so10 = 'APO'
-                        chain_stdout.append(so10)
+                    chain_stdout.append(so10)
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
@@ -1975,11 +1973,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if len(found_ligands) > 0:
                         #print('HOLO')
                         so10 = 'HOLO'
-                        chain_stdout.append(so10)
                     else:
                         #print('HOLO*')
                         so10 = 'HOLO*'
-                        chain_stdout.append(so10)
+                    chain_stdout.append(so10)
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
@@ -2068,7 +2065,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     apo_holo_dict_H_instance.setdefault(query_structchain, []).append(append_expression)
                     #print('HOLO')
                     so16 = 'HOLO'
-                    chain_stdout.append(so16)
+                    #chain_stdout.append(so16)
                     if save_separate == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
@@ -2082,18 +2079,19 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     if len(found_ligands_xtra) > 0:
                         #print('APO*')
                         so16 = 'APO*'
-                        chain_stdout.append(so16)
+                        #chain_stdout.append(so16)
                     else:
                         #print('APO')
                         so16 = 'APO'
-                        chain_stdout.append(so16)
+                        #chain_stdout.append(so16)
                     if save_separate == 1 and save_oppst == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct)  # save query structure
                         cmd.save(path_results_structs + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
+                chain_stdout.append(so16)
 
             # end apo/holo candidate verdict
-            print('\n'.join(chain_stdout))
+            print('\n'.join(chain_stdout))  # Print stdout for candidate chain
 
 
             candidate_result.apo_holo_dict_instance = apo_holo_dict_instance
