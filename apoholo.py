@@ -426,7 +426,7 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
 
     # Write CSV file
     filename_csv = path_results + '/results_holo.csv'
-    header = "query_chain, apo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
+    header = "query_chain, holo_chain, Exp.method, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands\n"
     with open(filename_csv, 'w') as csv_out:
         csv_out.write(header)
         for key, values in apo_holo_dict_H.items():
@@ -2278,10 +2278,10 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * mg',    help='main input query') # one MG is on non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 ! mg',    help='main input query') # apo 8, holo 24. one MG is on non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 ! mg,zn', help='main input query') # apo
-    parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
+    #parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',   help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',   help='main input query') 
-    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
+    parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2354,8 +2354,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut A tpo 285', help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a37 P sep 259', help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1]
-    #parser.add_argument('--query', type=str,   default='1a37 ! sep', help='main input query') #
-    #parser.add_argument('--query', type=str,   default='1a37 + sep', help='main input query') # Wrong input format
+    #parser.add_argument('--query', type=str,   default='1a37 ! sep',     help='main input query') #
+    #parser.add_argument('--query', type=str,   default='1a37 + sep',     help='main input query') # Wrong input format
     #parser.add_argument('--query', type=str,   default='1a37 P sep',     help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1], without now also works
     #parser.add_argument('--query', type=str,   default='1apm E sep',     help='main input query') # OK apo 5, holo 76
     #parser.add_argument('--query', type=str,   default='1apm E sep,tpo', help='main input query') # OK apo 2, holo 79
@@ -2369,8 +2369,8 @@ def parse_args(argv):
     # D amino acids
     #parser.add_argument('--query', type=str,   default='148l S DAL 170', help='main input query') # not working, not registered as a ligand, chain S is non-UniProt, no other UniProt chains around
     #parser.add_argument('--query', type=str,   default='148l E ARG 137', help='main input query') # (750 structures) does not seem to pick up DAL as ligand even with setting turned on
-    #parser.add_argument('--query', type=str,   default='1cfa', help='main input query') # works and gives results
-    #parser.add_argument('--query', type=str,   default='1cfa B dar', help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
+    #parser.add_argument('--query', type=str,   default='1cfa',           help='main input query') # works and gives results
+    #parser.add_argument('--query', type=str,   default='1cfa B dar',     help='main input query') # works after handling exception @ line 922 (many negative unp overlaps?)
 
     # Non-UniProt query structure (7MJB)
     #parser.add_argument('--query', type=str,   default='7mjb',       help='main input query')
@@ -2380,7 +2380,7 @@ def parse_args(argv):
     # Test new UNP overlap computation
     #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
-    #parser.add_argument('--query', type=str,   default='1cc7 ! PTR',  help='main input query')
+    #parser.add_argument('--query', type=str,   default='1cc7 ! PTR',   help='main input query')
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
