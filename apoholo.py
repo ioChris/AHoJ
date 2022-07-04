@@ -394,6 +394,7 @@ def write_query_info(user_query, normalized_input, job_id, query_chain_states, q
         queryi_out.write('normalized_query\t' + normalized_query + '\n')
         queryi_out.write('normalized_settings\t' + normalized_settings + '\n')
         queryi_out.write('job_id\t\t\t' + job_id + '\n')
+        queryi_out.write(f'query_chains_num\t{len(query_chain_states)}\n')
         queryi_out.write('query_chain_states\t' + str(query_chain_states) + '\n') # Write dict
         queryi_out.write('query_lig_positions\t' + str(query_lig_positions) + '\n') # Write dict
         queryi_out.write('total_apo_chains\t' + str(num_apo) + '\n')
@@ -2241,7 +2242,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         #     print('Job folder not empty, job ID: ', job_id, error)
 
     # Print states of query chains (apo or holo)
-    print(f'\nQuery chain states:\n{query_chain_states}')
+    print(f'\nNumber of query chains processed: {len(query_chain_states)}')
+    print(f'Query chain states:\n{query_chain_states}')
+
 
     # Test print query & candidate ligand positions
     print(f'Query ligands\n{query_lig_positions}\n')
