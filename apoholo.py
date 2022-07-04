@@ -384,6 +384,34 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     print('Done loading pre-compiled data\n')
     return res
 
+def write_query_info(user_query, normalized_input, job_id, query_chain_states, query_lig_positions, num_apo, num_holo, apo_dict, holo_dict, path_results):
+    filename_query = path_results + '/query_info.txt'
+    normalized_query = normalized_input.split(':')[0]
+    normalized_settings = normalized_input.split(':')[1]
+    normalized_settings = normalized_settings.split('-')[0]
+    with open(filename_query, 'w') as queryi_out:
+        queryi_out.write('user_query\t\t' + user_query + '\n')
+        queryi_out.write('normalized_query\t' + normalized_query + '\n')
+        queryi_out.write('normalized_settings\t' + normalized_settings + '\n')
+        queryi_out.write('job_id\t\t\t' + job_id + '\n')
+        queryi_out.write('query_chain_states\t' + str(query_chain_states) + '\n') # Write dict
+        queryi_out.write('query_lig_positions\t' + str(query_lig_positions) + '\n') # Write dict
+        queryi_out.write('total_apo_chains\t' + str(num_apo) + '\n')
+        queryi_out.write('total_holo_chains\t' + str(num_holo) + '\n')
+        # Write separate query chains and num of apo and holo results for each
+        for key in query_chain_states:
+            # Apo
+            if apo_dict.get(key) is not None:
+                queryi_out.write(key + '_apo\t\t' + str(len(apo_dict[key])) + '\n')
+            else:
+                queryi_out.write(key + '_apo\t\t' + '0\n')
+            # Holo
+            if holo_dict.get(key) is not None:
+                queryi_out.write(key + '_holo\t\t' + str(len(holo_dict[key])) + '\n')
+            else:
+                queryi_out.write(key + '_holo\t\t'  + '0\n')
+        
+
 
 def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results):  # Write dict(s) to csv
     # we don't want to edit original dicts while computation is still running
@@ -913,16 +941,26 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         except Exception:
             pass
 
-    #sys.exit(1)
+
     # Capture the full query expression - for query indexing and searching previous jobs
     if autodetect_lig == 0:
-        user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
+        if position is not None:
+            user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names) + '_' + str(position)
+        else:
+            user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names)
     elif autodetect_lig == 1 and ligand_names is not None:  # this probably does not occur anymore
-        user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names) + '_autodtctligloc'
+        if position is not None:
+            user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names) + '_autodtctligloc' + '_' + str(position)
+        else:
+            user_query_parameters = struct + '_' + ','.join(user_chains) + '_' + ','.join(ligand_names) + '_autodtctligloc'
     else:
-        user_query_parameters = struct + '_' + ','.join(user_chains) + '_autodtctlig'
-    query_full = user_query_parameters + '_' + settings_str + '-' + job_id
+        if position is not None:
+            user_query_parameters = struct + '_' + ','.join(user_chains) + '_autodtctlig' + '_' + str(position)
+        else:
+            user_query_parameters = struct + '_' + ','.join(user_chains) + '_autodtctlig'
+    query_full = user_query_parameters + ':' + settings_str + '-' + job_id
     #print(query_full)
+    #sys.exit(1)
 
 
     ## Look up query in history, if found, return job path and end script
@@ -1101,7 +1139,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     #print(f'\nTotal (non-unique) candidate chains over user-specified overlap threshold [{overlap_threshold}%]:\t{total_chains}\n') # this if for over user threshold
     print(f'\nTotal (non-unique) candidate chains over [0%] overlap:\t{total_chains}')
 
-    # End script if there are 0 candidate chains OR no UniProt is assigned to the query structure
+    # End script if there are 0 candidate chains OR e.g. no UniProt is assigned to the query structure
     if total_chains == 0:
         print('\n=== Ending program ===')
         sys.exit(0)  # Exit without error. Search was successful but there are no candidates
@@ -1162,7 +1200,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         # Check if resolution is already measured:
         #resolution = resolution_dict.get(apo_candidate_struct)
         #method = exp_method_dict.get(apo_candidate_struct)
-        #if resolution is not None and method is not None:
+        #if resolution is not None and method is not None: # just check method
             #resolution = float(resolution)
         #else:
         with gzip.open (apo_candidate_structPath, 'rt') as mmCIFin:
@@ -1290,7 +1328,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     if position is not None: # (4 args) assumes that everything is specified (chains(taken care of), 1 ligand, position) ignore_autodetect_lig
-        
+
         if ligand_names[0] == 'HOH': # mark selection & change lig scan radius -handled later
             search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
 
@@ -2171,6 +2209,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
     write_discarded_chains(discarded_chains, path_results)
 
+
+
+
+
     # Apo results
     write_results_apo_csv(apo_holo_dict, path_results)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
@@ -2185,6 +2227,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for key in apo_holo_dict_H:
         print(key, apo_holo_dict_H.get(key))
 
+    # Query info file
+    write_query_info(query, query_full, job_id, query_chain_states, query_lig_positions, num_apo_chains, num_holo_chains, apo_holo_dict, apo_holo_dict_H, path_results)
 
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
@@ -2268,7 +2312,7 @@ def parse_args(argv):
 
     # Main user query
     # Ligand
-    #parser.add_argument('--query', type=str,   default='1a73')
+    parser.add_argument('--query', type=str,   default='1a73')
     #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
@@ -2281,7 +2325,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',   help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',   help='main input query') 
-    parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
+    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2381,6 +2425,9 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='1cc7 ! PTR',   help='main input query')
+    
+    # Multi query
+    #parser.add_argument('--query', type=str,   default='3vro ! ptr\n1a37 P sep 259')#'\n3vro ! ptr') # Try multiquery input
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
