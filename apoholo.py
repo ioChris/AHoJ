@@ -46,7 +46,6 @@ from concurrent.futures import ThreadPoolExecutor; import threading           # 
 from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # multi-processing (doesn't work atm)
 
 #import rich.traceback
-
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
 
 
@@ -384,34 +383,134 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     print('Done loading pre-compiled data\n')
     return res
 
-def write_query_info(user_query, normalized_input, job_id, query_chain_states, query_lig_positions, num_apo, num_holo, apo_dict, holo_dict, path_results):
-    filename_query = path_results + '/query_info.txt'
+def compile_query_report(user_query, normalized_input, job_id, query_chain_states, query_lig_positions, num_apo, num_holo, apo_dict, holo_dict, include_query_chains=1):
+    query_report = list()
+    results_dict_eq = dict()    # results excluding query chains
+    results_dict_iq = dict()    # results including query chains
+    no_pair_iq = list()     # Query chains without a single apo-holo pair
+    paired_iq = list()      # Query chains with at least one apo-holo pair
+    no_pair_eq = list()
+    paired_eq = list()
+
     normalized_query = normalized_input.split(':')[0]
     normalized_settings = normalized_input.split(':')[1]
     normalized_settings = normalized_settings.split('-')[0]
-    with open(filename_query, 'w') as queryi_out:
-        queryi_out.write('user_query\t\t' + user_query + '\n')
-        queryi_out.write('normalized_query\t' + normalized_query + '\n')
-        queryi_out.write('normalized_settings\t' + normalized_settings + '\n')
-        queryi_out.write('job_id\t\t\t' + job_id + '\n')
-        queryi_out.write(f'query_chains_num\t{len(query_chain_states)}\n')
-        queryi_out.write('query_chain_states\t' + str(query_chain_states) + '\n') # Write dict
-        queryi_out.write('query_lig_positions\t' + str(query_lig_positions) + '\n') # Write dict
-        queryi_out.write('total_apo_chains\t' + str(num_apo) + '\n')
-        queryi_out.write('total_holo_chains\t' + str(num_holo) + '\n')
-        # Write separate query chains and num of apo and holo results for each
-        for key in query_chain_states:
-            # Apo
-            if apo_dict.get(key) is not None:
-                queryi_out.write(key + '_apo\t\t' + str(len(apo_dict[key])) + '\n')
-            else:
-                queryi_out.write(key + '_apo\t\t' + '0\n')
-            # Holo
+
+    query_report.append('user_query\t\t' + user_query)
+    query_report.append('normalized_query\t' + normalized_query)
+    query_report.append('normalized_settings\t' + normalized_settings)
+    query_report.append('job_id\t\t\t' + job_id)
+    query_report.append('=== Results summary ===')
+    query_report.append(f'query_chains_num\t{len(query_chain_states)}')
+    query_report.append('query_chain_states\t' + str(query_chain_states)) # Write dict
+    query_report.append('query_lig_positions\t' + str(query_lig_positions)) # Write dict
+    query_report.append('total_apo_chains\t' + str(num_apo))
+    query_report.append('total_holo_chains\t' + str(num_holo) + '\n')
+
+    # Get number of results for each query chain (for both excluding and including query chains)
+    for key in query_chain_states:
+        add_apo = 0
+        add_holo = 0
+        if query_chain_states[key] == 'apo':
+            add_apo = 1
+        elif query_chain_states[key] == 'holo':
+            add_holo = 1
+
+        # Apo
+        if apo_dict.get(key) is not None:
+            total_apo = len(apo_dict.get(key)) + add_apo
+            results_dict_eq[key + '_apo'] = total_apo - add_apo
+            results_dict_iq[key + '_apo'] = total_apo
+        else:
+            total_apo = 0 + add_apo
+            results_dict_eq[key + '_apo'] = total_apo - add_apo
+            results_dict_iq[key + '_apo'] = total_apo
+        # Holo
+        if holo_dict.get(key) is not None:
+            total_holo = len(holo_dict.get(key)) + add_holo
+            results_dict_eq[key + '_holo'] = total_holo - add_holo
+            results_dict_iq[key + '_holo'] = total_holo
+        else:
+            total_holo = 0 + add_holo
+            results_dict_eq[key + '_holo'] = total_holo - add_holo
+            results_dict_iq[key + '_holo'] = total_holo
+    '''
+    for key in query_chain_states:
+        if query_chain_states[key] == 'apo':
             if holo_dict.get(key) is not None:
-                queryi_out.write(key + '_holo\t\t' + str(len(holo_dict[key])) + '\n')
-            else:
-                queryi_out.write(key + '_holo\t\t'  + '0\n')
-        
+                paired_iq.append(key)
+                if apo_dict.get(key) is not None:
+                    paired_eq.append(key)
+            else:# if holo_dict.get(key) is  None:
+                no_pair_iq.append(key)
+
+        elif query_chain_states[key] == 'holo':
+            if apo_dict.get(key) is not None:
+                paired_iq.append(key)
+    '''
+    # Find chains without any apo-holo pairs (iq dict)
+    for key, value in results_dict_iq.items():
+        if value == 0:
+            no_pair_iq.append(key)
+    # Subtract to find paired chains
+    for key in query_chain_states:
+        apo_key = key + '_apo'
+        holo_key = key + '_holo'
+        if apo_key not in no_pair_iq and holo_key not in no_pair_iq:
+            paired_iq.append(key)
+
+    # Find chains without any apo-holo pairs (eq dict)
+    for key, value in results_dict_eq.items():
+        if value == 0:
+            no_pair_eq.append(key)
+    # Subtract to find paired chains
+    for key in query_chain_states:
+        apo_key = key + '_apo'
+        holo_key = key + '_holo'
+        if apo_key not in no_pair_eq and holo_key not in no_pair_eq:
+            paired_eq.append(key)
+
+    #query_report.append('\nresults_dict_iq\t\t' + str(results_dict_iq)) # Write dict
+    #query_report.append('no_pair_iq\t\t\t' + ','.join(no_pair_iq))
+    #query_report.append('paired_iq\t\t\t' + ','.join(paired_iq) + '\n')
+
+    # Including query chains
+    paired_chains_iq = len(query_chain_states) - len(no_pair_iq)
+    paired_chains_iq_pcnt = paired_chains_iq/len(query_chain_states)*100
+    non_paired_chains_iq_pcnt = len(no_pair_iq)/len(query_chain_states)*100
+    query_report.append('#paired_chains_iq\t' + str(paired_chains_iq))
+    query_report.append('%paired_chains_iq\t' + str(paired_chains_iq_pcnt))
+    query_report.append('paired_chains_iq\t' + ','.join(i.split('_')[0] for i in paired_iq))
+    query_report.append('#non-paired_chains_iq\t' + str(len(no_pair_iq)))
+    query_report.append('%non-paired_chains_iq\t' + str(non_paired_chains_iq_pcnt))
+    query_report.append('non-paired_chains_iq\t' + ','.join(i.split('_')[0] for i in no_pair_iq))
+
+    # Excluding query chains
+    paired_chains_eq = len(query_chain_states) - len(no_pair_eq)
+    paired_chains_eq_pcnt = paired_chains_eq/len(query_chain_states)*100
+    non_paired_chains_eq_pcnt = len(no_pair_eq)/len(query_chain_states)*100
+    query_report.append('#paired_chains_eq\t' + str(paired_chains_eq))
+    query_report.append('%paired_chains_eq\t' + str(paired_chains_eq_pcnt))
+    query_report.append('paired_chains_eq\t' + ','.join(i.split('_')[0] for i in paired_eq))
+    query_report.append('#non-paired_chains_eq\t' + str(len(no_pair_eq)))
+    query_report.append('%non-paired_chains_eq\t' + str(non_paired_chains_eq_pcnt))
+    query_report.append('non-paired_chains_eq\t' + ','.join(i.split('_')[0] for i in no_pair_eq))
+
+    # Append results as key-value pairs to report
+    query_report.append('\n- Results excluding query chains -')   # Excluding query
+    for key, value in results_dict_eq.items():
+        query_report.append(key + '\t\t' + str(value))
+    query_report.append('- Results including query chains -')   # Including query
+    for key, value in results_dict_iq.items():
+        query_report.append(key + '_iq\t\t' + str(value))
+
+    return query_report
+
+
+def write_query_report(query_report_list, report_filename, save_path):
+    report_filepath = save_path + '/' + report_filename
+    with open(report_filepath, 'w') as queryi_out:
+        queryi_out.write('\n'.join(query_report_list))
 
 
 def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results):  # Write dict(s) to csv
@@ -1606,7 +1705,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #print_dict_readable(query_lig_positions, '\nQuery lig positions dict')
 
             # Find binding residues (protein only) for all query chains
-            binding_res_dict = dict()
+            #binding_res_dict_all = dict()   # all binding residues
+            binding_res_dict = dict()       # only the residues that belong to query chain
 
             for structchain_i, ligands in query_lig_positions.items():
                 for ligand in ligands:
@@ -1625,7 +1725,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     cmd.select(ligand + '_' + struct, struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn)
 
                     # Find & select binding residues
-                    s1 = struct + ' and polymer.protein'
+                    #s1 = struct + ' and polymer.protein'
+                    s1 = struct + ' and chain ' + query_chain + ' and polymer.protein' # only query structchain residues
                     s2 = ligand + '_' + struct
                     cmd.select('arnd_' + ligand, s1 + ' near_to ' + lig_scan_radius + ' of ' + s2)
 
@@ -1637,6 +1738,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     for key, value in myspace_positions.items():
                         binding_res_dict[ligand] = list(myspace_positions.fromkeys(value))
 
+
             # Unpack binding residues into a single list
             binding_res_unpacked = []
             for sublist in binding_res_dict.values():
@@ -1647,6 +1749,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             if autodetect_lig == 1 and ligand_names is None:
                 ligand_names = query_lig_names.copy() # ligand_names = user-specified ligands. When no ligands specified, they might be undefined
 
+        #print_dict_readable(binding_res_dict_all, '\nbinding_res_dict_all')
+        #print_dict_readable(binding_res_dict, '\nbinding_res_dict')
+        #print_dict_readable(myspace_positions, '\nmyspace_positions')
+        #print(f'\nBinding res unpacked\n{binding_res_unpacked}')
 
         # Print universal ligand report for query chain
         print('\nQuery ligand information')
@@ -1655,6 +1761,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print('Position/chain/name: ', query_lig_positions.get(query_structchain))
         print('State:', query_chain_states[query_structchain])  #, '/', len(query_lig_positions.get(query_structchain)))
         #print('\nquery_lig_positions', query_lig_positions)
+        #sys.exit(1)
 
 
         # Print binding site report for query chain
@@ -1668,7 +1775,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             print(f'Binding residues clustered per ligand:\n{binding_res_dict}')
             #print(f'Bulk unique binding residues [segment, chain, residue, position]:\n{binding_res_unpacked}')
             print(f'Total/unique binding residues: [{total1}]/[{total2}]') # TODO these seem to be cummulative binding residues for all previous chains, check it
-
+        #sys.exit(1)
 
 
         ###### Residue mapping section ######
@@ -1683,7 +1790,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Map PDB (binding) residues of query to UniProt residue numbers
             print('Mapping query chain binding residues from PDB to UniProt numbering')
             bndgres_pdb_to_unp =  map_pdb_resnum_to_uniprot(binding_res_unpacked, pdb_xml)
-            #print(bndgres_pdb_to_unp)
+            #print(f'\nbndgres_pdb_to_unp\n{bndgres_pdb_to_unp}')
 
             # Group (UNP num) binding residues by chain (list in, dict out)
             bndgres_pdb_to_unp_chains = group_mapped_res_by_chain(bndgres_pdb_to_unp)
@@ -1726,6 +1833,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #print_dict_readable(bad_candidates_rsd_map, 'bad_candidates_rsd_map')
 
     # end query chain loop
+    #sys.exit(1)
 
 
     # Assemble final dictionary of candidates and start candidate alignment loop
@@ -2212,8 +2320,6 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
 
-
-
     # Apo results
     write_results_apo_csv(apo_holo_dict, path_results)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
@@ -2229,7 +2335,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         print(key, apo_holo_dict_H.get(key))
 
     # Query info file
-    write_query_info(query, query_full, job_id, query_chain_states, query_lig_positions, num_apo_chains, num_holo_chains, apo_holo_dict, apo_holo_dict_H, path_results)
+    query_report = compile_query_report(query, query_full, job_id, query_chain_states, query_lig_positions, num_apo_chains, num_holo_chains, apo_holo_dict, apo_holo_dict_H, path_results)
+    write_query_report(query_report, 'query_report.txt', path_results)
 
     if len(apo_holo_dict) == 0 and len(apo_holo_dict_H) == 0:
         print('\nConsider reversing the search or revising the input query')
@@ -2244,6 +2351,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Print states of query chains (apo or holo)
     print(f'\nNumber of query chains processed: {len(query_chain_states)}')
     print(f'Query chain states:\n{query_chain_states}')
+
+    # Print query report
+    #print('\n#### Query results report ####\n')
+    #print('\n'.join(query_report))
 
 
     # Test print query & candidate ligand positions
@@ -2315,7 +2426,7 @@ def parse_args(argv):
 
     # Main user query
     # Ligand
-    parser.add_argument('--query', type=str,   default='1a73')
+    #parser.add_argument('--query', type=str,   default='1a73')
     #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
@@ -2337,14 +2448,14 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
-    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
-    #parser.add_argument('--query', type=str,   default='3CQV A hem', help='main input query') # OK apo 6, holo 5
-    #parser.add_argument('--query', type=str,   default='3CQV ! hem', help='main input query') #
+    #parser.add_argument('--query', type=str,   default='3CQV A hem',   help='main input query') # OK apo 6, holo 5
+    #parser.add_argument('--query', type=str,   default='3CQV ! hem',   help='main input query') #
     #parser.add_argument('--query', type=str,   default='2npq A bog',   help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw A NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
@@ -2426,6 +2537,7 @@ def parse_args(argv):
 
     # Test new UNP overlap computation
     #parser.add_argument('--query', type=str,   default='7khr B')  # apo7, holo 2 (previous error? apo 30, holo 4)
+    #parser.add_argument('--query', type=str,   default='3fav B zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='1cc7 ! PTR',   help='main input query')
     

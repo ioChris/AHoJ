@@ -172,6 +172,10 @@ def examine_cndt_mapped_bs_res(dict_of_bndgres_pdb_to_unp, query_structchain, ca
                             candidate_hits.setdefault(candidate_structchain+'.'+query_structchain, []).append(chain + '.' + position + ' ' + str(1))
                         else:
                             candidate_hits.setdefault(candidate_structchain+'.'+query_structchain, []).append(chain + '.' + position + ' ' + str(0))
+    # Remove duplicates
+    for key, value in candidate_hits.items():
+        candidate_hits[key] = list(candidate_hits.fromkeys(value))
+
     return candidate_hits
 
 
