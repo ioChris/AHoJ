@@ -2456,7 +2456,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
-    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
@@ -2468,7 +2468,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1ksw A NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # first chain is apo, it was ignored before now works
-    parser.add_argument('--query', type=str,   default='2hka all', help='main input query')
+    #parser.add_argument('--query', type=str,   default='2hka all', help='main input query')
     #parser.add_argument('--query', type=str,   default='2hka A',     help='main input query') #
     #parser.add_argument('--query', type=str,   default='6j19 all atp', help='main input query') # problematic case, 6j19B has wrong UNP mapping in SIFTS 
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
