@@ -23,8 +23,8 @@ VERSION = '0.4.8'
 import copy
 import pathlib
 
-from common import get_workdir, load_dict_binary, tmalign2, write_file
-from residue_mapping import map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, print_dict_readable, good_candidates_from_residue_mapping, bad_candidates_from_residue_mapping, get_scores_from_residue_mapping
+from common import get_workdir, load_dict_binary, tmalign2, write_file, save_dict_binary
+from residue_mapping import map_pdb_resnum_to_uniprot, group_mapped_res_by_chain, examine_cndt_mapped_bs_res, remove_negative_duplicate_cndt_bs_res_pos, evaluate_candidate_bs_rsds, good_candidates_from_residue_mapping, bad_candidates_from_residue_mapping, get_scores_from_residue_mapping
 
 import __main__
 __main__.pymol_argv = ['pymol', '-qc']  # Quiet and no GUI
@@ -43,7 +43,7 @@ import sys
 from dataclasses import dataclass
 
 from concurrent.futures import ThreadPoolExecutor; import threading           # multi-threading
-from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # multi-processing (doesn't work atm)
+#from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # multi-processing (doesn't work atm)
 
 #import rich.traceback
 #rich.traceback.install(show_locals=True, extra_lines=4, max_frames=1)
@@ -52,7 +52,7 @@ from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # 
 _global_lock = threading.Lock()                      # multi-threading
 # global_lock = multiprocessing.Manager().Lock()     # multi-processing (must be moved to main)
 
-# TODO add sync with PDB
+
 
 ##########################################################################################################
 # Define functions
@@ -172,6 +172,12 @@ def wrong_input_error():
     print('\nInput format structure:\n<pdb_id> <chain> <ligand/residue> <position> or\n<pdb_id> <chains> <ligands> or\n<pdb_id> <chains> or\n<pdb_id> <ligands> or\n<pdb_id>')
     print('\nInput examples:\n"3fav A ZN 101"\n"3fav A,B ZN"\n"3fav ! ZN"\n"3fav * ZN"\n"3fav ALL ZN"\n"3fav"\n')
     sys.exit(1)  # exit with error
+
+
+def print_dict_readable(input_dict, header_msg):
+    print(header_msg)
+    for i, j in input_dict.items():
+        print(i, j)
 
 
 # Join list of ligand codes to a single string, sorted
@@ -383,12 +389,13 @@ def load_precompiled_data(workdir) -> PrecompiledData:
     print('Done loading pre-compiled data\n')
     return res
 
+
 def compile_query_report(user_query, normalized_input, job_id, query_chain_states, query_lig_positions, num_apo, num_holo, apo_dict, holo_dict, include_query_chains=1):
-    query_report = list()
-    results_dict_eq = dict()    # results excluding query chains
-    results_dict_iq = dict()    # results including query chains
-    no_pair_iq = list()     # Query chains without a single apo-holo pair
-    paired_iq = list()      # Query chains with at least one apo-holo pair
+    query_report = list()       # Final report as a list that will be printed/saved
+    results_dict_eq = dict()    # Results excluding query chains
+    results_dict_iq = dict()    # Results including query chains
+    no_pair_iq = list()         # Query chains without a single apo-holo pair
+    paired_iq = list()          # Query chains with at least one apo-holo pair
     no_pair_eq = list()
     paired_eq = list()
 
@@ -476,8 +483,8 @@ def compile_query_report(user_query, normalized_input, job_id, query_chain_state
 
     # Including query chains
     paired_chains_iq = len(query_chain_states) - len(no_pair_iq)
-    paired_chains_iq_pcnt = paired_chains_iq/len(query_chain_states)*100
-    non_paired_chains_iq_pcnt = len(no_pair_iq)/len(query_chain_states)*100
+    paired_chains_iq_pcnt = round(paired_chains_iq/len(query_chain_states)*100)
+    non_paired_chains_iq_pcnt = round(len(no_pair_iq)/len(query_chain_states)*100)
     query_report.append('#paired_chains_iq\t' + str(paired_chains_iq))
     query_report.append('%paired_chains_iq\t' + str(paired_chains_iq_pcnt))
     query_report.append('paired_chains_iq\t' + ','.join(i.split('_')[0] for i in paired_iq))
@@ -487,9 +494,9 @@ def compile_query_report(user_query, normalized_input, job_id, query_chain_state
 
     # Excluding query chains
     paired_chains_eq = len(query_chain_states) - len(no_pair_eq)
-    paired_chains_eq_pcnt = paired_chains_eq/len(query_chain_states)*100
-    non_paired_chains_eq_pcnt = len(no_pair_eq)/len(query_chain_states)*100
-    query_report.append('#paired_chains_eq\t' + str(paired_chains_eq))
+    paired_chains_eq_pcnt = round(paired_chains_eq/len(query_chain_states)*100)
+    non_paired_chains_eq_pcnt = round(len(no_pair_eq)/len(query_chain_states)*100)
+    query_report.append('\n#paired_chains_eq\t' + str(paired_chains_eq))
     query_report.append('%paired_chains_eq\t' + str(paired_chains_eq_pcnt))
     query_report.append('paired_chains_eq\t' + ','.join(i.split('_')[0] for i in paired_eq))
     query_report.append('#non-paired_chains_eq\t' + str(len(no_pair_eq)))
@@ -564,7 +571,6 @@ def write_results_holo_csv(apo_holo_dict_H, path_results):
 
 def write_discarded_chains(discarded_chains_dict, path_results):
 
-    # Write txt file
     filename_txt = path_results + '/discarded_chains.txt'
     #header = 'Discarded_chain, Discard_reason'
     with open(filename_txt, 'w') as txt_out:
@@ -2317,6 +2323,9 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         discarded_chains[key] = list(discarded_chains.fromkeys(value))
     write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
     write_discarded_chains(discarded_chains, path_results)
+    # Write binary ligands dictionaries
+    save_dict_binary(query_lig_positions, path_results + '/ligands_qr.bin')
+    save_dict_binary(cndt_lig_positions, path_results + '/ligands_cndt.bin')
 
 
 
@@ -2352,18 +2361,17 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     print(f'\nNumber of query chains processed: {len(query_chain_states)}')
     print(f'Query chain states:\n{query_chain_states}')
 
-    # Print query report
-    #print('\n#### Query results report ####\n')
-    #print('\n'.join(query_report))
-
-
     # Test print query & candidate ligand positions
     print(f'Query ligands\n{query_lig_positions}\n')
     #print(f'\nCandidate ligands\n{cndt_lig_positions}')
 
+    # Print Query Report
+    print('\n#### Query results report ####\n')
+    print('\n'.join(query_report))
+
     # Append the name of the query and the job_id in the queries.txt
     if job_id:
-        print(f'Saving query search: {[user_query_parameters]} for query {[query]}') #query_full)  # Don't show full query string
+        print(f'\nSaving query search: {[user_query_parameters]} for query {[query]}') #query_full)  # Don't show full query string
         with open(pathQRS + '/' + 'queries.txt', 'a') as out_q:
             out_q.write(query_full + '\n')
 
@@ -2448,7 +2456,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
-    parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
@@ -2460,7 +2468,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1ksw A NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # first chain is apo, it was ignored before now works
-    #parser.add_argument('--query', type=str,   default='2hka ALL',     help='main input query') #
+    parser.add_argument('--query', type=str,   default='2hka all', help='main input query')
+    #parser.add_argument('--query', type=str,   default='2hka A',     help='main input query') #
     #parser.add_argument('--query', type=str,   default='6j19 all atp', help='main input query') # problematic case, 6j19B has wrong UNP mapping in SIFTS 
     #parser.add_argument('--query', type=str,   default='1aro P HG 904',   help='main input query') # fragmented UniProt candidates, to use for testing UNP overlap calculation
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
