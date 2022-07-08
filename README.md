@@ -13,11 +13,11 @@ The ligand can be defined either by selecting a binding residue or the ligand it
 The main mode of search in AHoJ is "focused search". It is based on a user-specified point of interest (ligand, water molecule, modified residue) and it looks for apo and holo variations (structures) for this chunk of protein, based on the presence or absence of the specified point of interest at the particular binding site. Specifying the point of interest is therefore central to the workflow. Additional parameters can be controlled in by the user.
 
 #### Specifying the ligand/point of interest
-This is done by providing a series of arguments in the form of a query: the i)structure, ii)chain(s), iii)name of ligand or residue name (using the PDB 3-character code) and iv)position of ligand or residue in the sequence (PDB residue index is used). Specifying all these four arguments is recommended as it avoids ambiguity in the case that more than one ligand molecules of the same type exist within the same chain. When specifying a binding residue, it is obligatory to specify the position.
-However, the minimum number of arguments is one - the structure. In such case, AHoJ will try to automatically detect the chains, the ligands and their positions. AHoJ can work with ligands that are designated as heteroatoms in the PDB, which means small and medium-sized ligands but not protein subunits.
+This is done by providing a series of arguments in the form of a query: the i)structure, ii)chain(s), iii)name of ligand or residue name (using the PDB 3-character code) and iv)position of ligand or residue in the sequence (PDB residue index is used). Specifying all four arguments is optional but recommended as it avoids ambiguity in the case that more than one ligand molecules of the same type exist within the same chain. When specifying a binding residue, it is obligatory to specify the position.
+However, the minimum number of arguments is one - the structure (as PDB code). In such case, AHoJ will automatically detect the chains, the ligands and their positions. This mode offers flexibility but it is not recommended as any ligand will be detected in the query structure (or chain -if specified), which might be undesirable, and also the eventual apo-holo classification of the candidates will not depend on a single ligand, but possibly multiple, which can complicate the interpretation of results. AHoJ can work with ligands that are designated as heteroatoms in the PDB, which means small and medium-sized ligands (including post-translationally modified residues and water molecules) but not protein subunits.
 
-Therefore, the main search mode starts with a holo structure, where the user knows the ligand that will be used as a starting point. This user-specified ligand will then define the search and annotation of the results. Any other ligands in the query structure will be ignored. In the case that the user does not know the ligand or the binding residues, AHoJ will automatically detect available ligands in the query structure.
-If the query structure however does not bind any ligands (apo), AHoJ will still look for structures that belong to the same protein with the query, but it will not focus on a particular binding site. Instead it will report any ligands that it detects in the candidate structures.
+Therefore, the main search mode starts with a holo structure, where the user knows the ligand that will be used as a starting point. This user-specified ligand will define the binding site as well as the search and annotation of the results. Any other (non-specified) ligands in the query structure will be ignored. In the case that the user does not know the ligand or the binding residues, AHoJ will automatically detect available ligands in the query structure.
+If the query structure however does not bind any ligands (apo), AHoJ will still look for structures that belong to the same protein with the query, but it will not focus on a particular binding site. Instead it will report ligands that bind anywhere in the candidate structures.
 
 
 ##  Objective
@@ -33,15 +33,14 @@ If the query structure however does not bind any ligands (apo), AHoJ will still 
 
 Note: ligands are confined to chemical components that are not part of the protein according to the PDB 
 (however modified amino acids (e.g. phosphorylated), and water molecules can also be specified and considered as ligands). 
-Ligands are named and defined according to their (up to) 3-character code from PDB (i.e. ATP, HEM, ZN).
+Ligands are named and defined according to their 1-3 character code from PDB (i.e. ATP, HEM, ZN).
 
 ##  Methodology
 The application is conducting a search within the experimentally determined protein structures in the Protein Data Bank. 
-It retrieves identical proteins with known structures, and then looks whether the specified ligand(s) are present or absent. 
+It retrieves identical proteins with known structures, and then looks whether the specified ligand(s) are present or absent in the particular binding site(s). 
 
 Depending on the user’s input, the application can look for the specified ligand(s) in a single specified chain, or the whole protein (all chains).
-It can find apo-proteins that i) simply lack the specified ligand in a given binding site (but may bind a different ligand at the same site), or ii) 
-lack any known ligand in a given binding site and thus constitute universal apo- sites.
+It can find apo-proteins that i) simply lack the specified ligand in a given binding site (but may bind a different ligand at the same site for example), or ii) lack any ligand in any part of the structure and thus constitute universal apo structures.
 
 ##  Requirements
 The application was built and initially ran in a Windows 10 computer. The python packages were all installed through the Anaconda package manager.
@@ -60,8 +59,8 @@ Note: Newer versions of these packages should be functional as long as they are 
 
 Aside of the package dependencies, the application is using two precompiled files that are based on the SIFTS residue-level mapping between the UniProt sequence and the PDB structure.
 
-* `pdb_chain_uniprot_REVERSE_SPnum.txt`
-* `pdb_chain_uniprot_dict.txt`
+* `uniprot_segments_observed_REVERSE_SPnum.bin`
+* `uniprot_segments_observed_dict.bin`
                                  
 These files need to be generated by `prepare.py` before running the main script `apoholo.py`.
 
@@ -264,7 +263,7 @@ Floating point number that represents angstroms and is applied as a cutoff point
 
 **`--lig_free_sites`** : ligand-free sites [default = `1`]
 
-0 or 1. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo-proteins. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s). If the user wants to find apo structures that don't bind any ligands in the superimposed binding site(s) of the query ligand(s), they should set this value to 1 (default).
+0 or 1. This pertains to the apo/holo classification of candidate structures. When set to 1 (ON), it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo structures. When set to 0 (OFF), it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s). If the user wants to find apo structures that don't bind any ligands in the superimposed binding site(s) of the query ligand(s), this value should be set to 1 (default).
 
 [//]: # (**`--autodetect_lig`** : auto-detect ligands [default = `0`])
 
@@ -297,7 +296,7 @@ Floating point number that represents a percentage (%) and is applied as a cutof
 
 Note: "100" guarantees complete coverage, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cutoff with the "min_tmscore" parameter.
 
-**`--lig_scan_radius`** : ligand scanning radius [default = `4.0`]
+**`--lig_scan_radius`** : ligand scanning radius [default = `4.5`]
 
 Floating point number that represents angstroms and is applied as a scanning radius when looking for ligands in the candidate structures. This scanning radius is applied on the positions of the atoms of the superimposed query ligands to the aligned candidate structure, to scan for ligands. The resulting scanning space is a "carved" surface that has the shape of the query ligand, extended outward by the given radius. If the candidate structure binds ligands outside of this superimposed area, they will be ignored, and the candidate will be characterised as an apo-protein.
 
@@ -334,7 +333,7 @@ i) PDB structure files (cif.gz format) for the query structure (whole structure)
 
 Note: a given candidate chain could be a match for more than one query chains, and could thus appear more than once, in each case aligned to the respective query chain.
 
-ii) 1 or 2 CSV files with the successfully processed candidate chains for apo and holo chains respectively [results_apo.csv, results_holo.csv]. These CSV files contain the following information for each found chain: **`query_chain, apo_chain, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands`**
+ii) 2 CSV files with the successfully processed candidate chains for apo and holo chains respectively [results_apo.csv, results_holo.csv]. These CSV files contain the following information for each found chain: **`query_chain, apo_chain, Resolution, R-free, %UniProt_overlap, Mapped_bndg_rsds, %Mapped_bndg_rsds, RMSD, TM_score, iTM_score, ligands`**
 
 Note: UniProt overlap refers to the percentage of sequence overlap that each candidate chain has over the query chain (higher is better, max is 100%). The ligands listed in the files refer to the ligands that were detected in the superimposed positions of the specified query ligands, thus they might not include ligands that bind elsewhere in the candidate chains. If the CSV file for apo chains includes ligands (which seems contradicting), it indicates that the user set the parameter **`--lig_free_sites`** to 0 (OFF), and thus any other ligands besides the query ligand were allowed in the superimposed binding sites of candidate structures.
 
