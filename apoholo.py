@@ -2456,7 +2456,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
-    parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
@@ -2552,6 +2552,10 @@ def parse_args(argv):
     
     # Multi query
     #parser.add_argument('--query', type=str,   default='3vro ! ptr\n1a37 P sep 259')#'\n3vro ! ptr') # Try multiquery input
+    
+    # Error queries
+    #parser.add_argument('--query', type=str,   default='3anq ! PTR') # errored with Apo: 0  Holo: 570, locally finished with apo 0, holo 760. 
+    parser.add_argument('--query', type=str,   default='3l4j ! PTR') # errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
