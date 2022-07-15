@@ -414,103 +414,107 @@ def compile_query_report(user_query, normalized_input, job_id, query_chain_state
     query_report.append('total_apo_chains\t' + str(num_apo))
     query_report.append('total_holo_chains\t' + str(num_holo) + '\n')
 
-    # Get number of results for each query chain (for both excluding and including query chains)
-    for key in query_chain_states:
-        add_apo = 0
-        add_holo = 0
-        if query_chain_states[key] == 'apo':
-            add_apo = 1
-        elif query_chain_states[key] == 'holo':
-            add_holo = 1
-
-        # Apo
-        if apo_dict.get(key) is not None:
-            total_apo = len(apo_dict.get(key)) + add_apo
-            results_dict_eq[key + '_apo'] = total_apo - add_apo
-            results_dict_iq[key + '_apo'] = total_apo
-        else:
-            total_apo = 0 + add_apo
-            results_dict_eq[key + '_apo'] = total_apo - add_apo
-            results_dict_iq[key + '_apo'] = total_apo
-        # Holo
-        if holo_dict.get(key) is not None:
-            total_holo = len(holo_dict.get(key)) + add_holo
-            results_dict_eq[key + '_holo'] = total_holo - add_holo
-            results_dict_iq[key + '_holo'] = total_holo
-        else:
-            total_holo = 0 + add_holo
-            results_dict_eq[key + '_holo'] = total_holo - add_holo
-            results_dict_iq[key + '_holo'] = total_holo
-    '''
-    for key in query_chain_states:
-        if query_chain_states[key] == 'apo':
-            if holo_dict.get(key) is not None:
-                paired_iq.append(key)
-                if apo_dict.get(key) is not None:
-                    paired_eq.append(key)
-            else:# if holo_dict.get(key) is  None:
-                no_pair_iq.append(key)
-
-        elif query_chain_states[key] == 'holo':
+    try:
+        # Get number of results for each query chain (for both excluding and including query chains)
+        for key in query_chain_states:
+            add_apo = 0
+            add_holo = 0
+            if query_chain_states[key] == 'apo':
+                add_apo = 1
+            elif query_chain_states[key] == 'holo':
+                add_holo = 1
+    
+            # Apo
             if apo_dict.get(key) is not None:
+                total_apo = len(apo_dict.get(key)) + add_apo
+                results_dict_eq[key + '_apo'] = total_apo - add_apo
+                results_dict_iq[key + '_apo'] = total_apo
+            else:
+                total_apo = 0 + add_apo
+                results_dict_eq[key + '_apo'] = total_apo - add_apo
+                results_dict_iq[key + '_apo'] = total_apo
+            # Holo
+            if holo_dict.get(key) is not None:
+                total_holo = len(holo_dict.get(key)) + add_holo
+                results_dict_eq[key + '_holo'] = total_holo - add_holo
+                results_dict_iq[key + '_holo'] = total_holo
+            else:
+                total_holo = 0 + add_holo
+                results_dict_eq[key + '_holo'] = total_holo - add_holo
+                results_dict_iq[key + '_holo'] = total_holo
+        '''
+        for key in query_chain_states:
+            if query_chain_states[key] == 'apo':
+                if holo_dict.get(key) is not None:
+                    paired_iq.append(key)
+                    if apo_dict.get(key) is not None:
+                        paired_eq.append(key)
+                else:# if holo_dict.get(key) is  None:
+                    no_pair_iq.append(key)
+    
+            elif query_chain_states[key] == 'holo':
+                if apo_dict.get(key) is not None:
+                    paired_iq.append(key)
+        '''
+        # Find chains without any apo-holo pairs (iq dict)
+        for key, value in results_dict_iq.items():
+            if value == 0:
+                no_pair_iq.append(key)
+        # Subtract to find paired chains
+        for key in query_chain_states:
+            apo_key = key + '_apo'
+            holo_key = key + '_holo'
+            if apo_key not in no_pair_iq and holo_key not in no_pair_iq:
                 paired_iq.append(key)
-    '''
-    # Find chains without any apo-holo pairs (iq dict)
-    for key, value in results_dict_iq.items():
-        if value == 0:
-            no_pair_iq.append(key)
-    # Subtract to find paired chains
-    for key in query_chain_states:
-        apo_key = key + '_apo'
-        holo_key = key + '_holo'
-        if apo_key not in no_pair_iq and holo_key not in no_pair_iq:
-            paired_iq.append(key)
+    
+        # Find chains without any apo-holo pairs (eq dict)
+        for key, value in results_dict_eq.items():
+            if value == 0:
+                no_pair_eq.append(key)
+        # Subtract to find paired chains
+        for key in query_chain_states:
+            apo_key = key + '_apo'
+            holo_key = key + '_holo'
+            if apo_key not in no_pair_eq and holo_key not in no_pair_eq:
+                paired_eq.append(key)
+    
+        #query_report.append('\nresults_dict_iq\t\t' + str(results_dict_iq)) # Write dict
+        #query_report.append('no_pair_iq\t\t\t' + ','.join(no_pair_iq))
+        #query_report.append('paired_iq\t\t\t' + ','.join(paired_iq) + '\n')
+    
+        # Including query chains
+        paired_chains_iq = len(query_chain_states) - len(no_pair_iq)
+        paired_chains_iq_pcnt = round(paired_chains_iq/len(query_chain_states)*100)
+        non_paired_chains_iq_pcnt = round(len(no_pair_iq)/len(query_chain_states)*100)
+        query_report.append('#paired_chains_iq\t' + str(paired_chains_iq))
+        query_report.append('%paired_chains_iq\t' + str(paired_chains_iq_pcnt))
+        query_report.append('paired_chains_iq\t' + ','.join(i.split('_')[0] for i in paired_iq))
+        query_report.append('#non-paired_chains_iq\t' + str(len(no_pair_iq)))
+        query_report.append('%non-paired_chains_iq\t' + str(non_paired_chains_iq_pcnt))
+        query_report.append('non-paired_chains_iq\t' + ','.join(i.split('_')[0] for i in no_pair_iq))
+    
+        # Excluding query chains
+        paired_chains_eq = len(query_chain_states) - len(no_pair_eq)
+        paired_chains_eq_pcnt = round(paired_chains_eq/len(query_chain_states)*100)
+        non_paired_chains_eq_pcnt = round(len(no_pair_eq)/len(query_chain_states)*100)
+        query_report.append('\n#paired_chains_eq\t' + str(paired_chains_eq))
+        query_report.append('%paired_chains_eq\t' + str(paired_chains_eq_pcnt))
+        query_report.append('paired_chains_eq\t' + ','.join(i.split('_')[0] for i in paired_eq))
+        query_report.append('#non-paired_chains_eq\t' + str(len(no_pair_eq)))
+        query_report.append('%non-paired_chains_eq\t' + str(non_paired_chains_eq_pcnt))
+        query_report.append('non-paired_chains_eq\t' + ','.join(i.split('_')[0] for i in no_pair_eq))
+    
+        # Append results as key-value pairs to report
+        query_report.append('\n- Results excluding query chains -')   # Excluding query
+        for key, value in results_dict_eq.items():
+            query_report.append(key + '\t\t' + str(value))
+        query_report.append('- Results including query chains -')   # Including query
+        for key, value in results_dict_iq.items():
+            query_report.append(key + '_iq\t\t' + str(value))
 
-    # Find chains without any apo-holo pairs (eq dict)
-    for key, value in results_dict_eq.items():
-        if value == 0:
-            no_pair_eq.append(key)
-    # Subtract to find paired chains
-    for key in query_chain_states:
-        apo_key = key + '_apo'
-        holo_key = key + '_holo'
-        if apo_key not in no_pair_eq and holo_key not in no_pair_eq:
-            paired_eq.append(key)
-
-    #query_report.append('\nresults_dict_iq\t\t' + str(results_dict_iq)) # Write dict
-    #query_report.append('no_pair_iq\t\t\t' + ','.join(no_pair_iq))
-    #query_report.append('paired_iq\t\t\t' + ','.join(paired_iq) + '\n')
-
-    # Including query chains
-    paired_chains_iq = len(query_chain_states) - len(no_pair_iq)
-    paired_chains_iq_pcnt = round(paired_chains_iq/len(query_chain_states)*100)
-    non_paired_chains_iq_pcnt = round(len(no_pair_iq)/len(query_chain_states)*100)
-    query_report.append('#paired_chains_iq\t' + str(paired_chains_iq))
-    query_report.append('%paired_chains_iq\t' + str(paired_chains_iq_pcnt))
-    query_report.append('paired_chains_iq\t' + ','.join(i.split('_')[0] for i in paired_iq))
-    query_report.append('#non-paired_chains_iq\t' + str(len(no_pair_iq)))
-    query_report.append('%non-paired_chains_iq\t' + str(non_paired_chains_iq_pcnt))
-    query_report.append('non-paired_chains_iq\t' + ','.join(i.split('_')[0] for i in no_pair_iq))
-
-    # Excluding query chains
-    paired_chains_eq = len(query_chain_states) - len(no_pair_eq)
-    paired_chains_eq_pcnt = round(paired_chains_eq/len(query_chain_states)*100)
-    non_paired_chains_eq_pcnt = round(len(no_pair_eq)/len(query_chain_states)*100)
-    query_report.append('\n#paired_chains_eq\t' + str(paired_chains_eq))
-    query_report.append('%paired_chains_eq\t' + str(paired_chains_eq_pcnt))
-    query_report.append('paired_chains_eq\t' + ','.join(i.split('_')[0] for i in paired_eq))
-    query_report.append('#non-paired_chains_eq\t' + str(len(no_pair_eq)))
-    query_report.append('%non-paired_chains_eq\t' + str(non_paired_chains_eq_pcnt))
-    query_report.append('non-paired_chains_eq\t' + ','.join(i.split('_')[0] for i in no_pair_eq))
-
-    # Append results as key-value pairs to report
-    query_report.append('\n- Results excluding query chains -')   # Excluding query
-    for key, value in results_dict_eq.items():
-        query_report.append(key + '\t\t' + str(value))
-    query_report.append('- Results including query chains -')   # Including query
-    for key, value in results_dict_iq.items():
-        query_report.append(key + '_iq\t\t' + str(value))
-
+    except Exception as ex:
+        print(f'\n*Exception while compiling query report: {ex}')
+        #query_report.append(f'\nException while compiling query report: {ex}')
     return query_report
 
 
@@ -2555,7 +2559,11 @@ def parse_args(argv):
     
     # Error queries
     #parser.add_argument('--query', type=str,   default='3anq ! PTR') # errored with Apo: 0  Holo: 570, locally finished with apo 0, holo 760. 
-    parser.add_argument('--query', type=str,   default='3l4j ! PTR') # errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
+    #parser.add_argument('--query', type=str,   default='3l4j ! PTR') # errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
+    #parser.add_argument('--query', type=str,   default='3s3h ! PTR')
+    parser.add_argument('--query', type=str,   default='5a4l ! PTR')
+     
+    #parser.add_argument('--query', type=str,   default='3buo ! PTR')
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')

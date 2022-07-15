@@ -105,7 +105,8 @@ def map_pdb_resnum_to_uniprot(pdb_resnum_list, sifts_xml_file):
                 ures = './/{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}crossRefDb[@dbSource="PDB"][@dbResNum="%s"]' % pdb_resnum
                 my_pdb_residue = segment.findall(ures)
 
-                if len(my_pdb_residue) == 1: # this is prolly a list and we need it to have 1 element
+                if len(my_pdb_residue) > 0: # this is a list and we need it to have at least 1 element (e.g., in cases with "Microheterogeneity")
+                #if len(my_pdb_residue) == 1: # this is a list and we need it to have 1 element
                     # Get crossRefDb dbSource="PDB"
                     parent = my_pdb_residue[0].getparent()
                     pres = './/{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}crossRefDb[@dbSource="UniProt"]'
@@ -127,11 +128,14 @@ def map_pdb_resnum_to_uniprot(pdb_resnum_list, sifts_xml_file):
                         if my_pdb_annotation == 'Not_Observed':
                             my_pdb_annotation = False
                             list_out.append(resichain_frmt + '>*' + resichain_pdb) # Not observed in structure
+                        else:   # There is a different annotation, ignore it and get UniProt mapping
+                            list_out.append(resichain_frmt + '>' + resichain_pdb)
                     else:
                         my_pdb_annotation = True
                         list_out.append(resichain_frmt + '>' + resichain_pdb)
                 else:
-                    list_out.append(resichain_frmt + '>None')#  + None)
+                    list_out.append(resichain_frmt + '>.None')
+                    #pass # Skip residue if it is not found (it will not show up in mapped residues)
     return list_out
 
 
