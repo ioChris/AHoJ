@@ -661,8 +661,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     hoh_scan_radius = args.hoh_scan_radius # TODO replace with dynamic function for scan radius
 
     # Saving
-    save_oppst = args.save_oppst
-    save_separate = args.save_separate
+    save_apo = args.save_apo
+    save_holo = args.save_holo
     #save_session = args.save_session
     #multisave = args.multisave
 
@@ -2119,7 +2119,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         #print('APO')
                         so10 = 'APO'
                     chain_stdout.append(so10)
-                    if save_separate == 1:
+                    if save_apo == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                         cmd.save(path_results_structs + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
@@ -2134,7 +2134,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         #print('HOLO*')
                         so10 = 'HOLO*'
                     chain_stdout.append(so10)
-                    if save_separate == 1 and save_oppst == 1:
+                    if save_holo == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                         #save_sele = (candidate_structchain + '_arnd_' + ligand_) for ligand in query_lig_positions[query_structchain])
@@ -2223,7 +2223,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     #print('HOLO')
                     so16 = 'HOLO'
                     #chain_stdout.append(so16)
-                    if save_separate == 1:
+                    if save_holo == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct) # save query structure
                         cmd.save(path_results_structs + '/holo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain) # save apo chain
@@ -2241,7 +2241,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         #print('APO')
                         so16 = 'APO'
                         #chain_stdout.append(so16)
-                    if save_separate == 1 and save_oppst == 1:
+                    if save_apo == 1:
                         if not os.path.isfile(path_results + '/query_' + query_struct + '.cif.gz'):
                             cmd.save(path_results_structs + '/query_' + query_struct + '.cif.gz', query_struct)  # save query structure
                         cmd.save(path_results_structs + '/apo_' + candidate_structchain + '_aligned_to_' + query_structchain + '.cif.gz', candidate_structchain)  # save holo chain
@@ -2598,8 +2598,8 @@ def parse_args(argv):
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water query ligands only)')
 
     # Saving
-    parser.add_argument('--save_oppst',        type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_separate',     type=int,   default=1,     help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_apo',          type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
+    parser.add_argument('--save_holo',         type=int,   default=1,     help='0/1: save each chain object in a separate file (default save)')
     #parser.add_argument('--save_session',      type=int,   default=0,     help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     #parser.add_argument('--multisave',         type=int,   default=0,     help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
