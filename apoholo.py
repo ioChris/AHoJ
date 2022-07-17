@@ -2561,7 +2561,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3anq ! PTR') # errored with Apo: 0  Holo: 570, locally finished with apo 0, holo 760. 
     #parser.add_argument('--query', type=str,   default='3l4j ! PTR') # errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
     #parser.add_argument('--query', type=str,   default='3s3h ! PTR')
-    parser.add_argument('--query', type=str,   default='5a4l ! PTR')
+    parser.add_argument('--query', type=str,   default='6l1t ! PTR')
      
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
 
