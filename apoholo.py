@@ -2569,7 +2569,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3s3h ! PTR')
     #parser.add_argument('--query', type=str,   default='6l1t ! PTR')
     #parser.add_argument('--query', type=str,   default='3U7Q D MG')
-    parser.add_argument('--query', type=str,   default='6il9 A MG')
+    #parser.add_argument('--query', type=str,   default='6il9 A MG')  # Wrong input (ligand doesn't exist)
+    parser.add_argument('--query', type=str,   default='5J8P A MG')   # Crashes kernel
     
     
      
