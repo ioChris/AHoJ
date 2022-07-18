@@ -169,8 +169,14 @@ def search_query_history(pathQRS, new_query_name, past_queries_filename):    # F
 def wrong_input_error():
     print('\n=== ERROR: Wrong input format ===')
     print('-use a whitespace character to separate input arguments\n-chains are case-sensitive')
-    print('\nInput format structure:\n<pdb_id> <chain> <ligand/residue> <position> or\n<pdb_id> <chains> <ligands> or\n<pdb_id> <chains> or\n<pdb_id> <ligands> or\n<pdb_id>')
+    print('\nInput format structure:\n<pdb_id> <chain> <ligand/residue> <position> or\n<pdb_id> <chain> <ligandA,ligandB> or\n<pdb_id> <chainA,chainB> <ligand> or\n<pdb_id> <chain> or\n<pdb_id>')
     print('\nInput examples:\n"3fav A ZN 101"\n"3fav A,B ZN"\n"3fav ! ZN"\n"3fav * ZN"\n"3fav ALL ZN"\n"3fav"\n')
+    sys.exit(1)  # exit with error
+
+
+def wrong_input_error_b():
+    print('\n=== ERROR: Wrong input ===')
+    print('-Chain identifier has wrong case or ligand is misspelled or does not exist in the structure')
     sys.exit(1)  # exit with error
 
 
@@ -925,7 +931,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             try: # Catch wrong chain exception (wrong case or non-existing chains)
                 s3n = cmd.select('around_non-protein_lig' + unverified_structchain, 'polymer.protein near_to ' + intrfc_lig_radius + ' of ' + s2n)
             except Exception:
-                wrong_input_error()
+                wrong_input_error_b()
 
             if s1n != 0 and s3n != 0:
                 non_protein_lig_chains[unverified_structchain] = cmd.get_chains('around_non-protein_lig' + unverified_structchain)
@@ -2562,7 +2568,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3l4j ! PTR') # errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
     #parser.add_argument('--query', type=str,   default='3s3h ! PTR')
     #parser.add_argument('--query', type=str,   default='6l1t ! PTR')
-    parser.add_argument('--query', type=str,   default='3U7Q D MG')
+    #parser.add_argument('--query', type=str,   default='3U7Q D MG')
+    parser.add_argument('--query', type=str,   default='6il9 A MG')
     
     
      
