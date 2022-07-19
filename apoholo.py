@@ -570,8 +570,8 @@ def write_binding_sites_csv(binding_sites_dict, path_results):  # Write dict to 
         # Format dict values and write
         for key, values in binding_sites_dict.items():
             chain = key.split('.')[0]
-            site = key.split('.')[1]
-            csv_out.write("%s,%s,%s\n" % (chain, site, ' '.join(values)))
+            ligand = key.split('.')[1]
+            csv_out.write("%s,%s,%s\n" % (chain, ligand, ' '.join(values)))
 
 
 
@@ -685,6 +685,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     apo_chain_limit = args.apo_chain_limit
     intrfc_lig_radius = args.intrfc_lig_radius
     hoh_scan_radius = args.hoh_scan_radius # TODO replace with dynamic function for scan radius
+    bndg_res_radius = args.bndg_res_radius
 
     # Saving
     save_apo = args.save_apo
@@ -699,6 +700,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     lig_scan_radius = str(lig_scan_radius)      # needs to be str
     intrfc_lig_radius = str(intrfc_lig_radius)  # needs to be str
     hoh_scan_radius = str(hoh_scan_radius)      # needs to be str
+    bndg_res_radius = str(bndg_res_radius)      # needs to be str
     #cndtlig_scan_radius = lig_scan_radius      # why is this "not used", since it is required later on? -local vrbl
     #broad_search_mode = False # previously called "reverse_mode"
 
@@ -2077,7 +2079,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                         #print('*no candidate residues found around query ligand superposition, skipping ligand')
                         #continue # skip this ligand
 
-                    # Look for candidate ligands in the superimposed sites of the aligned query ligands # TODO possible to extract binding site residues here
+                    # Look for candidate ligands in the superimposed sites of the aligned query ligands
                     if resn == 'HOH':
                         cndtlig_scan_radius = hoh_scan_radius  # Decide whether to switch back to default after scanning once
                     cndt_sele_expression = '(' + candidate_struct + ' and hetatm)' # only limit search to candidate structure (not chain) #cndt_sele_expression = candidate_struct + ' and chain ' + candidate_chain + ' and hetatm'
@@ -2086,7 +2088,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                     # Select binding residues
                     cndt_bndg_site_expression = '(' + candidate_struct + ' and chain ' + candidate_chain + ' and polymer.protein)' # only get binding residues of candidate chain
-                    cmd.select(candidate_structchain + '_pocket_' + ligand_, cndt_bndg_site_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + qr_lig_sele_expression)
+                    cmd.select(candidate_structchain + '_pocket_' + ligand_, cndt_bndg_site_expression + ' near_to ' + bndg_res_radius + ' of ' + qr_lig_sele_expression)
 
                     myspace_pockets = {'pocket': []}
                     cmd.iterate(candidate_structchain + '_pocket_' + ligand_, 'pocket.append(chain + "_" + resn + "_" + resi)', space = myspace_pockets)
@@ -2104,15 +2106,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     for key, value in myspace_cndt.items():
                         myspace_cndt[key] = list(myspace_cndt.fromkeys(value))   # preserves the order of values - better than set()
 
+                    #for key, values in myspace_pockets.items():
+                        #myspace_pockets[key] = list(myspace_pockets.fromkeys(values))  # Remove duplicate values
+
                     # Capture binding site (only residues of candidate chain)
                     for key, values in myspace_pockets.items():
                         binding_sites_instance[candidate_structchain + '.' + ligand_] = values  # [alt] binding_sites_instance.setdefault(candidate_structchain + '.' + ligand_, []).append(values.strip('[',))
 
-                    #print('\n'.join(chain_stdout))
-                    #print(myspace_pockets.get('pocket'))
-                    #print(myspace_pockets)
                     #print(binding_sites_instance)
-                    #sys.exit(1)
 
                     ##print('scanning ligand:', ligand)
                     #print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
@@ -2253,16 +2254,17 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
                         # Select binding residues
                         cndt_bndg_site_expression = '(' + candidate_struct + ' and chain ' + candidate_chain + ' and polymer.protein)' # only get binding residues of candidate chain
-                        cmd.select(candidate_structchain + '_pocket_' + ligand_, cndt_bndg_site_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + s2cndtlig)
+                        cmd.select(candidate_structchain + '_pocket_' + ligand_, cndt_bndg_site_expression + ' near_to ' + bndg_res_radius + ' of ' + s2cndtlig)
 
                         myspace_pockets = {'pocket': []}
                         cmd.iterate(candidate_structchain + '_pocket_' + ligand_, 'pocket.append(chain + "_" + resn + "_" + resi)', space = myspace_pockets)
-                        for key, value in myspace_pockets.items():
-                            myspace_pockets[key] = list(myspace_pockets.fromkeys(value))  # Remove duplicate values
+                        #for key, value in myspace_pockets.items():
+                            #myspace_pockets[key] = list(myspace_pockets.fromkeys(value))  # Remove duplicate values
 
                         # Capture binding site (only residues of candidate chain)
                         for key, values in myspace_pockets.items():
-                            binding_sites_instance[candidate_structchain + '.' + ligand_] = values 
+                            binding_sites_instance[candidate_structchain + '.' + ligand_] = values
+
 
 
                 # Print verdict for chain & save it as ".cif.gz"
@@ -2362,11 +2364,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             update_dict_of_lists(apo_holo_dict, res.apo_holo_dict_instance)            # key = query_structchain
             update_dict_of_lists(apo_holo_dict_H, res.apo_holo_dict_H_instance)        # key = query_structchain
             update_dict_of_lists(cndt_lig_positions, res.cndt_lig_positions_instance)  # key = candidate_structchain
-            update_dict_of_lists(binding_sites, res.binding_sites_instance)            # key = structchain.binding_site
+            update_dict_of_lists(binding_sites, res.binding_sites_instance)            # key = structchain.ligand_position
 
-        # Remove duplicate values from dictionaries (cndt_lig_positions dict may have duplicates)
-        for key, value in cndt_lig_positions.items():
-            cndt_lig_positions[key] = list(cndt_lig_positions.fromkeys(value))  
+        # Remove duplicate values from dictionaries (cndt_lig_positions & binding_sites may have duplicates) (moved after loop)
+         
 
 
     track_progress()
@@ -2384,12 +2385,19 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Universal results
     
+    # Remove duplicates from dictionaries before writing to disk
+    for key, value in cndt_lig_positions.items():
+        cndt_lig_positions[key] = list(cndt_lig_positions.fromkeys(value))
+    for key, value in binding_sites.items():
+        binding_sites[key] = list(binding_sites.fromkeys(value))
     # Remove duplicate discard msgs from dict "discarded_chains" 
     for key, value in discarded_chains.items():
         discarded_chains[key] = list(discarded_chains.fromkeys(value))
+
     write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
     write_binding_sites_csv(binding_sites, path_results)
     write_discarded_chains(discarded_chains, path_results)
+
     # Write binary ligands dictionaries
     save_dict_binary(query_lig_positions, path_results + '/ligands_qr.bin')
     save_dict_binary(cndt_lig_positions, path_results + '/ligands_cndt.bin')
@@ -2502,7 +2510,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73')
-    #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 E mg 205',help='main input query') # fail, ligand assigned non-polymer chain
@@ -2523,7 +2531,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
-    parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
@@ -2627,10 +2635,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6l1t ! PTR')
     #parser.add_argument('--query', type=str,   default='3U7Q D MG')
     #parser.add_argument('--query', type=str,   default='6il9 A MG')  # Wrong input (ligand doesn't exist)
-    #parser.add_argument('--query', type=str,   default='5J8P A MG')   # Crashes kernel
-    
-    
-     
+    #parser.add_argument('--query', type=str,   default='5J8P A MG')  # Crashes kernel
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
 
     # Basic
@@ -2638,9 +2643,9 @@ def parse_args(argv):
     parser.add_argument('--include_nmr',       type=int,   default=1,     help='0/1: Discard/include NMR structures')
     parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: Only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands')
+    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: When examining the superimposed binding sites of candidate structures, consider HOH molecules as ligands and show them in the results')
     #parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
     #parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: Start the search with an apo structure that does not bind any ligands')
-    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: When examining the superimposed binding sites of candidate structures, consider HOH molecules as ligands and show them in the results')
 
     # Advanced
     parser.add_argument('--overlap_threshold', type=float, default=0.0,   help='Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="')
@@ -2652,8 +2657,8 @@ def parse_args(argv):
     parser.add_argument('--d_aa_as_lig',       type=int,   default=0,     help='0/1: Ignore/consider D-amino acids as ligands')
 
     # Experimental
-    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too
     parser.add_argument('--look_in_archive',   type=int,   default=0,     help='0/1: Search if the same query has been processed in the past (can give very fast results)')
+    #parser.add_argument('--beyond_hetatm',     type=int,   default=0,     help='0/1: when enabled, does not limit holo ligand detection to HETATM records for specified ligand/residue')  # [might need to apply this to apo search too
 
     # Internal
     parser.add_argument('--apo_chain_limit',   type=int,   default=9999,  help='limit number of apo chains to consider when aligning (for fast test runs)')
@@ -2664,10 +2669,11 @@ def parse_args(argv):
     parser.add_argument('--track_progress',    type=bool,  default=False, help='track the progress of long queries in .progress file, update result csv files continually (not just at the end)')
     parser.add_argument('--intrfc_lig_radius', type=float, default=4.5,   help='Angstrom radius to look around atoms of ligand for interactions with protein atoms')
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water query ligands only)')
+    parser.add_argument('--bndg_res_radius',   type=float, default=4.0,   help='Angstrom radius to look around candidate and query ligand(s) for binding residues')
 
     # Saving
-    parser.add_argument('--save_apo',          type=int,   default=1,     help='0/1: [Save aligned apo chains] save the structure files of the aligned apo chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final result reports')
-    parser.add_argument('--save_holo',         type=int,   default=1,     help='0/1: [Save aligned holo chains] save the structure files of the aligned holo chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final result reports')
+    parser.add_argument('--save_apo',          type=int,   default=1,     help='0/1: [Save aligned apo chains] Save the structure files of the aligned APO chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final results report.')
+    parser.add_argument('--save_holo',         type=int,   default=1,     help='0/1: [Save aligned holo chains] Save the structure files of the aligned HOLO chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final results report.')
     #parser.add_argument('--save_session',      type=int,   default=0,     help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     #parser.add_argument('--multisave',         type=int,   default=0,     help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
