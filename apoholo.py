@@ -2609,8 +2609,8 @@ def parse_args(argv):
     parser.add_argument('--hoh_scan_radius',   type=float, default=2.5,   help='Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str, applies to water query ligands only)')
 
     # Saving
-    parser.add_argument('--save_apo',          type=int,   default=1,     help='0/1: also save chains same with query (holo chains when looking for apo, and apo chains when looking for holo)')
-    parser.add_argument('--save_holo',         type=int,   default=1,     help='0/1: save each chain object in a separate file (default save)')
+    parser.add_argument('--save_apo',          type=int,   default=1,     help='0/1: [Save aligned apo chains] save the structure files of the aligned apo chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final result reports')
+    parser.add_argument('--save_holo',         type=int,   default=1,     help='0/1: [Save aligned holo chains] save the structure files of the aligned holo chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final result reports')
     #parser.add_argument('--save_session',      type=int,   default=0,     help='0/1: save each result as a PyMOL ".pse" session (zipped, includes annotations -less recommended)')
     #parser.add_argument('--multisave',         type=int,   default=0,     help='0/1: save each result in a .pdb file (unzipped, no annotations -least recommended)')
 
