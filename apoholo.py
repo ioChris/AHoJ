@@ -244,6 +244,7 @@ class CandidateChainResult:
     apo_holo_dict_instance: dict = None
     apo_holo_dict_H_instance: dict = None
     cndt_lig_positions_instance: dict = None
+    binding_sites_instance: dict = None
 
 
 @dataclass
@@ -553,6 +554,25 @@ def write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results):  #
             for idx, item in enumerate(values):  # replace " " with "_"
                 values[idx] = item.replace(" ", "_")
             csv_out.write("%s,%s\n" % (key, '-'.join(values)))
+
+
+def write_binding_sites_csv(binding_sites_dict, path_results):  # Write dict to csv
+    # we don't want to edit original dicts while computation is still running
+    # doing deepcopy because they are dicts of lists
+    binding_sites_dict = copy.deepcopy(binding_sites_dict)
+
+    filename_csv = path_results + '/binding_sites.csv'
+    header = "chain,ligand,binding_residues\n"
+
+    with open(filename_csv, 'w') as csv_out:
+        csv_out.write(header)
+
+        # Format dict values and write
+        for key, values in binding_sites_dict.items():
+            chain = key.split('.')[0]
+            site = key.split('.')[1]
+            csv_out.write("%s,%s,%s\n" % (chain, site, ' '.join(values)))
+
 
 
 def write_results_apo_csv(apo_holo_dict, path_results):
@@ -1501,6 +1521,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     query_lig_positions = dict()
     cndt_lig_positions = dict()
+    binding_sites = dict()
     query_chain_states = dict()
     apo_holo_dict = dict()
     apo_holo_dict_H = dict()
@@ -1525,6 +1546,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 write_results_apo_csv(apo_holo_dict, path_results)
                 write_results_holo_csv(apo_holo_dict_H, path_results)
                 write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
+                write_binding_sites_csv(binding_sites, path_results)
                 write_discarded_chains(discarded_chains, path_results)
 
 
@@ -1849,7 +1871,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             #print_dict_readable(bad_candidates_rsd_map, 'bad_candidates_rsd_map')
 
     # end query chain loop
-    #sys.exit(1)
+
 
 
     # Assemble final dictionary of candidates and start candidate alignment loop
@@ -1867,12 +1889,12 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for qr_chain in penultimate_candidates:
         if penultimate_candidates.get(qr_chain) is not None:
             final_candidates[qr_chain] = penultimate_candidates[qr_chain]
-    
+
     #print_dict_readable(dictApoCandidates_1,'\ndictApoCandidates_1')
     #print_dict_readable(penultimate_candidates,'\nPenultimate candidates')
     #print_dict_readable(dict_rsd_map_candidates,'\ndict_rsd_map_candidates')
     #print_dict_readable(final_candidates,'\nFinal candidates')
-    #sys.exit(0)
+
 
     # Move total progress calculation here
     progress_total_candidates = sum([len(lst) for lst in final_candidates.values()])
@@ -1901,6 +1923,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             apo_holo_dict_instance = dict()
             apo_holo_dict_H_instance = dict()
             cndt_lig_positions_instance = dict()
+            binding_sites_instance = dict()
             chain_stdout = list()
 
             nonlocal progress_processed_candidates
@@ -1932,7 +1955,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
             # Get mapped binding residue scores for query/candidate chain combo
             #print_dict_readable(candidate_scores, 'candidate_scores') # All candidate scores
-            #sys.exit(1)
+
             if query_chain_states[query_structchain] == 'holo':
                 bndg_rsd_scores = get_scores_from_residue_mapping(candidate_scores, query_structchain, candidate_structchain)
                 if bndg_rsd_scores != '-':
@@ -1941,7 +1964,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                 else:
                     bndg_rsd_ratio = bndg_rsd_scores
                     bndg_rsd_percent = bndg_rsd_scores
-            elif query_chain_states[query_structchain] == 'apo': # for Apo query chains
+            elif query_chain_states[query_structchain] == 'apo':
                 bndg_rsd_ratio = '-'
                 bndg_rsd_percent = '-'
             #print(f'\nBinding residue scores for {candidate_structchain}.{query_structchain}: {bndg_rsd_scores}')
@@ -2061,6 +2084,14 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     qr_lig_sele_expression = '(' + query_struct + ' and chain ' + chain + ' and resi ' + resi + ' and resn ' + resn + ')'
                     cmd.select(candidate_structchain + '_arnd_' + ligand_, cndt_sele_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + qr_lig_sele_expression)
 
+                    # Select binding residues
+                    cndt_bndg_site_expression = '(' + candidate_struct + ' and chain ' + candidate_chain + ' and polymer.protein)' # only get binding residues of candidate chain
+                    cmd.select(candidate_structchain + '_pocket_' + ligand_, cndt_bndg_site_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + qr_lig_sele_expression)
+
+                    myspace_pockets = {'pocket': []}
+                    cmd.iterate(candidate_structchain + '_pocket_' + ligand_, 'pocket.append(chain + "_" + resn + "_" + resi)', space = myspace_pockets)
+                    for key, value in myspace_pockets.items():
+                        myspace_pockets[key] = list(myspace_pockets.fromkeys(value))  # Remove duplicate values
 
                     # If cndt ligand belongs to different PDB chain than candidate structchain, it will not be saved, we need to merge the two selections here
                     cmd.select(candidate_structchain, candidate_structchain + '_arnd_' + ligand_, merge=1)
@@ -2072,6 +2103,16 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     # Remove duplicate values from myspace_cndt
                     for key, value in myspace_cndt.items():
                         myspace_cndt[key] = list(myspace_cndt.fromkeys(value))   # preserves the order of values - better than set()
+
+                    # Capture binding site (only residues of candidate chain)
+                    for key, values in myspace_pockets.items():
+                        binding_sites_instance[candidate_structchain + '.' + ligand_] = values  # [alt] binding_sites_instance.setdefault(candidate_structchain + '.' + ligand_, []).append(values.strip('[',))
+
+                    #print('\n'.join(chain_stdout))
+                    #print(myspace_pockets.get('pocket'))
+                    #print(myspace_pockets)
+                    #print(binding_sites_instance)
+                    #sys.exit(1)
 
                     ##print('scanning ligand:', ligand)
                     #print(f'-candidate ligands in query ligand binding site [{ligand}]: {myspace_cndt["cndt_positions"]}')
@@ -2210,6 +2251,19 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                             found_ligands_r.add(r_atom_lig_name)
                             cndt_lig_positions_instance.setdefault(candidate_structchain, []).append(ligand)
 
+                        # Select binding residues
+                        cndt_bndg_site_expression = '(' + candidate_struct + ' and chain ' + candidate_chain + ' and polymer.protein)' # only get binding residues of candidate chain
+                        cmd.select(candidate_structchain + '_pocket_' + ligand_, cndt_bndg_site_expression + ' near_to ' + cndtlig_scan_radius + ' of ' + s2cndtlig)
+
+                        myspace_pockets = {'pocket': []}
+                        cmd.iterate(candidate_structchain + '_pocket_' + ligand_, 'pocket.append(chain + "_" + resn + "_" + resi)', space = myspace_pockets)
+                        for key, value in myspace_pockets.items():
+                            myspace_pockets[key] = list(myspace_pockets.fromkeys(value))  # Remove duplicate values
+
+                        # Capture binding site (only residues of candidate chain)
+                        for key, values in myspace_pockets.items():
+                            binding_sites_instance[candidate_structchain + '.' + ligand_] = values 
+
 
                 # Print verdict for chain & save it as ".cif.gz"
                 #print('\t\t\t\t\t\t\t\t*** Chain evaluation ***')
@@ -2260,6 +2314,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             candidate_result.apo_holo_dict_instance = apo_holo_dict_instance
             candidate_result.apo_holo_dict_H_instance = apo_holo_dict_H_instance
             candidate_result.cndt_lig_positions_instance = cndt_lig_positions_instance
+            candidate_result.binding_sites_instance = binding_sites_instance
 
             candidate_result.passed = True
             return candidate_result
@@ -2307,6 +2362,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             update_dict_of_lists(apo_holo_dict, res.apo_holo_dict_instance)            # key = query_structchain
             update_dict_of_lists(apo_holo_dict_H, res.apo_holo_dict_H_instance)        # key = query_structchain
             update_dict_of_lists(cndt_lig_positions, res.cndt_lig_positions_instance)  # key = candidate_structchain
+            update_dict_of_lists(binding_sites, res.binding_sites_instance)            # key = structchain.binding_site
 
         # Remove duplicate values from dictionaries (cndt_lig_positions dict may have duplicates)
         for key, value in cndt_lig_positions.items():
@@ -2332,6 +2388,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     for key, value in discarded_chains.items():
         discarded_chains[key] = list(discarded_chains.fromkeys(value))
     write_ligands_csv(query_lig_positions, cndt_lig_positions, path_results)
+    write_binding_sites_csv(binding_sites, path_results)
     write_discarded_chains(discarded_chains, path_results)
     # Write binary ligands dictionaries
     save_dict_binary(query_lig_positions, path_results + '/ligands_qr.bin')
@@ -2466,7 +2523,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
-    #parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
+    parser.add_argument('--query', type=str,   default='2v0v',         help='main input query') # Fully apo, apo 8, holo 24
     #parser.add_argument('--query', type=str,   default='2v0v A,B',     help='main input query') # apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='2v0v A',       help='main input query') # apo 2, holo 6
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
@@ -2570,7 +2627,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6l1t ! PTR')
     #parser.add_argument('--query', type=str,   default='3U7Q D MG')
     #parser.add_argument('--query', type=str,   default='6il9 A MG')  # Wrong input (ligand doesn't exist)
-    parser.add_argument('--query', type=str,   default='5J8P A MG')   # Crashes kernel
+    #parser.add_argument('--query', type=str,   default='5J8P A MG')   # Crashes kernel
     
     
      
