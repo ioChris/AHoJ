@@ -2655,7 +2655,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='5J8P A MG')  # Crashes kernel
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
     #parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
-    parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
+    #parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
+    parser.add_argument('--query', type=str,   default='1afa 1 CA 227')  # errored in server, ok locally (ram?)
     
 
     # Basic
