@@ -1272,7 +1272,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             except Exception as ex:
                 print(f'Candidate chains over [{overlap_threshold}%] (user-specified) overlap threshold for [{qr_structchain}]:\t{dictApoCandidates.get(qr_structchain)},\t{ex}') # - {dictApoCandidates[dict_key]}') #[dict_key][0].split()[0]}]')
 
-
+    
     # Calculate num of total candidate chains for all query chains (use larger dict (dictApoCandidates_b))
     total_chains = sum([len(dictApoCandidates_b[x]) for x in dictApoCandidates_b if isinstance(dictApoCandidates_b[x], list)])
     #total_chains = sum([len(dictApoCandidates[x]) for x in dictApoCandidates if isinstance(dictApoCandidates[x], list)])
@@ -1283,7 +1283,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if total_chains == 0:
         print('\n=== Ending program ===')
         sys.exit(0)  # Exit without error. Search was successful but there are no candidates
-
+    
     '''
     # Remove duplicate values from dictApoCandidates & dictApoCandidates_b
     for key, values in dictApoCandidates.items():
@@ -1441,11 +1441,18 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     eligible_chains1 = sum([len(dictApoCandidates_1[x]) for x in dictApoCandidates_1 if isinstance(dictApoCandidates_1[x], list)])
     eligible_chainsb1 = sum([len(dictApoCandidates_b1[x]) for x in dictApoCandidates_b1 if isinstance(dictApoCandidates_b1[x], list)])
 
-    print(f'Candidate chains (over 0% UNP overlap - for UNP residue mapping) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chainsb1}')
+    print(f'\nCandidate chains (over 0% UNP overlap - for UNP residue mapping) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chainsb1}')
     if overlap_threshold != 0: # otherwise no need to re-print
         print(f'Candidate chains (over user-specified [{overlap_threshold}%] UNP overlap - for apo query chains) satisfying structure quality requirements (method/resolution) [{res_threshold} Å]:\t{eligible_chains1}')
     #print_dict_readable(exp_method_dict, '\nexp_method_dict')
-    #sys.exit(1)
+
+
+    # Check one last time if there are any remaining eligible candidates, if not kill the process
+    # End script if there are 0 candidate chains OR e.g. no UniProt is assigned to the query structure
+    if overlap_threshold == 0 and eligible_chains1 == 0 or overlap_threshold != 0 and eligible_chainsb1 == 0:
+        print('\n=== Ending program ===')
+        sys.exit(0)  # Exit without error. Search was successful but there are no candidates
+
 
     # Make dict with query struct:chains
     dictQueryChains = dict()
@@ -2647,7 +2654,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6il9 A MG')  # Wrong input (ligand doesn't exist)
     #parser.add_argument('--query', type=str,   default='5J8P A MG')  # Crashes kernel
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
-    parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
+    #parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
+    parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
     
 
     # Basic
