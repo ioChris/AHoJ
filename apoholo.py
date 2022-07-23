@@ -933,6 +933,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     # Map ligands with non-protein chains to protein chains [not allowed in broad search]
     non_protein_lig_chains = dict()
+    remap_to_UNP = False
     if len(usr_structchains_unverified) > 0 and ligand_names is not None:
         print(f'-ligand assigned non-protein chain(s): {usr_structchains_unverified}, attempting to map to protein chains')
 
@@ -966,6 +967,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
                     try:
                         print(new_structchain, dict_SIFTS[new_structchain])
                         user_structchains.append(new_structchain)
+                        remap_to_UNP = True
                     except Exception:
                         print('-remapped chain not found in SIFTS', found_chain)
 
@@ -1566,10 +1568,18 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
     search_interface = False
 
-    if ligand_names is not None: # and if interface search allowed by parameter?
+    if ligand_names is not None: # and if interface search allowed by parameter? AND if position is not specified (as numerical index)
         for x in ligand_names:
-            if x not in nolig_resn and x != 'HOH': # this maybe should be OR == 'HOH'
-                search_interface = True
+            if x not in nolig_resn and x != 'HOH':  # if lig is ligand AND not water # this maybe should be OR == 'HOH'
+            #if x not in std_rsds and x != 'HOH': #std_rsds
+                if position is None:                # position not specified at all
+                    #if int(position).isnumeric():
+                    search_interface = True
+                if position is not None:
+                    if not position.isnumeric():   # position not specified (as numerical index)
+                        search_interface = True
+                    if remap_to_UNP:         
+                        search_interface = True
     elif ligand_names is None: # and if interface search allowed by parameter?
         search_interface = True
 
@@ -2510,7 +2520,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73')
-    parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 E mg 205',help='main input query') # fail, ligand assigned non-polymer chain
@@ -2560,7 +2570,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6XBY s nag')
     #parser.add_argument('--query', type=str,   default='6XBY b pov')
     #parser.add_argument('--query', type=str,   default='6XBY A thr 257', help='main input query')
-    #parser.add_argument('--query', type=str,   default='1a73 e mg 205')
+    #parser.add_argument('--query', type=str,   default='1a73 E mg 205')
     #parser.add_argument('--query', type=str,   default='1a73 A mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg,zn')
     #parser.add_argument('--query', type=str,   default='1a73 * mg')
@@ -2637,6 +2647,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6il9 A MG')  # Wrong input (ligand doesn't exist)
     #parser.add_argument('--query', type=str,   default='5J8P A MG')  # Crashes kernel
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
+    parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
+    
 
     # Basic
     parser.add_argument('--res_threshold',     type=float, default=3.8,   help='Lowest allowed resolution for result structures (applies to highest resolution value for scattering methods, expressed in angstroms), condition is <=')
