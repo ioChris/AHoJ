@@ -2611,7 +2611,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut ! tpo',     help='main input query') # 
     #parser.add_argument('--query', type=str,   default='6sut A',         help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut A tpo 285', help='main input query') # OK apo 0, holo 3
-    #parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
+    parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a37 P sep 259', help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1]
     #parser.add_argument('--query', type=str,   default='1a37 ! sep',     help='main input query') #
     #parser.add_argument('--query', type=str,   default='1a37 + sep',     help='main input query') # Wrong input format
@@ -2656,7 +2656,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
     #parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
     #parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
-    parser.add_argument('--query', type=str,   default='1afa 1 CA 227')  # errored in server, ok locally (ram?)
+    #parser.add_argument('--query', type=str,   default='1afa 1 CA 227')  # errored in server, ok locally (ram?)
     
 
     # Basic
