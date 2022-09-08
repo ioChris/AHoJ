@@ -796,7 +796,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     if user_chains != 'ALL' and user_chains != '!':
         user_chains = ''.join(user_chains)
         user_chains = user_chains.split(',')
-        #user_chains_bundle = '+'.join(user_chains)
+        user_chains_bundle = '+'.join(user_chains)
 
         # Convert chains to structchain combos
         user_structchains = list()
@@ -1616,7 +1616,13 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
         #print(struct, dictQueryChains[struct])
         all_ligands_selection = cmd.select('structure_ligands', search_interface_expression)
-
+        '''
+        if all_ligands_selection == 0 and remap_to_UNP and user_chains_bundle is not None:
+            if position is None:
+                search_interface_expression = query_struct + ' and hetatm and not solvent and chain ' + user_chains_bundle + ' and resn ' + ligand_names_bundle
+            else:  # TODO we don't want all ligands
+                search_interface_expression = query_struct + ' and hetatm and not solvent and chain ' + user_chains_bundle + 'and resn ' + ligand_names_bundle + ' and resi ' + position
+        '''
         if all_ligands_selection != 0:
             myspace_intrfc = {'all_ligs': []}
             cmd.iterate('structure_ligands', 'all_ligs.append( (resn+"_"+chain+"_"+resi,ID) )', space=myspace_intrfc)
@@ -1697,6 +1703,10 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and segi ' + query_chain)
             if ligands_selection == 0:# and autodetect_lig == 0: # This should not occur anymore (unless the ligand belongs to non-protein chain)
                 print('No ligands found in PDB chain')
+                
+                if ligands_selection == 0 and remap_to_UNP:
+                    print('Trying remapped user chain')
+                    ligands_selection = cmd.select('query_ligands', query_struct +' and '+ search_term + ' and chain ' + user_chains_bundle)
 
 
         # Search & select interface ligands (if any)
@@ -2611,7 +2621,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='6sut ! tpo',     help='main input query') # 
     #parser.add_argument('--query', type=str,   default='6sut A',         help='main input query') # OK apo 0, holo 3
     #parser.add_argument('--query', type=str,   default='6sut A tpo 285', help='main input query') # OK apo 0, holo 3
-    parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A zn 201',  help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a37 P sep 259', help='main input query') # OK apo 6, holo 4 [with nonstd_rsds_as_lig=1]
     #parser.add_argument('--query', type=str,   default='1a37 ! sep',     help='main input query') #
     #parser.add_argument('--query', type=str,   default='1a37 + sep',     help='main input query') # Wrong input format
@@ -2657,6 +2667,8 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
     #parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
     #parser.add_argument('--query', type=str,   default='1afa 1 CA 227')  # errored in server, ok locally (ram?)
+    #parser.add_argument('--query', type=str,   default='3k0v C NAG 1') # no error (just no results)
+    parser.add_argument('--query', type=str,   default='3k0v B NAG 1') #
     
 
     # Basic
