@@ -18,7 +18,7 @@ i) When looking for apo from holo:
 *When position is specified, only one ligand can be defined.
 '''
 
-VERSION = '0.4.8'
+VERSION = '0.4.9'
 
 import copy
 import pathlib

@@ -122,6 +122,7 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '1a73 E mg 205' ", expect_apo=4, expect_holo=12) # non-protein query chain
         self.tst_query("--query '1a73 A mg' ",     expect_apo=4, expect_holo=12) # interface ligand assigned nucleic acid chain in the PDB file
         self.tst_query("--query '6XBY A adp,mg' ", expect_apo=7, expect_holo=2)  # ADP is an interface ligand on non-query chain
+        self.tst_query("--query '3k0v B NAG 1' ",  expect_apo=2, expect_holo=86) # ligand is on a non-uniprot chain that is remapped, it was not detected in previous versions (< 0.4.9)
 
     def test_lig_bndng_chains_parsing(self):
         self.tst_query("--query '1a73 ! MG' ",    expect_apo=8, expect_holo=24)     # "!" means that only query chains that bind the ligand(s) will be considered for the search
