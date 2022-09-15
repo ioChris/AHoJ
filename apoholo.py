@@ -2540,7 +2540,7 @@ def parse_args(argv):
     # Main user query
     # Ligand
     #parser.add_argument('--query', type=str,   default='1a73')
-    parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
+    #parser.add_argument('--query', type=str,   default='1a73 A zn',    help='main input query') # OK apo 0, holo 16
     #parser.add_argument('--query', type=str,   default='1a73 A,B zn',  help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * zn',    help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 E mg 205',help='main input query') # fail, ligand assigned non-polymer chain
@@ -2557,7 +2557,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
+    parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
@@ -2679,7 +2679,7 @@ def parse_args(argv):
     parser.add_argument('--include_nmr',       type=int,   default=1,     help='0/1: Discard/include NMR structures')
     parser.add_argument('--xray_only',         type=int,   default=0,     help='0/1: Only consider X-ray structures')
     parser.add_argument('--lig_free_sites',    type=int,   default=1,     help='0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands')
-    parser.add_argument('--water_as_ligand',   type=int,   default=1,     help='0/1: When examining the superimposed binding sites of candidate structures, consider HOH molecules as ligands and show them in the results')
+    parser.add_argument('--water_as_ligand',   type=int,   default=0,     help='0/1: When examining the superimposed binding sites of candidate structures, consider HOH molecules as ligands and show them in the results')
     #parser.add_argument('--autodetect_lig',    type=int,   default=0,     help='0/1: This will find and consider any non-protein and non-solvent heteroatoms as ligands and mark their binding sites, in addition to any specified ligands (useful when the user does not know the ligand)')
     #parser.add_argument('--reverse_search',    type=int,   default=0,     help='0/1: Start the search with an apo structure that does not bind any ligands')
 
