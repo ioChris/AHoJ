@@ -108,6 +108,7 @@ class T02_Apoholo(unittest.TestCase):
         self.tst_query("--query '2v57 A,C prl' ",    expect_apo=4,  expect_holo=0)  # SS changes in transcriptional regulator LfrR in complex with proflavine
         self.tst_query("--query '1fmk A HOH 1011' ", expect_apo=18, expect_holo=3)  # (hard target) Water molecule in the interface of two domains that undergo extensive conformational changes upon ligand binding (v0.4.6 apo 25)
         self.tst_query("--query '1aro P HG 904' ",   expect_apo=21, expect_holo=0)  # (previously apo 19) fragmented UniProt candidates, to use for testing UNP overlap calculation
+        self.tst_query("--query '1pkz A tyr 9' --water_as_ligand 1",   expect_apo=9, expect_holo=88) # marian example, allosteric effects of HOH
 
     def test_advanced_queries_B(self):
         self.tst_query("--query '1a37 P sep 259' ",     expect_apo=6,  expect_holo=4)  # Phosphoserine on non-uniprot chain (hard target)
