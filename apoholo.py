@@ -1474,7 +1474,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     # Define query ligand search expression
 
 
-    if position is not None: # (4 args) assumes that everything is specified (chains(taken care of), 1 ligand, position) ignore_autodetect_lig
+    if position is not None: # (4 args) assumes that everything is specified (chains ok, 1 ligand, position) ignore_autodetect_lig
 
         if ligand_names[0] == 'HOH': # mark selection & change lig scan radius -handled later
             search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
@@ -1482,8 +1482,11 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
         elif ligand_names[0] in nonstd_rsds: # find ligands
             if nonstd_rsds_as_lig == 1: # mark selection
                 search_term = 'resi ' + position + ' and resn ' + ligand_names_bundle
-            elif nonstd_rsds_as_lig == 0: # treat as residue, find ligand
-                search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+            elif nonstd_rsds_as_lig == 0: # treat as residue, find ligands [This is now perhaps obsolete as the previous option turns on automatically]
+                if water_as_ligand == 1:
+                    search_term = 'hetatm near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
+                else:
+                    search_term = 'hetatm and not solvent near_to ' + lig_scan_radius + ' of (resi ' + position + ' and resn ' + ligand_names_bundle + ')'
 
         elif ligand_names[0] in d_aminoacids:
             if d_aa_as_lig == 1: # mark selection
@@ -2611,7 +2614,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * hoh 509',  help='main input query') # OK apo 9, holo 7
     #parser.add_argument('--query', type=str,   default='1a73 * hoh',      help='main input query') # expected parsing fail
     #parser.add_argument('--query', type=str,   default='3i34 X hoh 311',  help='main input query') # apo 113, holo 94 *many irrelevant ligands show up
-    #parser.add_argument('--query', type=str,   default='1pkz A tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
+    parser.add_argument('--query', type=str,   default='1pkz A tyr 9',    help='main input query') # apo 7, holo 93, water as lig, marian, allosteric effect of hoh
     #parser.add_argument('--query', type=str,   default='1fmk A HOH 1011', help='main input query') # Issue related (query longer than candidate seq, poor one-way TM score, hit 4hxj is discarded)
     #parser.add_argument('--query', type=str,   default='4hxj A,B',        help='main input query')
     #parser.add_argument('--query', type=str,   default='2v7d B hoh 2026', help='main input query')
@@ -2668,7 +2671,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
     #parser.add_argument('--query', type=str,   default='1afa 1 CA 227')  # errored in server, ok locally (ram?)
     #parser.add_argument('--query', type=str,   default='3k0v C NAG 1') # no error (just no results)
-    parser.add_argument('--query', type=str,   default='3k0v B NAG 1') #
+    #parser.add_argument('--query', type=str,   default='3k0v B NAG 1') #
     
 
     # Basic
