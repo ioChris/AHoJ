@@ -1,0 +1,123 @@
+# command_line_name: used on command line and as a HTTP param name in web API
+# display_name: relatively short, displayed as an option name near the input box / checkbox in web UI
+# Short description / tooltip (longer, contains units, ranges / possible values, used as args help string and a hoover on tooltip in the web UI)
+# Long description (can contain multiple paragraphs, displayed in the new Options box in the web UI)
+
+
+options:
+  - command_line_name: res_threshold
+    display_name: Resolution threshold
+    default_value: 3.8
+    short_description: |
+      Lowest allowed resolution for result structures (applies to highest resolution value for 
+      scattering methods, expressed in angstroms), condition is "<="
+    long description: |
+      Floating point number that represents angstroms and is applied as a cut-off point when assessing 
+      candidate structures that are resolved by scattering methods (X-ray crystallography, electron 
+      microscopy, neutron diffraction). 
+      
+      It applies at the highest resolution value, when this is 
+      available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. 
+      Condition is "<=".
+
+  - command_line_name: include_nmr
+    display_name: Include NMR structures
+    default_value: 1
+    short_description: |
+      0/1: Discard/include NMR structures
+    long description: |
+      When set to 1 (ON), NMR structures are considered as candidates. In the case of multiple states for a certain structure, the first one is considered [default = ON].
+
+  - command_line_name: xray_only
+    display_name: X-ray structures only
+    default_value: 0
+    short_description: |
+      0/1: Only consider X-ray structures
+    long description: |
+      When set to 1 (ON), only X-ray structures are considered as candidates during the search and structures resolved by hybrid methods including X-ray crystallography (e.g., electron paramagnetic resonance and neutron diffraction), will be excluded. This overrides the NMR setting [default = OFF].
+
+  - command_line_name: lig_free_sites
+    display_name: Ligand-free sites
+    default_value: 1
+    short_description: |
+      0/1: Ligand-free binding sites. When on, resulting apo sites will be free of any other known ligands in addition to specified ligands
+    long description: |
+      This pertains to the apo/holo classification of candidate structures. When set to ON, it does not tolerate any ligands (in addition to the user-specified one(s)) in the superimposed binding sites of the candidate apo structures. When set to OFF, it tolerates ligands other than the user-specified one(s) in the same superimposed binding site(s). If the user wants to find apo structures that do not bind any ligands in the superimposed binding site(s) of the query ligand(s), this value should be set to ON [default = ON].
+
+  - command_line_name: water_as_ligand
+    display_name: Consider water as ligand
+    default_value: 0
+    short_description: |
+      0/1: When examining the superimposed binding sites of candidate structures, consider HOH molecules as ligands and show them in the results
+    long description: |
+      When set to 1 (ON), allows the detection of water molecules (i.e., 'HOH') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one water molecule is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a water molecule is defined in the user query, this setting is automatically enabled [default = OFF].
+
+  - command_line_name: overlap_threshold
+    display_name: Sequence overlap threshold
+    default_value: 0.0
+    short_description: |
+      Minimum % of sequence overlap between query and result chains (using the SIFTS residue-level mapping with UniProt), condition is ">="
+    long description: |
+      Floating point number that represents a percentage (%) and is applied as a cut-off point when comparing the sequence overlap between the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate chains, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it means that the candidate chain must completely cover the query chain. It can be longer than the query, but not shorter [default = 0, min/max = 0/100].
+      
+      Note: "100" guarantees complete coverage, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cut-off with the "Minimum TM-score" parameter.
+
+  - command_line_name: bndgrsds_threshold
+    display_name: Binding residues threshold
+    default_value: 1.0
+    short_description: |
+      Minimum % of binding residues of the query that have to be present in the candidate according to UNP residue mapping, for the candidate to be considered, condition is ">="
+    long description: |
+      Floating point number that represents a percentage (%) and is applied as a minimum cut-off upon the percentage of the number of successfully mapped binding residues in the candidate chain out of the total number of binding residues in the query chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo [default = 1.0, min/max = 1/100, condition is ">="].
+
+  - command_line_name: lig_scan_radius
+    display_name: Ligand scanning radius
+    default_value: 4.5
+    short_description: |
+      Angstrom radius to look around the query ligand(s) superposition (needs to be converted to str)
+    long description: |
+      Floating point number that represents angstroms and is applied as a scanning radius when looking for ligands in the candidate structures. This scanning radius is applied on the positions of the atoms of the superimposed query ligands to the aligned candidate structure, to scan for ligands. The resulting scanning space is a "carved" surface that has the shape of the query ligand, extended outward by the given radius. If the candidate structure binds ligands outside of this superimposed area, they will be ignored, and the candidate will be characterised as an apo-protein [default = 4.5].
+
+  - command_line_name: min_tmscore
+    display_name: Minimum TM-score
+    default_value: 0.5
+    short_description: |
+      Minimum acceptable TM-score for apo-holo alignments (condition is ">")
+    long description: |
+      Floating point number that is applied as a minimum accepted template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH [default = 0.5, min/max = 0/1].
+
+  - command_line_name: nonstd_rsds_as_lig
+    display_name: Consider non-standard residues as ligands
+    default_value: 0
+    short_description: |
+      0/1: Ignore/consider non-standard residues as ligands
+    long description: |
+      When set to 1 (ON), allows the detection of non-standard -or modified- residues (e.g., 'TPO', 'SEP') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one modified residue is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a modified residue is defined in the user query, this setting is automatically enabled [default = OFF].
+      
+      Note: The current list of non-standard residues includes the following residue names: 'SEP TPO PSU MSE MSO 1MA 2MG 5MC 5MU 7MG H2U M2G OMC OMG PSU YG PYG PYL SEC PHA'.
+
+  - command_line_name: d_aa_as_lig
+    display_name: Consider D-amino acids as ligands
+    default_value: 0
+    short_description: |
+      0/1: Ignore/consider D-amino acids as ligands
+    long description: |
+      When set to 1 (ON), allows the detection of D-residues (e.g., 'DAL', 'DSN') as ligands in the superposition of the query ligand(s) in the candidate chains. If this setting is enabled and at least one D-residue is detected within the scanning radius, that would warrant a holo classification for the candidate chain. When a D-residue is defined in the user query, this setting is automatically enabled [default = OFF].
+      
+      Note: The current list of D-residues includes the following residue names: 'DAL DAR DSG DAS DCY DGN DGL DHI DIL DLE DLY MED DPN DPR DSN DTH DTR DTY DVA'.
+
+  - command_line_name: save_apo
+    display_name: Save aligned apo chains
+    default_value: 1
+    short_description: |
+      Save the structure files of the aligned APO chains (mmCIF)
+    long description: |
+      Save the structure files of the aligned APO chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final result reports [default = ON].
+
+  - command_line_name: save_holo
+    display_name: Save aligned holo chains
+    default_value: 1
+    short_description: |
+      Save the structure files of the aligned HOLO chains (mmCIF)
+    long description: |
+      Save the structure files of the aligned HOLO chains (mmCIF). Disabling this is only recommended in multiple queries if visualizations are not needed (reduces download size). This setting does not affect the search for apo or holo chains or the final result reports [default = ON].
