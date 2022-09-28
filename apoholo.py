@@ -18,7 +18,7 @@ i) When looking for apo from holo:
 *When position is specified, only one ligand can be defined.
 '''
 
-VERSION = '0.4.9'
+VERSION = '0.5.0'
 
 import copy
 import pathlib
@@ -41,6 +41,7 @@ import time
 import argparse
 import sys
 from dataclasses import dataclass
+import pandas as pd
 
 from concurrent.futures import ThreadPoolExecutor; import threading           # multi-threading
 #from concurrent.futures import ProcessPoolExecutor; import multiprocessing    # multi-processing (doesn't work atm)
@@ -573,6 +574,21 @@ def write_binding_sites_csv(binding_sites_dict, path_results):  # Write dict to 
             ligand = key.split('.')[1]
             csv_out.write("%s,%s,%s\n" % (chain, ligand, ' '.join(values)))
 
+
+def sort_results_pd(dict_name, column_names, sort=1): # Transfer results from dict to dataframe and sort them
+
+    if len(dict_name) > 0:
+        df = pd.DataFrame.from_dict(dict_name, orient='index').T.melt(var_name='query_chain', value_name='values').dropna(subset=['values'])
+        df[column_names] = df['values'].str.split(' ', expand=True)
+        df.drop('values', axis=1, inplace=True)
+
+        if sort == 1:
+            df.sort_values(by=['query_chain', ' %Mapped_bndg_rsds',' %UniProt_overlap', ' Resolution', ' R-free'], ascending=[True, False, False, True, True], inplace=True)
+    else:
+        column_names.insert(0, 'query_chain')
+        df = pd.DataFrame(columns = column_names)
+
+    return df
 
 
 def write_results_apo_csv(apo_holo_dict, path_results):
@@ -2435,18 +2451,38 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
 
 
     # Apo results
-    write_results_apo_csv(apo_holo_dict, path_results)
+    #write_results_apo_csv(apo_holo_dict, path_results)
     num_apo_chains = sum([len(apo_holo_dict[x]) for x in apo_holo_dict if isinstance(apo_holo_dict[x], list)])  # number of found APO chains
     print('\nApo chains: ', num_apo_chains)
     for key in apo_holo_dict:
         print(key, apo_holo_dict.get(key))
 
+    # Sort & save
+    filename_csv_apo = path_results + '/results_apo.csv'
+    #apo_cols = ["apo_chain", "Exp.method", "Resolution", "R-free", "%UniProt_overlap", "Mapped_bndg_rsds", "%Mapped_bndg_rsds", "RMSD", "TM_score", "iTM_score", "ligands"]
+    apo_cols = [" apo_chain", " Exp.method", " Resolution", " R-free", " %UniProt_overlap", " Mapped_bndg_rsds", " %Mapped_bndg_rsds", " RMSD", " TM_score", " iTM_score", " ligands"]
+    df_apo = sort_results_pd(apo_holo_dict, apo_cols, sort=0)
+    df_apo.to_csv(filename_csv_apo, index=False)
+    #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        #print(df_apo)
+
+
     # Holo results
-    write_results_holo_csv(apo_holo_dict_H, path_results)
+    #write_results_holo_csv(apo_holo_dict_H, path_results)
     num_holo_chains = sum([len(apo_holo_dict_H[x]) for x in apo_holo_dict_H if isinstance(apo_holo_dict_H[x], list)])  # number of found HOLO chains
     print('\nHolo chains: ', num_holo_chains)
     for key in apo_holo_dict_H:
         print(key, apo_holo_dict_H.get(key))
+
+    # Sort & save
+    filename_csv_holo = path_results + '/results_holo.csv'
+    #holo_cols = ["holo_chain", "Exp.method", "Resolution", "R-free", "%UniProt_overlap", "Mapped_bndg_rsds", "%Mapped_bndg_rsds", "RMSD", "TM_score", "iTM_score", "ligands"]
+    holo_cols = [" holo_chain", " Exp.method", " Resolution", " R-free", " %UniProt_overlap", " Mapped_bndg_rsds", " %Mapped_bndg_rsds", " RMSD", " TM_score", " iTM_score", " ligands"]
+    df_holo = sort_results_pd(apo_holo_dict_H, holo_cols, sort=0)
+    df_holo.to_csv(filename_csv_holo, index=False)
+    #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
+        #print(df_holo)
+
 
     # Query info file
     query_report = compile_query_report(query, query_full, job_id, query_chain_states, query_lig_positions, num_apo_chains, num_holo_chains, apo_holo_dict, apo_holo_dict_H, path_results)
