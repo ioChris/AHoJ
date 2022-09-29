@@ -4,6 +4,7 @@ channels:
   - speleo3
   - defaults
 dependencies:
+  - python=3.9
   - pymol-open-source=2.5.0
   - pymol-psico=4.0.2
   - tmalign=20170708
