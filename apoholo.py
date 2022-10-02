@@ -2461,7 +2461,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     filename_csv_apo = path_results + '/results_apo.csv'
     #apo_cols = ["apo_chain", "Exp.method", "Resolution", "R-free", "%UniProt_overlap", "Mapped_bndg_rsds", "%Mapped_bndg_rsds", "RMSD", "TM_score", "iTM_score", "ligands"]
     apo_cols = [" apo_chain", " Exp.method", " Resolution", " R-free", " %UniProt_overlap", " Mapped_bndg_rsds", " %Mapped_bndg_rsds", " RMSD", " TM_score", " iTM_score", " ligands"]
-    df_apo = sort_results_pd(apo_holo_dict, apo_cols, sort=0)
+    df_apo = sort_results_pd(apo_holo_dict, apo_cols, sort=1)
     df_apo.to_csv(filename_csv_apo, index=False)
     #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         #print(df_apo)
@@ -2478,7 +2478,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     filename_csv_holo = path_results + '/results_holo.csv'
     #holo_cols = ["holo_chain", "Exp.method", "Resolution", "R-free", "%UniProt_overlap", "Mapped_bndg_rsds", "%Mapped_bndg_rsds", "RMSD", "TM_score", "iTM_score", "ligands"]
     holo_cols = [" holo_chain", " Exp.method", " Resolution", " R-free", " %UniProt_overlap", " Mapped_bndg_rsds", " %Mapped_bndg_rsds", " RMSD", " TM_score", " iTM_score", " ligands"]
-    df_holo = sort_results_pd(apo_holo_dict_H, holo_cols, sort=0)
+    df_holo = sort_results_pd(apo_holo_dict_H, holo_cols, sort=1)
     df_holo.to_csv(filename_csv_holo, index=False)
     #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         #print(df_holo)
