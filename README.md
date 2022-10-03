@@ -46,7 +46,7 @@ It can find apo-proteins that i) simply lack the specified ligand in a given bin
 The application was built and initially ran in a Windows 10 computer. The python packages were all installed through the Anaconda package manager.
 The python version and packages used to run the application appear below:
 
-* Python  3.8.11
+* Python  3.9
 * PyMOL		 2.4.1
 * pywget		0.31
 * wget		  3.2
