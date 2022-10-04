@@ -270,7 +270,8 @@ def verify_ligands(ligand_names, pathLIGS):
                 if line.startswith('_chem_comp.pdbx_synonyms'):
                     lig_syn = line.split()[1:]
                     #print('>', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
-                    print('Verifying ligand:\t', ligand_names, '> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
+                    #print('Verifying ligand:\t', ligand_names, '> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
+                    print('Verifying ligand:\t', lig_id, '\t> ', lig_id, ' '.join(lig_name), ' '.join(lig_syn))
                     break
         #except Exception as ex:
             #print('Error verifying ligand:\t', lig_id, ex)
@@ -464,32 +465,65 @@ def compile_query_report(user_query, normalized_input, job_id, query_chain_state
                 if apo_dict.get(key) is not None:
                     paired_iq.append(key)
         '''
+
         # Find chains without any apo-holo pairs (iq dict)
         for key, value in results_dict_iq.items():
             if value == 0:
-                no_pair_iq.append(key)
-        # Subtract to find paired chains
-        for key in query_chain_states:
-            apo_key = key + '_apo'
-            holo_key = key + '_holo'
-            if apo_key not in no_pair_iq and holo_key not in no_pair_iq:
-                paired_iq.append(key)
-    
+                #no_pair_iq.append(key)
+                no_pair_iq.append(key.split('_')[0])    # remove _apo/_holo suffix
+
         # Find chains without any apo-holo pairs (eq dict)
         for key, value in results_dict_eq.items():
             if value == 0:
-                no_pair_eq.append(key)
+                #no_pair_eq.append(key)
+                no_pair_eq.append(key.split('_')[0])    # remove _apo/_holo suffix
+
+        # Subtract to find paired chains (for both iq and eq)
+        for key in query_chain_states:
+            if key not in no_pair_iq:
+                paired_iq.append(key)
+            if key not in no_pair_eq:
+                paired_eq.append(key)
+
+        '''
         # Subtract to find paired chains
         for key in query_chain_states:
-            apo_key = key + '_apo'
-            holo_key = key + '_holo'
-            if apo_key not in no_pair_eq and holo_key not in no_pair_eq:
+            #apo_key = key + '_apo'
+            #holo_key = key + '_holo'
+            #if apo_key not in no_pair_iq and holo_key not in no_pair_iq:
+            if key not in no_pair_iq:
+                paired_iq.append(key)
+
+        # Subtract to find paired chains
+        for key in query_chain_states:
+            #apo_key = key + '_apo'
+            #holo_key = key + '_holo'
+            #if apo_key not in no_pair_eq and holo_key not in no_pair_eq:
+            if key not in no_pair_eq:
                 paired_eq.append(key)
-    
+        '''
+
+        # Remove _apo/_holo suffix from list item names
+        # done earlier (maybe do it here instead)
+        #no_pair_eq_chains = list()
+        #no_pair_eq_chains.append(i.split('_')[0] for i in no_pair_iq)
+        #print(no_pair_eq_chains)
+
+        # Remove possible duplicate chains
+        #no_pair_iq = list(no_pair_iq.fromkeys)
+        #print('\n\nkey, value in dict')
+        #print(key, value, results_dict_eq)
+        #print('\n\nno_pair_iq list', no_pair_iq)
+        #print('\n\nno_pair_eq list', no_pair_eq)
+        no_pair_iq = list(dict.fromkeys(no_pair_iq))
+        no_pair_eq = list(dict.fromkeys(no_pair_eq))
+        #print('\n\nno_pair_iq list', no_pair_iq)
+        #print('\n\nno_pair_eq list', no_pair_eq)
+
         #query_report.append('\nresults_dict_iq\t\t' + str(results_dict_iq)) # Write dict
         #query_report.append('no_pair_iq\t\t\t' + ','.join(no_pair_iq))
         #query_report.append('paired_iq\t\t\t' + ','.join(paired_iq) + '\n')
-    
+
         # Including query chains
         paired_chains_iq = len(query_chain_states) - len(no_pair_iq)
         paired_chains_iq_pcnt = round(paired_chains_iq/len(query_chain_states)*100)
@@ -499,8 +533,9 @@ def compile_query_report(user_query, normalized_input, job_id, query_chain_state
         query_report.append('paired_chains_iq\t' + ','.join(i.split('_')[0] for i in paired_iq))
         query_report.append('#non-paired_chains_iq\t' + str(len(no_pair_iq)))
         query_report.append('%non-paired_chains_iq\t' + str(non_paired_chains_iq_pcnt))
-        query_report.append('non-paired_chains_iq\t' + ','.join(i.split('_')[0] for i in no_pair_iq))
-    
+        #query_report.append('non-paired_chains_iq\t' + ','.join(i.split('_')[0] for i in no_pair_iq))
+        query_report.append('non-paired_chains_iq\t' + ','.join(no_pair_iq))
+
         # Excluding query chains
         paired_chains_eq = len(query_chain_states) - len(no_pair_eq)
         paired_chains_eq_pcnt = round(paired_chains_eq/len(query_chain_states)*100)
@@ -510,8 +545,9 @@ def compile_query_report(user_query, normalized_input, job_id, query_chain_state
         query_report.append('paired_chains_eq\t' + ','.join(i.split('_')[0] for i in paired_eq))
         query_report.append('#non-paired_chains_eq\t' + str(len(no_pair_eq)))
         query_report.append('%non-paired_chains_eq\t' + str(non_paired_chains_eq_pcnt))
-        query_report.append('non-paired_chains_eq\t' + ','.join(i.split('_')[0] for i in no_pair_eq))
-    
+        #query_report.append('non-paired_chains_eq\t' + ','.join(i.split('_')[0] for i in no_pair_eq))
+        query_report.append('non-paired_chains_eq\t' + ','.join(no_pair_eq))
+
         # Append results as key-value pairs to report
         query_report.append('\n- Results excluding query chains -')   # Excluding query
         for key, value in results_dict_eq.items():
@@ -2584,7 +2620,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * mg',    help='main input query') # one MG is on non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 ! mg',    help='main input query') # apo 8, holo 24. one MG is on non-protein chain
-    #parser.add_argument('--query', type=str,   default='1a73 ! mg,zn', help='main input query') # apo
+    parser.add_argument('--query', type=str,   default='1a73 ! mg,zn', help='main input query') # apo
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',   help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',   help='main input query') 
@@ -2593,7 +2629,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='7s4z A *',     help='main input query') # apo 103, holo 104 *many irrelevant ligands
-    parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query')
+    #parser.add_argument('--query', type=str,   default='3fav all zn',  help='main input query') # possible error with SIFTS or UniProt annotation of chain A
     #parser.add_argument('--query', type=str,   default='3fav all',     help='main input query')
     #parser.add_argument('--query', type=str,   default='1y57 A mpz',   help='main input query') # apo 5, holo 29
     #parser.add_argument('--query', type=str,   default='6h3c B,G zn',  help='main input query') # OK apo 0, holo 4
@@ -2696,14 +2732,14 @@ def parse_args(argv):
     
     # Error queries
     #parser.add_argument('--query', type=str,   default='3anq ! PTR') # errored with Apo: 0  Holo: 570, locally finished with apo 0, holo 760. 
-    #parser.add_argument('--query', type=str,   default='3l4j ! PTR') # errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
+    #parser.add_argument('--query', type=str,   default='3l4j ! PTR') # [OK] before: errored with Apo: 0  Holo: 0, while Downloading: 3l4j.xml.gz
     #parser.add_argument('--query', type=str,   default='3s3h ! PTR')
     #parser.add_argument('--query', type=str,   default='6l1t ! PTR')
     #parser.add_argument('--query', type=str,   default='3U7Q D MG')
     #parser.add_argument('--query', type=str,   default='6il9 A MG')  # Wrong input (ligand doesn't exist)
     #parser.add_argument('--query', type=str,   default='5J8P A MG')  # Crashes kernel
     #parser.add_argument('--query', type=str,   default='3buo ! PTR')
-    #parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains
+    #parser.add_argument('--query', type=str,   default='7vd8 A ZN 201') # Even if position is specified, it looks and finds 3 more ligands on interface chains [fixed]
     #parser.add_argument('--query', type=str,   default='1a25 A CA 291') # 1a25 A CA 291
     #parser.add_argument('--query', type=str,   default='1afa 1 CA 227')  # errored in server, ok locally (ram?)
     #parser.add_argument('--query', type=str,   default='3k0v C NAG 1') # no error (just no results)
