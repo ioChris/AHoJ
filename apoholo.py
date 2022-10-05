@@ -618,6 +618,10 @@ def sort_results_pd(dict_name, column_names, sort=1): # Transfer results from di
         df[column_names] = df['values'].str.split(' ', expand=True)
         df.drop('values', axis=1, inplace=True)
 
+        # Convert selected columns to floating numbers (for correct sorting)
+        df[[' %Mapped_bndg_rsds',' %UniProt_overlap',' Resolution',' R-free']] = df[[' %Mapped_bndg_rsds',' %UniProt_overlap',' Resolution',' R-free']].apply(pd.to_numeric, errors='coerce').fillna('-')
+        #df[df.columns.drop('D')] = df[df.columns.drop('D')].apply(pd.to_numeric, errors='coerce')
+
         if sort == 1:
             df.sort_values(by=['query_chain', ' %Mapped_bndg_rsds',' %UniProt_overlap', ' Resolution', ' R-free'], ascending=[True, False, False, True, True], inplace=True)
     else:
@@ -2501,6 +2505,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     df_apo.to_csv(filename_csv_apo, index=False)
     #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         #print(df_apo)
+        #print(df_apo[["query_chain", " apo_chain", " Resolution", " R-free", " %UniProt_overlap", " %Mapped_bndg_rsds"]])
 
 
     # Holo results
@@ -2518,6 +2523,8 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
     df_holo.to_csv(filename_csv_holo, index=False)
     #with pd.option_context('display.max_rows', None, 'display.max_columns', None):  # more options can be specified also
         #print(df_holo)
+        #print(df_holo[["query_chain", " holo_chain", " Resolution", " R-free", " %UniProt_overlap", " %Mapped_bndg_rsds"]])
+
 
 
     # Query info file
@@ -2620,7 +2627,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1a73 * *',     help='main input query') # OK apo 0, holo 32
     #parser.add_argument('--query', type=str,   default='1a73 * mg',    help='main input query') # one MG is on non-protein chain
     #parser.add_argument('--query', type=str,   default='1a73 ! mg',    help='main input query') # apo 8, holo 24. one MG is on non-protein chain
-    parser.add_argument('--query', type=str,   default='1a73 ! mg,zn', help='main input query') # apo
+    #parser.add_argument('--query', type=str,   default='1a73 ! mg,zn', help='main input query') # apo
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',   help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',   help='main input query') 
@@ -2655,6 +2662,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
+    parser.add_argument('--query', type=str,   default='1DB1 ! VDX',   help='main input query') # apo 0, holo 44, vitamin D3 study
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2
