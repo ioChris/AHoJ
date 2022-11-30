@@ -70,7 +70,7 @@ elif os.path.exists(ligands_file) and not ligands_list:
 # Load all structures into PyMOL session
 for file in all_files:
     cmd.load(file)
-    object_name = file[:-7].split('\\')[1]
+    object_name = file[:-7].split(os.sep)[1]
     lig_positions = None
 
     if ligands_list: # If ligands file was found and was not empty
