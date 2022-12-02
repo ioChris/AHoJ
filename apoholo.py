@@ -1921,6 +1921,7 @@ def process_query(query, workdir, args, data: PrecompiledData = None) -> QueryRe
             # Group (UNP num) binding residues by chain (list in, dict out)
             bndgres_pdb_to_unp_chains = group_mapped_res_by_chain(bndgres_pdb_to_unp)
             print(f'Binding residues [UNP] grouped by query structure chain:\n{query_structchain}:{bndgres_pdb_to_unp_chains.get(query_structchain[4:])}')
+            #sys.exit(1)
 
             # Find whether mapped binding residues are present in each candidate chain
             candidate_hits = examine_cndt_mapped_bs_res(bndgres_pdb_to_unp_chains, query_structchain, uniprot_segments_dict)# dictApoCandidates_b1)# candidates_unp_dict) 
@@ -2646,8 +2647,10 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
-    #parser.add_argument('--query', type=str,   default='3CQV A HEM',   help='main input query') # OK apo 6, holo 5
+    parser.add_argument('--query', type=str,   default='3CQV A HEM',   help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='3CQV ! hem',   help='main input query') #
+    #parser.add_argument('--query', type=str,   default='6wmq ! hem',   help='main input query') #
+    #parser.add_argument('--query', type=str,   default='4n73 ! COH',   help='main input query') # 
     #parser.add_argument('--query', type=str,   default='2npq A bog',   help='main input query') # long, apo 149, holo 114, p38 MAP kinase cryptic sites
     #parser.add_argument('--query', type=str,   default='1ksw A NBS',   help='main input query') # apo 4, holo 28 Human c-Src Tyrosine Kinase (Thr338Gly Mutant) in Complex with N6-benzyl ADP
     #parser.add_argument('--query', type=str,   default='1ai5',         help='main input query') # negative uniprot overlap (fixed)
@@ -2662,7 +2665,10 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
-    parser.add_argument('--query', type=str,   default='1DB1 ! VDX',   help='main input query') # apo 0, holo 44, vitamin D3 study
+    #parser.add_argument('--query', type=str,   default='1DB1 ! VDX',   help='main input query') # apo 0, holo 44, vitamin D3 study
+    
+    # Unobserved/missing residues - check how we handle them with UNP mapping
+    #parser.add_argument('--query', type=str,   default='2x8b A UNX 1556',   help='main input query') # Unknown ion with unobserved? binding residues
 
     # Issue: Ligands bound to query protein chain (interaface) but annotated to different chain (either of the protein or the polymer/nucleic acid)
     #parser.add_argument('--query', type=str,   default='6XBY A adp,mg',  help='main input query') # apo 4, holo 2

@@ -93,7 +93,7 @@ def map_pdb_resnum_to_uniprot(pdb_resnum_list, sifts_xml_file):
         resichain_frmt = '.'.join([segi_id, chain_id, pdb_resnum]) # Reformat the string to more compact form
         #print(segi_id, chain_id, pdb_resnum)
 
-        # Find the right segment (entities in the xml doc)
+        # Find the right segment (entityId in the xml doc)
         ent = './/{http://www.ebi.ac.uk/pdbe/docs/sifts/eFamily.xsd}entity'
         for segment in root.findall(ent):
             # IMPORTANT - entityId is not the chain ID
