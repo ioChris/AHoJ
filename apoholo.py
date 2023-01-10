@@ -2632,7 +2632,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='3vro ! ptr',   help='main input query') # apo 7, holo 0. 1 PTR between 2 chains (assigned chain is tiny fragment)
     #parser.add_argument('--query', type=str,   default='5aep ! ptr',   help='main input query') # 2 PTRs in same chain non-interface
     #parser.add_argument('--query', type=str,   default='5aep ! hem',   help='main input query') 
-    #parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
+    parser.add_argument('--query', type=str,   default='3n7y ! ptr',   help='main input query') # apo 21, holo 270. good test for "!"
     #parser.add_argument('--query', type=str,   default='5j72 A na 703',help='main input query') # apo 0, holo 0 (no UniProt chains)
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # OK, apo 4, holo 12
     #parser.add_argument('--query', type=str,   default='1a73 b mg 206',help='main input query') # water_as_ligand=1 OK, apo 4, holo 12
@@ -2662,7 +2662,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
     #parser.add_argument('--query', type=str,   default='4V51 ! MG', help='main input query') # too slow for "!"
-    parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 22, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 22, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
     #parser.add_argument('--query', type=str,   default='1DB1 ! VDX',   help='main input query') # apo 0, holo 44, vitamin D3 study
