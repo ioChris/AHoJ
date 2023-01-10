@@ -2647,7 +2647,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='2hka all c3s', help='main input query') # OK apo 2, holo 0
     #parser.add_argument('--query', type=str,   default='2v57 A,C prl', help='main input query') # OK apo 4, holo 0
     #parser.add_argument('--query', type=str,   default='3CQV all hem', help='main input query') # OK apo 6, holo 5
-    parser.add_argument('--query', type=str,   default='3CQV A HEM',   help='main input query') # OK apo 6, holo 5
+    #parser.add_argument('--query', type=str,   default='3CQV A HEM',   help='main input query') # OK apo 6, holo 5
     #parser.add_argument('--query', type=str,   default='3CQV ! hem',   help='main input query') #
     #parser.add_argument('--query', type=str,   default='6wmq ! hem',   help='main input query') #
     #parser.add_argument('--query', type=str,   default='4n73 ! COH',   help='main input query') # 
@@ -2662,7 +2662,7 @@ def parse_args(argv):
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3327', help='main input query') # ribosome protein binding to nucleic acid only
     #parser.add_argument('--query', type=str,   default='4V51 BA MG 3328', help='main input query') # ribosome protein binding also protein (ok)
     #parser.add_argument('--query', type=str,   default='4V51 ! MG', help='main input query') # too slow for "!"
-    #parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 20, holo 16, apo struct, has solid state nmr candidate "2K0P"
+    parser.add_argument('--query', type=str,   default='1GB1',         help='main input query') # apo 22, holo 16, apo struct, has solid state nmr candidate "2K0P"
     #parser.add_argument('--query', type=str,   default='6hwv A BOG 402',  help='main input query') # apo 134, holo 128
     #parser.add_argument('--query', type=str,   default='6hwv A BOG',   help='main input query') # apo 76, holo 186. Bug with residue mapping section (maps only first ligand, then transfers the binding residues to rest ligands)
     #parser.add_argument('--query', type=str,   default='1DB1 ! VDX',   help='main input query') # apo 0, holo 44, vitamin D3 study
