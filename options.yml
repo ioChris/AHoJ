@@ -19,6 +19,8 @@ options:
       It applies at the highest resolution value, when this is 
       available in the PDB structure file. It can take any value, suggested min/max = 1.5/8. 
       Condition is "<=".
+    results_table_label: Res
+    results_table_legend: Resolution (Å)
 
   - command_line_name: include_nmr
     display_name: Include NMR structures
@@ -61,6 +63,8 @@ options:
       Floating point number that represents a percentage (%) and is applied as a cut-off point when comparing the sequence overlap between the query and the candidate chain. It applies to the percentage of sequence overlap between query and candidate chains, and it is calculated from the query's perspective according to the UniProt residue numbering. If set to 100 (%), it means that the candidate chain must completely cover the query chain. It can be longer than the query, but not shorter [default = 0, min/max = 0/100].
       
       Note: "100" guarantees complete coverage, but it is the strictest setting. If the user wants a more lenient filtration, they can lower the value, or even set it to 0 and rely on the template-modeling score (TM-score) by using the default value (0.5) or setting their own TM-score cut-off with the "Minimum TM-score" parameter.
+    results_table_label: SO
+    results_table_legend: Sequence overlap (%): the percentage of sequence overlap between query and result chains in the observed residues (using the SIFTS residue-level mapping with UniProt
 
   - command_line_name: bndgrsds_threshold
     display_name: Binding residues threshold
@@ -69,6 +73,8 @@ options:
       Minimum % of binding residues of the query that have to be present in the candidate according to UNP residue mapping, for the candidate to be considered, condition is ">="
     long description: |
       Floating point number that represents a percentage (%) and is applied as a minimum cut-off upon the percentage of the number of successfully mapped binding residues in the candidate chain out of the total number of binding residues in the query chain. The binding residues are mapped between query and candidate by converting PDB to UniProt numbering. "1%" translates to at least 1% percent of the query residues being present in the candidate structure, for the structure to be considered as apo or holo [default = 1.0, min/max = 1/100, condition is ">="].
+    results_table_label: MBR
+    results_table_legend: Mapped binding residues (%): the percentage of binding residues of the query chain present in the candidate chain according to UNP residue mapping
 
   - command_line_name: lig_scan_radius
     display_name: Ligand scanning radius
@@ -85,6 +91,8 @@ options:
       Minimum acceptable TM-score for apo-holo alignments (condition is ">")
     long description: |
       Floating point number that is applied as a minimum accepted template-modeling score between the query and the candidate chain. Value 1 indicates a perfect match, values higher than 0.5 generally assume the same fold in SCOP/CATH [default = 0.5, min/max = 0/1].
+    results_table_label: TM-sc
+    results_table_legend: TM-score and inverse TM-score (hover text)
 
   - command_line_name: nonstd_rsds_as_lig
     display_name: Consider non-standard residues as ligands
