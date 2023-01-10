@@ -357,6 +357,7 @@ When running the application locally in Windows systems, it is possible to run i
 https://learn.microsoft.com/en-us/windows/wsl/case-sensitivity
 
 Quick fix
+
 To change case-sensitivity of a directory in the Windows file system, run PowerShell as Administrator and use the following commands:
 ~~~sh
 # Enable case sensitivity in a Windows directory
