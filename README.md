@@ -349,3 +349,18 @@ The web application allows the visualization of the results in the browser with 
 
 The results can also be downloaded and visualized locally by loading the PyMOL script that is included in the results folder through PyMOL [load_results_into_PyMOL.pml]. The script has to be loaded from within the results folder. After downloading and unpacking the results into a folder, start a new PyMOL session and open the .pml file through it. A PyMOL installation is needed for this to work (Incentive or Open-Source).
 
+## Notes / Troubleshooting
+
+### Case sensitivity in Windows
+
+When running the application locally in Windows systems, it is possible to run into a situation where a structure has 2 chains of the same letter but in different case (i.e., "5cdwC" and "5cdwc"); this is typical in large EM assemblies that have numerous chains. In such situations, a saved aligned chain can be overwritten by the last alphanumerically-identical chain. This is because Windows by default treats file and directory names as case-insensitive. This can be changed for a particular directory in Windows 10 or later. To learn how change these settings, visit:
+https://learn.microsoft.com/en-us/windows/wsl/case-sensitivity
+
+Quick fix
+To change case-sensitivity of a directory in the Windows file system, run PowerShell as Administrator and use the following commands:
+~~~sh
+# Enable case sensitivity in a Windows directory
+fsutil.exe file setCaseSensitiveInfo <path> enable
+# Disable case sensitivity in a Windows directory
+fsutil.exe file setCaseSensitiveInfo <path> disable
+~~~
